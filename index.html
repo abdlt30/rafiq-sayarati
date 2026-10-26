@@ -4,21 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>رفيق سيارتي | Rafiq Sayarati</title>
+    <!-- خط Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
+            fontFamily: { sans: ['Cairo', 'sans-serif'] },
             colors: {
-              brand: { 500: '#2f6bff', 600: '#1e50d6' },
-              dark: { 900: '#070b14', 800: '#0e1526', 700: '#1a2540' }
+              brand: { 500: '#3b82f6', 600: '#2563eb' }, // أزرق أكثر عمقاً
+              dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }, // ألوان أعمق
+              accent: { 500: '#10b981' } // أخضر للنجاح
             }
           }
         }
       }
     </script>
   </head>
-  <body class="bg-dark-900 text-white font-sans">
+  <body class="bg-dark-900 text-slate-200 font-sans antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
