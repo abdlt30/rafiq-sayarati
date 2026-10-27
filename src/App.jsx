@@ -3,12 +3,12 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
-import Welcome from './pages/Welcome'; // صفحة جديدة
+import Welcome from './pages/Welcome';
+import AddVehicle from './pages/AddVehicle'; // صفحة جديدة
 
 function App() {
   const [isStarted, setIsStarted] = useState(false);
 
-  // محاكاة: هل المستخدم جديد أم لا؟
   useEffect(() => {
     const saved = localStorage.getItem('app_started');
     if (saved === 'true') setIsStarted(true);
@@ -28,6 +28,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="expenses" element={<Expenses />} />
+            <Route path="add-vehicle" element={<AddVehicle />} />
           </Route>
         </Routes>
       )}
