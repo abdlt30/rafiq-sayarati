@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { getVehicles, getMaintenanceByVehicle, addMaintenance } from '../services/dataService';
-import { Wrench, Plus, Calendar, Gauge } from 'lucide-react';
+import { Wrench, Plus, Calendar, Gauge, X } from 'lucide-react';
 
 export default function Maintenance() {
   const [maintenanceList, setMaintenanceList] = useState([]);
   const [vehicleId, setVehicleId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  // حالة النموذج
   const [formData, setFormData] = useState({
     service: 'تغيير الزيت',
     date: new Date().toISOString().split('T')[0],
@@ -15,13 +14,19 @@ export default function Maintenance() {
     odometer: ''
   });
 
+  const services = [
+    { id: 'تغيير الزيت', label: 'تغيير الزيت', icon: '🛢️' },
+    { id: 'فحص الفرامل', label: 'فحص الفرامل', icon: '🛑' },
+    { id: 'تغيير الإطارات', label: 'تغيير الإطارات', icon: '🛞' },
+    { id: 'فحص شامل', label: 'فحص شامل', icon: '🔍' },
+  ];
+
   const loadData = async () => {
     const vehs = await getVehicles();
     if (vehs.length > 0) {
       setVehicleId(vehs[0].id);
       setFormData(prev => ({ ...prev, odometer: vehs[0].odometer }));
       const list = await getMaintenanceByVehicle(vehs[0].id);
-      // ترتيب حسب التاريخ من الأحدث للأقدم
       setMaintenanceList(list.sort((a, b) => new Date(b.date) - new Date(a.date)));
     }
   };
@@ -31,11 +36,11 @@ export default function Maintenance() {
   }, []);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleServiceSelect = (serviceId) => setFormData({ ...formData, service: serviceId });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!vehicleId) return;
-    
     try {
       await addMaintenance({
         vehicleId,
@@ -45,69 +50,81 @@ export default function Maintenance() {
         odometer: Number(formData.odometer)
       });
       setShowForm(false);
-      setFormData({ ...formData, cost: '' }); // تصفير التكلفة فقط
-      loadData(); // إعادة تحميل القائمة فوراً
+      setFormData({ ...formData, cost: '' });
+      loadData();
     } catch (error) {
       console.error("Error adding maintenance", error);
     }
   };
 
-  // دالة لتنسيق التاريخ بشكل مقروء (مثال: 27 أكتوبر 2026)
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('ar-MA', options);
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-300">
+    <div className="space-y-4 animate-in fade-in duration-300 relative">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">الصيانة</h1>
         <button 
           onClick={() => setShowForm(!showForm)} 
-          className="bg-brand-500 text-white p-3 rounded-full shadow-lg shadow-brand-500/30 hover:bg-brand-600 transition-all active:scale-95"
+          className="bg-brand-500 text-white p-3 rounded-full shadow-lg shadow-brand-500/30 hover:bg-brand-600 transition-all active:scale-95 z-10"
         >
-          <Plus size={24} className={showForm ? "rotate-45 transition-transform" : "transition-transform"} />
+          {showForm ? <X size={24} /> : <Plus size={24} />}
         </button>
       </div>
 
-      {/* نموذج الإضافة الأنيق */}
+      {/* نموذج الإضافة المحسن */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-dark-800 p-5 rounded-3xl border border-dark-700 space-y-4 shadow-xl mb-6">
-          <h3 className="font-bold text-white text-lg">إضافة صيانة جديدة</h3>
-          
-          <div>
-            <label className="block text-sm text-slate-400 mb-2">نوع الخدمة</label>
-            <select name="service" onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500">
-              <option value="تغيير الزيت">تغيير الزيت</option>
-              <option value="فحص الفرامل">فحص الفرامل</option>
-              <option value="تغيير الإطارات">تغيير الإطارات</option>
-              <option value="فحص شامل">فحص شامل</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        <div className="fixed inset-0 bg-dark-900/90 backdrop-blur-sm z-40 flex items-end justify-center pb-20 animate-in slide-in-from-bottom-10">
+          <form onSubmit={handleSubmit} className="bg-dark-800 p-6 rounded-t-3xl border-t border-dark-700 w-full max-w-md space-y-5 shadow-2xl">
+            <h3 className="font-bold text-white text-xl mb-2">إضافة صيانة جديدة</h3>
+            
             <div>
-              <label className="block text-sm text-slate-400 mb-2">التاريخ</label>
-              <input name="date" type="date" value={formData.date} onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" />
+              <label className="block text-sm text-slate-400 mb-3">نوع الخدمة</label>
+              <div className="grid grid-cols-2 gap-2">
+                {services.map((srv) => (
+                  <button
+                    key={srv.id}
+                    type="button"
+                    onClick={() => handleServiceSelect(srv.id)}
+                    className={`p-3 rounded-xl border flex items-center gap-2 transition ${
+                      formData.service === srv.id 
+                        ? 'border-brand-500 bg-brand-500/10 text-white' 
+                        : 'border-dark-700 bg-dark-900 text-slate-400'
+                    }`}
+                  >
+                    <span>{srv.icon}</span>
+                    <span className="text-sm font-medium">{srv.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">التاريخ</label>
+                <input name="date" type="date" value={formData.date} onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">التكلفة (MAD)</label>
+                <input required name="cost" type="number" placeholder="0" onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm text-slate-400 mb-2">التكلفة (MAD)</label>
-              <input required name="cost" type="number" placeholder="0" onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" />
+              <label className="block text-sm text-slate-400 mb-2">عداد الكيلومترات</label>
+              <input required name="odometer" type="number" value={formData.odometer} onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm text-slate-400 mb-2">عداد الكيلومترات</label>
-            <input required name="odometer" type="number" value={formData.odometer} onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" />
-          </div>
-
-          <button type="submit" className="w-full bg-brand-500 text-white font-bold py-3 rounded-xl hover:bg-brand-600 transition-colors">
-            حفظ الصيانة
-          </button>
-        </form>
+            <button type="submit" className="w-full bg-brand-500 text-white font-bold py-4 rounded-xl hover:bg-brand-600 transition-colors shadow-lg shadow-brand-500/30">
+              حفظ الصيانة
+            </button>
+          </form>
+        </div>
       )}
 
-      {/* قائمة الصيانة */}
+      {/* قائمة الصيانة (البطاقات) */}
       {maintenanceList.length === 0 ? (
         <div className="text-center mt-20 flex flex-col items-center gap-4">
           <div className="w-20 h-20 bg-dark-800 rounded-full flex items-center justify-center">
@@ -120,12 +137,9 @@ export default function Maintenance() {
           {maintenanceList.map(item => (
             <div key={item.id} className="bg-dark-800 p-4 rounded-2xl border border-dark-700 flex items-center justify-between hover:border-yellow-500/30 transition-colors">
               <div className="flex items-center gap-4">
-                {/* أيقونة موحدة باللون الأصفر */}
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-yellow-500/10">
                   <Wrench size={22} className="text-yellow-500" />
                 </div>
-                
-                {/* تفاصيل البطاقة */}
                 <div>
                   <p className="font-bold text-white text-base">{item.service}</p>
                   <div className="flex items-center gap-3 text-xs text-slate-400 mt-1.5">
@@ -134,8 +148,6 @@ export default function Maintenance() {
                   </div>
                 </div>
               </div>
-              
-              {/* التكلفة */}
               <div className="text-right">
                 <p className="font-mono font-bold text-white text-lg">{item.cost.toLocaleString()}</p>
                 <p className="text-[10px] text-slate-400">MAD</p>
