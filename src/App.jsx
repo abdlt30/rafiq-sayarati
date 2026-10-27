@@ -5,7 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle'; 
-import AddExpense from './pages/AddExpense'; // أضفنا هذه الصفحة
+import AddExpense from './pages/AddExpense';
+import Maintenance from './pages/Maintenance'; // صفحة الصيانة
 
 function App() {
   const [isStarted, setIsStarted] = useState(false);
@@ -30,6 +31,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="expenses" element={<Expenses />} />
+            <Route path="maintenance" element={<Maintenance />} />
           </Route>
 
           {/* المسارات التي تظهر بملء الشاشة (بدون شريط سفلي) */}
