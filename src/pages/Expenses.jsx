@@ -1,96 +1,74 @@
 import React, { useEffect, useState } from 'react';
-import { getVehicles, getExpensesByVehicle, addExpense } from '../services/dataService';
-import { Plus } from 'lucide-react';
+import { getVehicles, getExpensesByVehicle } from '../services/dataService';
+import { Plus, Fuel, Wrench, Shield, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Expenses() {
   const [expenses, setExpenses] = useState([]);
-  const [vehicleId, setVehicleId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  
-  const [amount, setAmount] = useState('');
-  const [type, setType] = useState('fuel');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-
-  const loadExpenses = async () => {
-    const vehs = await getVehicles();
-    if (vehs.length > 0) {
-      setVehicleId(vehs[0].id);
-      const exps = await getExpensesByVehicle(vehs[0].id);
-      setExpenses(exps.sort((a,b) => new Date(b.date) - new Date(a.date)));
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadExpenses = async () => {
+      const vehs = await getVehicles();
+      if (vehs.length > 0) {
+        const exps = await getExpensesByVehicle(vehs[0].id);
+        setExpenses(exps.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      }
+      setLoading(false);
+    };
     loadExpenses();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!amount || !vehicleId) return;
-
-    await addExpense({
-      vehicleId,
-      amount: Number(amount),
-      type,
-      date,
-      notes: 'إضافة سريعة'
-    });
-
-    setAmount('');
-    setShowForm(false);
-    loadExpenses();
+  const getIcon = (type) => {
+    switch(type) {
+      case 'fuel': return { icon: Fuel, color: 'text-brand-500', bg: 'bg-brand-500/10' };
+      case 'maintenance': return { icon: Wrench, color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
+      case 'insurance': return { icon: Shield, color: 'text-green-500', bg: 'bg-green-500/10' };
+      default: return { icon: FileText, color: 'text-slate-400', bg: 'bg-slate-500/10' };
+    }
   };
+
+  if (loading) return <div className="text-center mt-20 text-slate-400">جاري التحميل...</div>;
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">سجل المصاريف</h2>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="bg-brand-500 p-2 rounded-lg flex items-center gap-1 text-sm font-medium hover:bg-brand-600"
-        >
-          <Plus size={16} /> إضافة
-        </button>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-white">المصاريف</h1>
+        <Link to="/add-expense" className="bg-brand-500 text-white p-3 rounded-full shadow-lg shadow-brand-500/30 hover:bg-brand-600 transition">
+          <Plus size={24} />
+        </Link>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-dark-800 p-4 rounded-xl border border-dark-700 space-y-3">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">المبلغ (MAD)</label>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} required className="w-full bg-dark-900 border border-dark-700 rounded-lg p-2 text-white" />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">النوع</label>
-            <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-dark-900 border border-dark-700 rounded-lg p-2 text-white">
-              <option value="fuel">وقود</option>
-              <option value="maintenance">صيانة</option>
-              <option value="repair">إصلاح</option>
-              <option value="other">أخرى</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">التاريخ</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} required className="w-full bg-dark-900 border border-dark-700 rounded-lg p-2 text-white" />
-          </div>
-          <button type="submit" className="w-full bg-brand-500 py-2 rounded-lg font-bold hover:bg-brand-600">حفظ</button>
-        </form>
-      )}
-
-      <div className="space-y-2">
-        {expenses.length === 0 ? (
-          <p className="text-center text-gray-500 mt-10">لا توجد مصاريف مسجلة بعد.</p>
-        ) : (
-          expenses.map(exp => (
-            <div key={exp.id} className="bg-dark-800 p-4 rounded-xl border border-dark-700 flex justify-between items-center">
-              <div>
-                <p className="font-bold">{exp.type === 'fuel' ? 'وقود' : exp.type === 'maintenance' ? 'صيانة' : 'أخرى'}</p>
-                <p className="text-xs text-gray-400">{exp.date}</p>
+      {expenses.length === 0 ? (
+        <div className="text-center mt-20 space-y-4">
+          <p className="text-slate-400">لا توجد مصاريف مسجلة بعد.</p>
+          <Link to="/add-expense" className="inline-block bg-dark-800 border border-dark-700 text-brand-500 font-bold py-3 px-6 rounded-xl hover:bg-dark-700 transition">
+            إضافة أول مصروف
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {expenses.map(exp => {
+            const { icon: Icon, color, bg } = getIcon(exp.type);
+            return (
+              <div key={exp.id} className="bg-dark-800 p-4 rounded-2xl border border-dark-700 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bg}`}>
+                    <Icon size={24} className={color} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white capitalize">
+                      {exp.type === 'fuel' ? 'وقود' : exp.type === 'maintenance' ? 'صيانة' : exp.type === 'insurance' ? 'تأمين' : 'أخرى'}
+                    </p>
+                    <p className="text-xs text-slate-400">{exp.date}</p>
+                  </div>
+                </div>
+                <p className="font-mono font-bold text-xl text-white">{exp.amount} <span className="text-sm text-slate-400">MAD</span></p>
               </div>
-              <p className="font-mono font-bold text-red-400">{exp.amount} MAD</p>
-            </div>
-          ))
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
