@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { getVehicles, getExpensesByVehicle } from '../services/dataService';
-import { initDB } from '../db/database';
-import { Car, Gauge, Fuel, Wrench, ArrowLeft, MoreHorizontal } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Car, Gauge, Fuel, Wrench, Plus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const [vehicle, setVehicle] = useState(null);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadData = async () => {
-      await initDB();
       const vehs = await getVehicles();
       if (vehs.length > 0) {
         const v = vehs[0];
@@ -19,23 +19,39 @@ export default function Dashboard() {
         const total = exps.reduce((sum, e) => sum + Number(e.amount), 0);
         setTotalExpenses(total);
       }
+      setLoading(false);
     };
     loadData();
   }, []);
 
-  if (!vehicle) return <div className="text-center mt-20 text-slate-400">جاري التحميل...</div>;
+  if (loading) return <div className="text-center mt-20 text-slate-400">جاري التحميل...</div>;
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">مرحباً، عبدو 👋</h2>
-        <button className="bg-dark-700 p-2 rounded-full text-slate-300">
-          <MoreHorizontal size={20} />
+  // إذا لم توجد سيارة، اعرض شاشة فارغة
+  if (!vehicle) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        <div className="w-24 h-24 bg-dark-800 rounded-full flex items-center justify-center">
+          <Car size={48} className="text-slate-500" />
+        </div>
+        <h2 className="text-xl font-bold text-white">لا توجد سيارة</h2>
+        <p className="text-slate-400 text-center max-w-xs">أضف سيارتك الأولى لتبدأ بتتبع المصاريف والصيانة.</p>
+        <button 
+          onClick={() => navigate('/add-vehicle')}
+          className="bg-brand-500 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 hover:bg-brand-600 transition"
+        >
+          <Plus size={20} /> إضافة سيارة جديدة
         </button>
       </div>
+    );
+  }
 
-      {/* Vehicle Card */}
+  // ... (باقي كود لوحة التحكم الذي كتبناه سابقاً يبقى كما هو)
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-white">مرحباً، عبدو 👋</h2>
+      </div>
+
       <div className="bg-gradient-to-br from-brand-600 to-indigo-700 p-6 rounded-3xl shadow-xl relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-6">
@@ -54,7 +70,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-dark-800 p-5 rounded-3xl border border-dark-700">
           <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center mb-3">
@@ -74,7 +89,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div>
         <h3 className="text-lg font-bold text-white mb-3">إجراءات سريعة</h3>
         <div className="flex gap-3">
@@ -84,12 +98,12 @@ export default function Dashboard() {
             </div>
             <span className="text-sm font-medium text-white">إضافة وقود</span>
           </Link>
-          <Link to="/expenses" className="flex-1 bg-dark-800 border border-dark-700 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-dark-700 transition">
+          <button className="flex-1 bg-dark-800 border border-dark-700 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-dark-700 transition opacity-50 cursor-not-allowed">
             <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
               <Wrench size={20} className="text-yellow-500" />
             </div>
-            <span className="text-sm font-medium text-white">صيانة</span>
-          </Link>
+            <span className="text-sm font-medium text-white">صيانة (قريباً)</span>
+          </button>
         </div>
       </div>
     </div>
