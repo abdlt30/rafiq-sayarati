@@ -1,17 +1,13 @@
 import { db } from '../db/database';
 
-export const getVehicles = async () => {
-  return await db.vehicles.toArray();
-};
+export const getVehicles = async () => await db.vehicles.toArray();
 
-export const addVehicle = async (vehicleData) => {
-  return await db.vehicles.add(vehicleData);
-};
+export const addVehicle = async (vehicleData) => await db.vehicles.add(vehicleData);
 
-export const addExpense = async (expense) => {
-  return await db.expenses.add(expense);
-};
+export const addExpense = async (expense) => await db.expenses.add(expense);
 
-export const getExpensesByVehicle = async (vehicleId) => {
-  return await db.expenses.where('vehicleId').equals(vehicleId).toArray();
-};
+export const getExpensesByVehicle = async (vehicleId) => await db.expenses.where('vehicleId').equals(vehicleId).toArray();
+
+// دوال الصيانة الجديدة
+export const addMaintenance = async (data) => await db.maintenance.add(data);
+export const getMaintenanceByVehicle = async (vehicleId) => await db.maintenance.where('vehicleId').equals(vehicleId).toArray();
