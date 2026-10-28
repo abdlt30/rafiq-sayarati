@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { getVehicles, getExpensesByVehicle, getMaintenanceByVehicle } from '../services/dataService';
-import { Car, Gauge, Fuel, Wrench, Plus, AlertCircle } from 'lucide-react';
+import { getVehicles, getExpensesByVehicle, getMaintenanceByVehicle, getDocumentsByVehicle } from '../services/dataService';
+import { Car, Gauge, Fuel, Wrench, Plus, AlertCircle, FileText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const [vehicle, setVehicle] = useState(null);
   const [totalExpenses, setTotalExpenses] = useState(0);
-  const [nextMaintenance, setNextMaintenance] = useState(null);
+  const [alerts, setAlerts] = useState([]); // مصفوفة للتنبيهات المتعددة
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -17,16 +17,32 @@ export default function Dashboard() {
         const v = vehs[0];
         setVehicle(v);
         
+        // 1. حساب المصاريف
         const exps = await getExpensesByVehicle(v.id);
         const total = exps.reduce((sum, e) => sum + Number(e.amount), 0);
         setTotalExpenses(total);
 
+        // 2. فحص التنبيهات الذكية (صيانة + وثائق)
+        let currentAlerts = [];
+
+        // فحص الزيت
         const maints = await getMaintenanceByVehicle(v.id);
-        // منطق ذكي: إذا كانت آخر صيانة زيت قبل 5000 كم، نبه المستخدم
         const oilChange = maints.find(m => m.service === 'تغيير الزيت');
         if (oilChange && (v.odometer - oilChange.odometer) > 5000) {
-          setNextMaintenance('الزيت يحتاج تغييراً قريباً!');
+          currentAlerts.push({ type: 'maintenance', text: 'الزيت يحتاج تغييراً قريباً!', icon: Wrench, color: 'yellow' });
         }
+
+        // فحص الوثائق
+        const docs = await getDocumentsByVehicle(v.id);
+        const expiringDocs = docs.filter(d => {
+          const days = Math.ceil((new Date(d.endDate) - new Date()) / (1000 * 60 * 60 * 24));
+          return days <= 30; // أي وثيقة تنتهي خلال 30 يوم
+        });
+        if (expiringDocs.length > 0) {
+          currentAlerts.push({ type: 'document', text: `${expiringDocs[0].type} ينتهي قريباً!`, icon: FileText, color: 'red' });
+        }
+
+        setAlerts(currentAlerts);
       }
       setLoading(false);
     };
@@ -34,6 +50,7 @@ export default function Dashboard() {
   }, []);
 
   if (loading) return <div className="text-center mt-20 text-slate-400">جاري التحميل...</div>;
+  
   if (!vehicle) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
       <Car size={48} className="text-slate-500" />
@@ -50,11 +67,18 @@ export default function Dashboard() {
         <h2 className="text-2xl font-bold text-white">مرحباً، عبدو 👋</h2>
       </div>
 
-      {/* تنبيه ذكي */}
-      {nextMaintenance && (
-        <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-2xl flex items-center gap-3">
-          <AlertCircle className="text-yellow-500" size={24} />
-          <p className="text-yellow-500 text-sm font-bold">{nextMaintenance}</p>
+      {/* التنبيهات الذكية */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          {alerts.map((alert, index) => {
+            const Icon = alert.icon;
+            return (
+              <div key={index} className={`bg-${alert.color}-500/10 border border-${alert.color}-500/30 p-4 rounded-2xl flex items-center gap-3 animate-pulse`}>
+                <AlertCircle className={`text-${alert.color}-500`} size={24} />
+                <p className={`text-${alert.color}-500 text-sm font-bold`}>{alert.text}</p>
+              </div>
+            );
+          })}
         </div>
       )}
 
