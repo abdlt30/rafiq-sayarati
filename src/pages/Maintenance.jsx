@@ -7,11 +7,8 @@ export default function Maintenance() {
   const [vehicle, setVehicle] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-
-  // 1. تعريف حالة نافذة الحذف (التي كانت مفقودة وتسبب الخطأ)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
-  // حالة النموذج - نترك الحقول فارغة ليجبر المستخدم على الكتابة
   const [formData, setFormData] = useState({
     service: 'تغيير الزيت',
     date: new Date().toISOString().split('T')[0],
@@ -79,7 +76,6 @@ export default function Maintenance() {
     setShowForm(true);
   };
 
-  // 2. دالة الحذف الفعلي
   const executeDelete = async () => {
     if (deleteConfirmId) {
       await deleteMaintenance(deleteConfirmId);
@@ -108,7 +104,6 @@ export default function Maintenance() {
         </button>
       </div>
 
-      {/* نموذج الإضافة والتعديل */}
       {showForm && (
         <div className="fixed inset-0 bg-dark-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSubmit} className="bg-dark-800 p-6 rounded-3xl border border-dark-700 w-full max-w-md space-y-5 shadow-2xl relative">
@@ -162,7 +157,6 @@ export default function Maintenance() {
         </div>
       )}
 
-      {/* قائمة الصيانة */}
       {maintenanceList.length === 0 ? (
         <div className="text-center mt-20">
           <Wrench size={40} className="mx-auto text-slate-600 mb-4" />
@@ -190,8 +184,6 @@ export default function Maintenance() {
                   <p className="font-mono font-bold text-white">{item.cost.toLocaleString()}</p>
                   <p className="text-[10px] text-slate-400">MAD</p>
                 </div>
-                
-                {/* حاوية أزرار التحكم منفصلة ومرتبة */}
                 <div className="flex gap-1 border-r border-dark-700 pr-3 mr-1">
                   <button onClick={() => handleEditClick(item)} className="p-2 text-slate-500 hover:text-brand-500 transition">
                     <Edit2 size={16} />
@@ -206,7 +198,6 @@ export default function Maintenance() {
         </div>
       )}
 
-      {/* 3. نافذة تأكيد الحذف المخصصة (بدلاً من window.confirm) */}
       {deleteConfirmId && (
         <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-dark-800 p-6 rounded-3xl w-full max-w-sm border border-dark-700 shadow-2xl text-center">
@@ -214,7 +205,7 @@ export default function Maintenance() {
               <AlertTriangle size={32} className="text-red-500" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
-            <p className="text-slate-400 mb-6">هل أنت متأكد من حذف سجل الصيانة هذا؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <p className="text-slate-400 mb-6">هل أنت متأكد من حذف سجل الصيانة هذا؟</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteConfirmId(null)} className="flex-1 bg-dark-700 text-white py-3 rounded-xl font-bold hover:bg-dark-600 transition">إلغاء</button>
               <button onClick={executeDelete} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition">حذف</button>
@@ -224,4 +215,4 @@ export default function Maintenance() {
       )}
     </div>
   );
-}
+    }
