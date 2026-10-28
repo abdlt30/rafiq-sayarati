@@ -8,13 +8,12 @@ export default function FuelTracking() {
   const [showForm, setShowForm] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   
-  // حالة النموذج
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     odometer: '',
     liters: '',
     cost: '',
-    fullTank: true // افتراضياً تعبئة كاملة
+    fullTank: true
   });
 
   const loadData = async () => {
@@ -22,7 +21,7 @@ export default function FuelTracking() {
     if (vehs.length > 0) {
       setVehicle(vehs[0]);
       const data = await getFuelLogsByVehicle(vehs[0].id);
-      setLogs(data.sort((a, b) => a.odometer - b.odometer)); // ترتيب تصاعدي حسب العداد
+      setLogs(data.sort((a, b) => a.odometer - b.odometer));
     }
   };
 
@@ -61,24 +60,15 @@ export default function FuelTracking() {
     }
   };
 
-  // 🔥 خوارزمية حساب الاستهلاك (Full Tank Method)
   const calculateConsumption = () => {
     if (logs.length < 2) return null;
-    
-    // نبحث عن آخر تعبئة كاملة
     let lastFullIndex = -1;
     for (let i = logs.length - 1; i >= 0; i--) {
-      if (logs[i].fullTank) {
-        lastFullIndex = i;
-        break;
-      }
+      if (logs[i].fullTank) { lastFullIndex = i; break; }
     }
-
-    if (lastFullIndex <= 0) return null; // لا توجد تعبئة كاملة سابقة
-
+    if (lastFullIndex <= 0) return null;
     const totalDistance = logs[lastFullIndex].odometer - logs[0].odometer;
     const totalLiters = logs.slice(1, lastFullIndex + 1).reduce((sum, log) => sum + log.liters, 0);
-
     if (totalDistance <= 0) return null;
     return ((totalLiters / totalDistance) * 100).toFixed(2);
   };
@@ -137,7 +127,6 @@ export default function FuelTracking() {
         </div>
       )}
 
-      {/* بطاقة الإحصائيات */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-dark-800 p-5 rounded-3xl border border-dark-700">
           <div className="flex items-center gap-2 mb-2">
@@ -159,7 +148,6 @@ export default function FuelTracking() {
         </div>
       </div>
 
-      {/* قائمة التعبئات */}
       <div className="space-y-3">
         {logs.slice().reverse().map(log => (
           <div key={log.id} className="bg-dark-800 p-4 rounded-2xl border border-dark-700 flex items-center justify-between group">
@@ -188,7 +176,6 @@ export default function FuelTracking() {
         ))}
       </div>
 
-      {/* نافذة تأكيد الحذف */}
       {deleteConfirmId && (
         <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-dark-800 p-6 rounded-3xl w-full max-w-sm border border-dark-700 shadow-2xl text-center">
