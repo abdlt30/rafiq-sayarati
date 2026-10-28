@@ -6,7 +6,8 @@ import Expenses from './pages/Expenses';
 import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle'; 
 import AddExpense from './pages/AddExpense';
-import Maintenance from './pages/Maintenance'; // صفحة الصيانة
+import Maintenance from './pages/Maintenance';
+import Documents from './pages/Documents'; // <-- إضافة هذا السطر
 
 function App() {
   const [isStarted, setIsStarted] = useState(false);
@@ -27,14 +28,12 @@ function App() {
         <Welcome onStart={handleStart} />
       ) : (
         <Routes>
-          {/* المسارات التي تحتوي على الشريط السفلي */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="expenses" element={<Expenses />} />
             <Route path="maintenance" element={<Maintenance />} />
+            <Route path="documents" element={<Documents />} /> {/* <-- إضافة هذا السطر */}
           </Route>
-
-          {/* المسارات التي تظهر بملء الشاشة (بدون شريط سفلي) */}
           <Route path="/add-vehicle" element={<AddVehicle />} />
           <Route path="/add-expense" element={<AddExpense />} />
         </Routes>
