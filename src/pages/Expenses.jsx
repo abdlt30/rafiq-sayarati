@@ -6,10 +6,14 @@ import { useNavigate } from 'react-router-dom';
 export default function Expenses() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingExpense, setEditingExpense] = useState(null); // حالة التعديل
+  const [editingExpense, setEditingExpense] = useState(null);
+  
+  // حالة نافذة تأكيد الحذف
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null); 
+
   const navigate = useNavigate();
 
-  // حالة النموذج
+  // حالة نموذج التعديل
   const [editFormData, setEditFormData] = useState({ amount: '', type: '', date: '' });
 
   const loadExpenses = async () => {
@@ -40,21 +44,22 @@ export default function Expenses() {
         date: editFormData.date
       });
       setEditingExpense(null);
-      loadExpenses(); // إعادة تحميل القائمة لتحديث الأرقام
+      loadExpenses();
     } catch (error) {
       console.error("Error updating expense", error);
     }
   };
 
-  // حذف المصروف
-  const handleDelete = async (id) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا المصروف؟')) {
-      await deleteExpense(id);
+  // تنفيذ الحذف الفعلي
+  const executeDelete = async () => {
+    if (deleteConfirmId) {
+      await deleteExpense(deleteConfirmId);
+      setDeleteConfirmId(null);
       loadExpenses();
     }
   };
 
-  // الحسابات (كما هي)
+  // الحسابات
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const fuelTotal = expenses.filter(e => e.type === 'fuel').reduce((s, e) => s + Number(e.amount), 0);
   const maintTotal = expenses.filter(e => e.type === 'maintenance').reduce((s, e) => s + Number(e.amount), 0);
@@ -121,12 +126,12 @@ export default function Expenses() {
               </div>
               <div className="flex items-center gap-3">
                 <p className="font-mono font-bold text-white">{exp.amount} <span className="text-xs text-slate-400">MAD</span></p>
-                {/* أزرار التحكم */}
                 <div className="flex gap-1">
                   <button onClick={() => handleEditClick(exp)} className="p-2 text-slate-500 hover:text-brand-500 transition">
                     <Edit2 size={16} />
                   </button>
-                  <button onClick={() => handleDelete(exp.id)} className="p-2 text-slate-500 hover:text-red-500 transition">
+                  {/* زر الحذف يفتح النافذة المخصصة */}
+                  <button onClick={() => setDeleteConfirmId(exp.id)} className="p-2 text-slate-500 hover:text-red-500 transition">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -164,6 +169,23 @@ export default function Expenses() {
               </div>
               <button type="submit" className="w-full bg-brand-500 text-white font-bold py-3 rounded-xl hover:bg-brand-600 transition">حفظ التعديلات</button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تأكيد الحذف الاحترافية */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-800 p-6 rounded-3xl w-full max-w-sm border border-dark-700 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={32} className="text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
+            <p className="text-slate-400 mb-6">هل أنت متأكد من حذف هذا المصروف؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 bg-dark-700 text-white py-3 rounded-xl font-bold hover:bg-dark-600 transition">إلغاء</button>
+              <button onClick={executeDelete} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition">حذف</button>
+            </div>
           </div>
         </div>
       )}
