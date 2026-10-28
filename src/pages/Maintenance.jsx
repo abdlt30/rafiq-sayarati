@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getVehicles, getMaintenanceByVehicle, addMaintenance, updateMaintenance, deleteMaintenance } from '../services/dataService';
-import { Wrench, Plus, Calendar, Gauge, X, Edit2, Trash2, GaugeCircle } from 'lucide-react';
+import { Wrench, Plus, Calendar, Gauge, X, Edit2, Trash2, GaugeCircle, AlertTriangle } from 'lucide-react';
 
 export default function Maintenance() {
   const [maintenanceList, setMaintenanceList] = useState([]);
@@ -8,7 +8,10 @@ export default function Maintenance() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
-  // حالة النموذج - نترك الحقول فارغة
+  // 1. تعريف حالة نافذة الحذف (التي كانت مفقودة وتسبب الخطأ)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  // حالة النموذج - نترك الحقول فارغة ليجبر المستخدم على الكتابة
   const [formData, setFormData] = useState({
     service: 'تغيير الزيت',
     date: new Date().toISOString().split('T')[0],
@@ -76,9 +79,11 @@ export default function Maintenance() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('هل أنت متأكد من حذف سجل الصيانة؟')) {
-      await deleteMaintenance(id);
+  // 2. دالة الحذف الفعلي
+  const executeDelete = async () => {
+    if (deleteConfirmId) {
+      await deleteMaintenance(deleteConfirmId);
+      setDeleteConfirmId(null);
       loadData();
     }
   };
@@ -91,11 +96,19 @@ export default function Maintenance() {
     <div className="space-y-4 animate-in fade-in relative">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">الصيانة</h1>
-        <button onClick={() => { setShowForm(!showForm); setEditingItem(null); setFormData({ service: 'تغيير الزيت', date: new Date().toISOString().split('T')[0], cost: '', odometer: '' }); }} className="bg-brand-500 text-white p-3 rounded-full hover:bg-brand-600 transition shadow-lg shadow-brand-500/30">
+        <button 
+          onClick={() => { 
+            setShowForm(!showForm); 
+            setEditingItem(null); 
+            setFormData({ service: 'تغيير الزيت', date: new Date().toISOString().split('T')[0], cost: '', odometer: '' }); 
+          }} 
+          className="bg-brand-500 text-white p-3 rounded-full hover:bg-brand-600 transition shadow-lg shadow-brand-500/30"
+        >
           {showForm ? <X size={24} /> : <Plus size={24} />}
         </button>
       </div>
 
+      {/* نموذج الإضافة والتعديل */}
       {showForm && (
         <div className="fixed inset-0 bg-dark-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSubmit} className="bg-dark-800 p-6 rounded-3xl border border-dark-700 w-full max-w-md space-y-5 shadow-2xl relative">
@@ -134,7 +147,7 @@ export default function Maintenance() {
               <label className="block text-sm text-slate-400 mb-2 flex justify-between items-center">
                 <span>عداد الكيلومترات</span>
                 {vehicle && (
-                  <button type="button" onClick={() => setFormData({...formData, odometer: vehicle.odometer})} className="text-xs text-brand-500 flex items-center gap-1">
+                  <button type="button" onClick={() => setFormData({...formData, odometer: vehicle.odometer})} className="text-xs text-brand-500 flex items-center gap-1 hover:underline">
                     <GaugeCircle size={14} /> استخدام الحالي ({vehicle.odometer})
                   </button>
                 )}
@@ -149,43 +162,65 @@ export default function Maintenance() {
         </div>
       )}
 
+      {/* قائمة الصيانة */}
       {maintenanceList.length === 0 ? (
-        <div className="text-center mt-20"><Wrench size={40} className="mx-auto text-slate-600 mb-4" /><p className="text-slate-400">لا توجد سجلات صيانة.</p></div>
+        <div className="text-center mt-20">
+          <Wrench size={40} className="mx-auto text-slate-600 mb-4" />
+          <p className="text-slate-400">لا توجد سجلات صيانة.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {maintenanceList.map(item => (
-  <div key={item.id} className="bg-dark-800 p-4 rounded-2xl border border-dark-700 flex items-center justify-between group">
-    <div className="flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-yellow-500/10">
-        <Wrench size={22} className="text-yellow-500" />
-      </div>
-      <div>
-        <p className="font-bold text-white">{item.service}</p>
-        <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-          <span>{formatDate(item.date)}</span>
-          <span>{item.odometer.toLocaleString()} KM</span>
+            <div key={item.id} className="bg-dark-800 p-4 rounded-2xl border border-dark-700 flex items-center justify-between group transition-colors hover:border-brand-500/30">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-yellow-500/10">
+                  <Wrench size={22} className="text-yellow-500" />
+                </div>
+                <div>
+                  <p className="font-bold text-white">{item.service}</p>
+                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                    <span className="flex items-center gap-1"><Calendar size={12} /> {formatDate(item.date)}</span>
+                    <span className="flex items-center gap-1"><Gauge size={12} /> {item.odometer.toLocaleString()} KM</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="font-mono font-bold text-white">{item.cost.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400">MAD</p>
+                </div>
+                
+                {/* حاوية أزرار التحكم منفصلة ومرتبة */}
+                <div className="flex gap-1 border-r border-dark-700 pr-3 mr-1">
+                  <button onClick={() => handleEditClick(item)} className="p-2 text-slate-500 hover:text-brand-500 transition">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => setDeleteConfirmId(item.id)} className="p-2 text-slate-500 hover:text-red-500 transition">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-    </div>
-    
-    <div className="flex items-center gap-3">
-      <div className="text-right">
-        <p className="font-mono font-bold text-white">{item.cost.toLocaleString()}</p>
-        <p className="text-[10px] text-slate-400">MAD</p>
-      </div>
-      {/* حاوية أزرار التحكم منفصلة ومرتبة */}
-      <div className="flex gap-1 border-l border-dark-700 pl-2 ml-1">
-        <button onClick={() => handleEditClick(item)} className="p-2 text-slate-500 hover:text-brand-500 transition">
-          <Edit2 size={16} />
-        </button>
-        <button onClick={() => setDeleteConfirmId(item.id)} className="p-2 text-slate-500 hover:text-red-500 transition">
-          <Trash2 size={16} />
-           </button>
-           </div>
-         </div>
+      )}
+
+      {/* 3. نافذة تأكيد الحذف المخصصة (بدلاً من window.confirm) */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-800 p-6 rounded-3xl w-full max-w-sm border border-dark-700 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={32} className="text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
+            <p className="text-slate-400 mb-6">هل أنت متأكد من حذف سجل الصيانة هذا؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 bg-dark-700 text-white py-3 rounded-xl font-bold hover:bg-dark-600 transition">إلغاء</button>
+              <button onClick={executeDelete} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition">حذف</button>
+            </div>
+          </div>
         </div>
-         ))}
-        </div> 
       )}
     </div>
   );
