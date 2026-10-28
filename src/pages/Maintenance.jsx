@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { getVehicles, getMaintenanceByVehicle, addMaintenance, updateMaintenance, deleteMaintenance } from '../services/dataService';
-import { Wrench, Plus, Calendar, Gauge, X, Edit2, Trash2 } from 'lucide-react';
+import { Wrench, Plus, Calendar, Gauge, X, Edit2, Trash2, GaugeCircle } from 'lucide-react';
 
 export default function Maintenance() {
   const [maintenanceList, setMaintenanceList] = useState([]);
-  const [vehicleId, setVehicleId] = useState(null);
+  const [vehicle, setVehicle] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
+  // حالة النموذج - نترك الحقول فارغة
   const [formData, setFormData] = useState({
     service: 'تغيير الزيت',
     date: new Date().toISOString().split('T')[0],
@@ -25,7 +26,7 @@ export default function Maintenance() {
   const loadData = async () => {
     const vehs = await getVehicles();
     if (vehs.length > 0) {
-      setVehicleId(vehs[0].id);
+      setVehicle(vehs[0]);
       const list = await getMaintenanceByVehicle(vehs[0].id);
       setMaintenanceList(list.sort((a, b) => new Date(b.date) - new Date(a.date)));
     }
@@ -37,10 +38,9 @@ export default function Maintenance() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!vehicleId) return;
+    if (!vehicle) return;
     try {
       if (editingItem) {
-        // وضع التعديل
         await updateMaintenance(editingItem.id, {
           service: formData.service,
           date: formData.date,
@@ -48,9 +48,8 @@ export default function Maintenance() {
           odometer: Number(formData.odometer)
         });
       } else {
-        // وضع الإضافة
         await addMaintenance({
-          vehicleId,
+          vehicleId: vehicle.id,
           service: formData.service,
           date: formData.date,
           cost: Number(formData.cost),
@@ -59,7 +58,7 @@ export default function Maintenance() {
       }
       setShowForm(false);
       setEditingItem(null);
-      setFormData({ ...formData, cost: '', odometer: '' });
+      setFormData({ service: 'تغيير الزيت', date: new Date().toISOString().split('T')[0], cost: '', odometer: '' });
       loadData();
     } catch (error) {
       console.error("Error saving maintenance", error);
@@ -132,7 +131,14 @@ export default function Maintenance() {
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400 mb-2">عداد الكيلومترات</label>
+              <label className="block text-sm text-slate-400 mb-2 flex justify-between items-center">
+                <span>عداد الكيلومترات</span>
+                {vehicle && (
+                  <button type="button" onClick={() => setFormData({...formData, odometer: vehicle.odometer})} className="text-xs text-brand-500 flex items-center gap-1">
+                    <GaugeCircle size={14} /> استخدام الحالي ({vehicle.odometer})
+                  </button>
+                )}
+              </label>
               <input required name="odometer" type="number" placeholder="أدخل العداد الحالي" value={formData.odometer} onChange={handleChange} className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" />
             </div>
 
