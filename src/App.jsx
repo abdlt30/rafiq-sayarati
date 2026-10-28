@@ -1,49 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useContext } from 'react';
+import { AppContext } from './context/AppContext';
+import Layout from './components/layout/Layout';
+
+// استدعاء الصفحات (تأكد أن هذه الملفات موجودة في مجلد pages)
 import Dashboard from './pages/Dashboard';
-import Expenses from './pages/Expenses';
-import Welcome from './pages/Welcome';
-import AddVehicle from './pages/AddVehicle'; 
-import AddExpense from './pages/AddExpense';
+import Fuel from './pages/Fuel';
 import Maintenance from './pages/Maintenance';
-import Documents from './pages/Documents';
-import Fuel from './pages/Fuel'; // تأكد من إنشاء هذا الملف
-import More from './pages/More'; // سننشئه لاحقاً
+import Expenses from './pages/Expenses';
+import More from './pages/More';
+import Welcome from './pages/Welcome';
 
-function App() {
-  const [isStarted, setIsStarted] = useState(false);
+export default function App() {
+  const { currentCar } = useContext(AppContext);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('app_started');
-    if (saved === 'true') setIsStarted(true);
-  }, []);
-
-  const handleStart = () => {
-    localStorage.setItem('app_started', 'true');
-    setIsStarted(true);
-  };
+  // إذا لم تكن هناك سيارة مسجلة، التطبيق يحولك لصفحة الترحيب
+  // (سنستخدم سيارة وهمية مؤقتاً للتجربة إذا كنت تريد رؤية الصفحات)
+  const hasCar = currentCar !== null; 
 
   return (
-    <HashRouter>
-      {!isStarted ? (
-        <Welcome onStart={handleStart} />
-      ) : (
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="expenses" element={<Expenses />} />
-            <Route path="maintenance" element={<Maintenance />} />
-            <Route path="documents" element={<Documents />} />
-            <Route path="fuel" element={<Fuel />} /> 
-            <Route path="more" element={<More />} />
-          </Route>
-          <Route path="/add-vehicle" element={<AddVehicle />} />
-          <Route path="/add-expense" element={<AddExpense />} />
-        </Routes>
-      )}
-    </HashRouter>
+    <BrowserRouter>
+      <Routes>
+        {/* صفحة الترحيب (بدون Layout) */}
+        <Route path="/welcome" element={<Welcome />} />
+
+        {/* باقي الصفحات (داخل الـ Layout) */}
+        <Route path="/" element={hasCar ? <Layout><Dashboard /></Layout> : <Navigate to="/welcome" />} />
+        <Route path="/fuel" element={<Layout><Fuel /></Layout>} />
+        <Route path="/maintenance" element={<Layout><Maintenance /></Layout>} />
+        <Route path="/expenses" element={<Layout><Expenses /></Layout>} />
+        <Route path="/more" element={<Layout><More /></Layout>} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
