@@ -7,7 +7,9 @@ import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle'; 
 import AddExpense from './pages/AddExpense';
 import Maintenance from './pages/Maintenance';
-import Documents from './pages/Documents'; // <-- إضافة هذا السطر
+import Documents from './pages/Documents';
+import Fuel from './pages/Fuel'; // تأكد من إنشاء هذا الملف
+import More from './pages/More'; // سننشئه لاحقاً
 
 function App() {
   const [isStarted, setIsStarted] = useState(false);
@@ -32,7 +34,9 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="expenses" element={<Expenses />} />
             <Route path="maintenance" element={<Maintenance />} />
-            <Route path="documents" element={<Documents />} /> {/* <-- إضافة هذا السطر */}
+            <Route path="documents" element={<Documents />} />
+            <Route path="fuel" element={<Fuel />} /> 
+            <Route path="more" element={<More />} />
           </Route>
           <Route path="/add-vehicle" element={<AddVehicle />} />
           <Route path="/add-expense" element={<AddExpense />} />
