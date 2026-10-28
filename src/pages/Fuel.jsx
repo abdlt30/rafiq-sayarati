@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getVehicles, getFuelLogsByVehicle, addFuelLog, deleteFuelLog } from '../services/dataService';
-import { Fuel, Plus, X, TrendingDown, Calendar, Gauge, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Fuel, Plus, X, TrendingDown, Calendar, Gauge, CheckCircle } from 'lucide-react';
 
 export default function FuelTracking() {
   const [logs, setLogs] = useState([]);
