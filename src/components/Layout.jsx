@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Wallet, Wrench, FileText } from 'lucide-react';
+import { Home, Wallet, Wrench, Fuel, Menu } from 'lucide-react';
 
 export default function Layout() {
   const location = useLocation();
@@ -9,7 +9,8 @@ export default function Layout() {
     { path: '/', icon: Home, label: 'الرئيسية' },
     { path: '/expenses', icon: Wallet, label: 'المصاريف' },
     { path: '/maintenance', icon: Wrench, label: 'الصيانة' },
-    { path: '/documents', icon: FileText, label: 'الوثائق' }, // <-- تفعيلها هنا
+    { path: '/fuel', icon: Fuel, label: 'الوقود' }, // <-- إضافة الوقود
+    { path: '/more', icon: Menu, label: 'المزيد' }, // صفحة تجمع الوثائق والإعدادات
   ];
 
   return (
