@@ -5,9 +5,9 @@ export const db = new Dexie('RafiqSayaratiDB');
 db.version(1).stores({
   vehicles: '++id, name, odometer, plate',
   expenses: '++id, vehicleId, type, amount, date, odometer',
-  maintenance: '++id, vehicleId, type, date, odometer',
-  documents: '++id, vehicleId, type, expiryDate',
-  fuel: '++id, vehicleId, date, odometer, liters, cost, fullTank' // <-- أضف هذا السطر هنا بالضبط
+  maintenance: '++id, vehicleId, service, date, odometer',
+  documents: '++id, vehicleId, type, endDate',
+  fuel: '++id, vehicleId, date, odometer, liters, cost, fullTank' // <-- أضف هذا السطر
 });
 
 export const initDB = async () => {
