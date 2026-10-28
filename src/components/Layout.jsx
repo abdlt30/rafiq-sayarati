@@ -8,8 +8,8 @@ export default function Layout() {
   const navItems = [
     { path: '/', icon: Home, label: 'الرئيسية' },
     { path: '/expenses', icon: Wallet, label: 'المصاريف' },
-    { path: '/maintenance', icon: Wrench, label: 'الصيانة' }, // تم تفعيلها
-    { path: '/documents', icon: FileText, label: 'الوثائق', disabled: true },
+    { path: '/maintenance', icon: Wrench, label: 'الصيانة' },
+    { path: '/documents', icon: FileText, label: 'الوثائق' }, // <-- تفعيلها هنا
   ];
 
   return (
@@ -25,8 +25,8 @@ export default function Layout() {
           return (
             <Link 
               key={item.path} 
-              to={item.disabled ? '#' : item.path}
-              className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isActive ? 'text-brand-500' : 'text-slate-500'} ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              to={item.path}
+              className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isActive ? 'text-brand-500' : 'text-slate-500'}`}
             >
               <Icon size={22} />
               <span className="text-[10px] font-medium mt-1">{item.label}</span>
