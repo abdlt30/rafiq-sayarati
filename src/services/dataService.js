@@ -41,3 +41,4 @@ export const deleteMaintenance = async (id) => {
 // ==========================================
 export const addDocument = async (data) => await db.documents.add(data);
 export const getDocumentsByVehicle = async (vehicleId) => await db.documents.where('vehicleId').equals(vehicleId).toArray();
+export const deleteDocument = async (id) => await db.documents.delete(id);
