@@ -42,3 +42,6 @@ export const deleteMaintenance = async (id) => {
 export const addDocument = async (data) => await db.documents.add(data);
 export const getDocumentsByVehicle = async (vehicleId) => await db.documents.where('vehicleId').equals(vehicleId).toArray();
 export const deleteDocument = async (id) => await db.documents.delete(id);
+export const addFuelLog = async (data) => await db.fuel.add(data);
+export const getFuelLogsByVehicle = async (vehicleId) => await db.fuel.where('vehicleId').equals(vehicleId).toArray();
+export const deleteFuelLog = async (id) => await db.fuel.delete(id);
