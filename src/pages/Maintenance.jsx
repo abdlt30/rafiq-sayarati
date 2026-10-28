@@ -154,36 +154,38 @@ export default function Maintenance() {
       ) : (
         <div className="space-y-3">
           {maintenanceList.map(item => (
-            <div key={item.id} className="bg-dark-800 p-4 rounded-2xl border border-dark-700 flex items-center justify-between group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-yellow-500/10">
-                  <Wrench size={22} className="text-yellow-500" />
-                </div>
-                <div>
-                  <p className="font-bold text-white">{item.service}</p>
-                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                    <span>{formatDate(item.date)}</span>
-                    <span>{item.odometer.toLocaleString()} KM</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="font-mono font-bold text-white">{item.cost.toLocaleString()}</p>
-                  <p className="text-[10px] text-slate-400">MAD</p>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => handleEditClick(item)} className="p-2 text-slate-500 hover:text-brand-500 transition">
-                    <Edit2 size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-500 hover:text-red-500 transition">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+  <div key={item.id} className="bg-dark-800 p-4 rounded-2xl border border-dark-700 flex items-center justify-between group">
+    <div className="flex items-center gap-4">
+      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-yellow-500/10">
+        <Wrench size={22} className="text-yellow-500" />
+      </div>
+      <div>
+        <p className="font-bold text-white">{item.service}</p>
+        <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+          <span>{formatDate(item.date)}</span>
+          <span>{item.odometer.toLocaleString()} KM</span>
         </div>
+      </div>
+    </div>
+    
+    <div className="flex items-center gap-3">
+      <div className="text-right">
+        <p className="font-mono font-bold text-white">{item.cost.toLocaleString()}</p>
+        <p className="text-[10px] text-slate-400">MAD</p>
+      </div>
+      {/* حاوية أزرار التحكم منفصلة ومرتبة */}
+      <div className="flex gap-1 border-l border-dark-700 pl-2 ml-1">
+        <button onClick={() => handleEditClick(item)} className="p-2 text-slate-500 hover:text-brand-500 transition">
+          <Edit2 size={16} />
+        </button>
+        <button onClick={() => setDeleteConfirmId(item.id)} className="p-2 text-slate-500 hover:text-red-500 transition">
+          <Trash2 size={16} />
+           </button>
+           </div>
+         </div>
+        </div>
+         ))}
+        </div> 
       )}
     </div>
   );
