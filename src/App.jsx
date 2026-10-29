@@ -15,7 +15,6 @@ export default function App() {
   const { currentCar, isLoading } = useContext(AppContext);
   const hasCar = currentCar !== null; 
 
-  // 1. شاشة التحميل (حتى نعرف هل هناك سيارة أم لا)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-dark-900 flex justify-center items-center text-brand-500 font-bold text-xl">
@@ -30,7 +29,6 @@ export default function App() {
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
 
-        {/* 2. التوجيه الذكي: إذا كان هناك سيارة، اذهب للوحة التحكم */}
         <Route path="/" element={hasCar ? <Layout><Dashboard /></Layout> : <Navigate to="/welcome" />} />
         <Route path="/fuel" element={<Layout><Fuel /></Layout>} />
         <Route path="/maintenance" element={<Layout><Maintenance /></Layout>} />
