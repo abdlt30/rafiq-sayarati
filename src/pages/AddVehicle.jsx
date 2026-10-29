@@ -9,15 +9,10 @@ export default function AddVehicle() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if(!car.make || !car.model || !car.currentOdometer) {
-      return alert('الرجاء تعبئة الحقول الأساسية');
-    }
+    if(!car.make || !car.model || !car.currentOdometer) return alert('الرجاء تعبئة الحقول الأساسية');
     
-    // حفظ فوري بدون await (لأنه لا يعلق)
-    addNewCar({
-      ...car,
-      currentOdometer: Number(car.currentOdometer)
-    });
+    // استدعاء الحفظ (بدون await لأنه سريع)
+    addNewCar({ ...car, currentOdometer: Number(car.currentOdometer) });
   };
 
   return (
