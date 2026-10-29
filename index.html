@@ -4,13 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>رفيق سيارتي | Rafiq Sayarati</title>
+    
     <!-- خط Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- إعدادات PWA -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- سكربت Tailwind CDN (للتجربة السريعة، لاحقاً سنستخدم vite) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -18,24 +23,12 @@
           extend: {
             fontFamily: { sans: ['Cairo', 'sans-serif'] },
             colors: {
-              brand: { 500: '#3b82f6', 600: '#2563eb' }, // أزرق أكثر عمقاً
-              dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }, // ألوان أعمق
-              accent: { 500: '#10b981' } // أخضر للنجاح
-
-                {
-  "name": "رفيق سيارتي",
-  "short_name": "رفيق سيارتي",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#3b82f6",
-  "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/3202/3202926.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+              brand: { 500: '#3b82f6', 600: '#2563eb' },
+              dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' },
+              accent: { 500: '#10b981' }
+            }
+          }
+        }
       }
     </script>
   </head>
