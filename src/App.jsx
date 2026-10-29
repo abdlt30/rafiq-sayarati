@@ -30,7 +30,7 @@ export default function App() {
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
 
-        {/* 2. التوجيه الذكي: إذا كان هناك سيارة، اذهب للوحة التحكم. إذا لا، اذهب للترحيب */}
+        {/* 2. التوجيه الذكي: إذا كان هناك سيارة، اذهب للوحة التحكم */}
         <Route path="/" element={hasCar ? <Layout><Dashboard /></Layout> : <Navigate to="/welcome" />} />
         <Route path="/fuel" element={<Layout><Fuel /></Layout>} />
         <Route path="/maintenance" element={<Layout><Maintenance /></Layout>} />
