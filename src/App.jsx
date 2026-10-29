@@ -12,11 +12,10 @@ import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle';
 
 export default function App() {
-  // نضيف isLoading هنا
   const { currentCar, isLoading } = useContext(AppContext);
   const hasCar = currentCar !== null; 
 
-  // 1. إذا كان التطبيق يحمل البيانات، اعرض شاشة تحميل (مثل شعار)
+  // 1. شاشة التحميل (حتى نعرف هل هناك سيارة أم لا)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-dark-900 flex justify-center items-center text-brand-500 font-bold text-xl">
@@ -31,7 +30,7 @@ export default function App() {
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
 
-        {/* 2. الآن لن يتخذ قرار التوجيه إلا بعد انتهاء التحميل */}
+        {/* 2. التوجيه الذكي: إذا كان هناك سيارة، اذهب للوحة التحكم. إذا لا، اذهب للترحيب */}
         <Route path="/" element={hasCar ? <Layout><Dashboard /></Layout> : <Navigate to="/welcome" />} />
         <Route path="/fuel" element={<Layout><Fuel /></Layout>} />
         <Route path="/maintenance" element={<Layout><Maintenance /></Layout>} />
