@@ -5,7 +5,6 @@ import Button from '../components/ui/Button';
 
 export default function AddVehicle() {
   const { addNewCar } = useContext(AppContext);
-  
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -16,19 +15,15 @@ export default function AddVehicle() {
       return alert('الرجاء تعبئة الحقول الأساسية');
     }
     
-    setIsSaving(true); // تعطيل الزر أثناء الحفظ
+    setIsSaving(true); 
     
-    try {
-      await addNewCar({
-        ...car,
-        currentOdometer: Number(car.currentOdometer)
-      });
-      // لا نستخدم navigate هنا. App.jsx سيتولى التوجيه فوراً.
-    } catch (error) {
-      console.error("حدث خطأ أثناء الحفظ:", error);
-      alert("حدث خطأ أثناء الحفظ. الرجاء المحاولة مرة أخرى.");
-      setIsSaving(false); // إعادة تفعيل الزر في حال الخطأ
-    }
+    // استدعاء دالة الحفظ
+    await addNewCar({
+      ...car,
+      currentOdometer: Number(car.currentOdometer)
+    });
+    
+    // ملاحظة: التطبيق سينتقل تلقائياً بفضل App.jsx
   };
 
   return (
@@ -52,4 +47,4 @@ export default function AddVehicle() {
       </form>
     </div>
   );
-}
+          }
