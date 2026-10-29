@@ -13,7 +13,7 @@ export default function AddVehicle() {
       return alert('الرجاء تعبئة الحقول الأساسية');
     }
     
-    // حفظ فوري بدون await (لأننا نستخدم LocalStorage)
+    // حفظ فوري
     addNewCar({
       ...car,
       currentOdometer: Number(car.currentOdometer)
@@ -39,4 +39,4 @@ export default function AddVehicle() {
       </form>
     </div>
   );
-}
+      }
