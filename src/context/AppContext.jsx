@@ -4,41 +4,40 @@ import { db } from '../db/database';
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  // نبدأ بـ null دائماً
   const [currentCar, setCurrentCar] = useState(null);
   const [isDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. تحميل البيانات عند فتح التطبيق
   useEffect(() => {
-    const loadData = async () => {
+    const loadCar = async () => {
       try {
+        // قراءة السيارات من قاعدة البيانات
         const cars = await db.cars.toArray();
-        if (cars.length > 0) {
+        if (cars && cars.length > 0) {
           setCurrentCar(cars[0]);
         }
       } catch (error) {
-        console.error("Error loading data:", error);
+        console.error("Error loading car:", error);
+        // إذا فشلت قاعدة البيانات، جرب الذاكرة المحلية
+        const localCar = localStorage.getItem('savedCar');
+        if (localCar) setCurrentCar(JSON.parse(localCar));
       } finally {
         setIsLoading(false);
       }
     };
-    loadData();
+    loadCar();
   }, []);
 
-  // 2. دالة الحفظ المعمارية
   const addNewCar = async (carData) => {
     try {
-      // الحفظ في قاعدة البيانات
       const id = await db.cars.add(carData);
       const newCar = { ...carData, id };
-      
-      // التحديث الفوري للحالة (هذا ما يحرك الموجه)
       setCurrentCar(newCar); 
-      
+      localStorage.setItem('savedCar', JSON.stringify(newCar));
       return newCar;
     } catch (error) {
-      console.error("Error adding car:", error);
-      // في حال فشل قاعدة البيانات، نحفظ في الذاكرة المحلية كخطة بديلة
+      console.error("Error adding car, using fallback:", error);
       const fallbackCar = { ...carData, id: Date.now() };
       setCurrentCar(fallbackCar);
       localStorage.setItem('savedCar', JSON.stringify(fallbackCar));
