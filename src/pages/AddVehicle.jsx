@@ -5,7 +5,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 export default function AddVehicle() {
-  const { addNewCar } = useContext(AppContext);
+  const { addNewCar, setCurrentCar } = useContext(AppContext); // أضفنا setCurrentCar
   const navigate = useNavigate();
   
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
@@ -16,13 +16,20 @@ export default function AddVehicle() {
       return alert('الرجاء تعبئة الحقول الأساسية (الماركة، الموديل، العداد)');
     }
     
-    // حفظ السيارة في قاعدة البيانات
-    await addNewCar({
+    // 1. حفظ السيارة في قاعدة البيانات
+    const newCarData = {
       ...car,
       currentOdometer: Number(car.currentOdometer)
-    });
+    };
     
-    // الانتقال إلى لوحة التحكم
+    // حفظ في الـ DB
+    await addNewCar(newCarData);
+    
+    // 2. التحديث اليدوي (Force Update) لضمان أن التطبيق يعلم بوجود السيارة
+    // هذا السطر هو "المفتاح السحري" لحل المشكلة
+    setCurrentCar(newCarData); 
+
+    // 3. الانتقال إلى لوحة التحكم
     navigate('/');
   };
 
