@@ -8,21 +8,17 @@ export const AppProvider = ({ children }) => {
   const [isDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. عند فتح التطبيق: نجلب السيارة من Dexie، أو من LocalStorage
+  // 1. تحميل البيانات عند بدء التطبيق
   useEffect(() => {
     const loadCar = async () => {
       try {
-        // محاولة الجلب من قاعدة البيانات
         const cars = await db.cars.toArray();
         if (cars.length > 0) {
           setCurrentCar(cars[0]);
-        } else {
-          // إذا كانت فارغة، جرب LocalStorage
-          const localCar = localStorage.getItem('savedCar');
-          if (localCar) setCurrentCar(JSON.parse(localCar));
         }
       } catch (error) {
-        console.error("Dexie Error, using LocalStorage:", error);
+        console.error("خطأ في تحميل السيارة من قاعدة البيانات:", error);
+        // خطة بديلة: جلب من الذاكرة المحلية إذا فشلت قاعدة البيانات
         const localCar = localStorage.getItem('savedCar');
         if (localCar) setCurrentCar(JSON.parse(localCar));
       } finally {
@@ -32,23 +28,23 @@ export const AppProvider = ({ children }) => {
     loadCar();
   }, []);
 
-  // 2. دالة الحفظ الذكية
+  // 2. دالة الحفظ (مصممة لعدم التعليق)
   const addNewCar = async (carData) => {
     try {
-      // أ. محاولة الحفظ في Dexie
+      // محاولة الحفظ في قاعدة البيانات
       const id = await db.cars.add(carData);
       const newCar = { ...carData, id };
       
-      // ب. تحديث الحالة (هذا ما يمنع التعليق)
+      // تحديث الحالة (هذا سينقل المستخدم فوراً)
       setCurrentCar(newCar); 
       
-      // ج. حفظ نسخة احتياطية في LocalStorage (لضمان عدم ضياع البيانات)
+      // حفظ نسخة احتياطية في الذاكرة المحلية
       localStorage.setItem('savedCar', JSON.stringify(newCar));
       
       return newCar;
     } catch (error) {
-      console.error("Error saving to Dexie, using LocalStorage:", error);
-      // إذا فشل Dexie، نحفظ في LocalStorage مباشرة
+      console.error("فشل الحفظ في قاعدة البيانات، جاري الحفظ في الذاكرة:", error);
+      // خطة بديلة: إذا فشلت Dexie، نحفظ في LocalStorage
       const fallbackCar = { ...carData, id: Date.now() };
       setCurrentCar(fallbackCar);
       localStorage.setItem('savedCar', JSON.stringify(fallbackCar));
