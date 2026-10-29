@@ -1,5 +1,4 @@
 import { createContext, useState, useEffect } from 'react';
-import { db } from '../db/database';
 
 export const AppContext = createContext();
 
@@ -10,15 +9,17 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const loadCar = () => {
       try {
-        // 1. الأولوية القصوى للقراءة من الذاكرة المحلية (LocalStorage)
+        // مسح أي بيانات قديمة لتجنب التداخل (للتشخيص فقط)
+        // localStorage.clear(); // (أزل التعليق إذا أردت البدء من الصفر دائماً)
+        
         const localCar = localStorage.getItem('savedCar');
         if (localCar) {
           setCurrentCar(JSON.parse(localCar));
         }
       } catch (error) {
-        console.error("خطأ في قراءة الذاكرة:", error);
+        console.error("Error loading car:", error);
       } finally {
-        setIsLoading(false); // انتهى التحميل فوراً
+        setIsLoading(false);
       }
     };
     loadCar();
@@ -28,19 +29,15 @@ export const AppProvider = ({ children }) => {
     try {
       const newCar = { ...carData, id: Date.now() };
       
-      // 1. الحفظ الفوري في الذاكرة (يمنع التعليق)
+      // الحفظ الفوري في الذاكرة
       localStorage.setItem('savedCar', JSON.stringify(newCar));
       
-      // 2. تحديث الحالة (هذا ينقل المستخدم فوراً إلى لوحة التحكم)
+      // تحديث الحالة (هذا سينقل المستخدم للوحة التحكم)
       setCurrentCar(newCar);
-
-      // 3. محاولة الحفظ في قاعدة البيانات (بدون انتظار، في الخلفية)
-      db.cars.add(carData).catch(err => {
-        console.warn("لم يتم الحفظ في IndexedDB، لكن البيانات آمنة في LocalStorage.");
-      });
       
     } catch (error) {
-      console.error("خطأ كارثي في الحفظ:", error);
+      console.error("Critical error saving car:", error);
+      alert("حدث خطأ أثناء الحفظ: " + error.message);
     }
   };
 
