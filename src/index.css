@@ -2,11 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-dark-900 text-slate-200 font-sans;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* إجبار الصفحة بالكامل على الوضع الداكن */
+html, body, #root {
+  background-color: #0f172a; /* نفس لون dark-900 */
+  color: #e2e8f0; /* لون النص الفاتح */
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Cairo', sans-serif;
   }
-}
