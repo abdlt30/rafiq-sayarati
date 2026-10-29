@@ -5,22 +5,30 @@ import Button from '../components/ui/Button';
 
 export default function AddVehicle() {
   const { addNewCar } = useContext(AppContext);
+  
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if(!car.make || !car.model || !car.currentOdometer) {
       return alert('الرجاء تعبئة الحقول الأساسية');
     }
     
-    // حفظ السيارة
-    await addNewCar({
-      ...car,
-      currentOdometer: Number(car.currentOdometer)
-    });
-
-    // ملاحظة: لا نستخدم navigate هنا. App.jsx سيتكفل بالتحويل فوراً
-    // بمجرد أن تتغير حالة currentCar في AppContext.
+    setIsSaving(true); // تعطيل الزر أثناء الحفظ
+    
+    try {
+      await addNewCar({
+        ...car,
+        currentOdometer: Number(car.currentOdometer)
+      });
+      // لا نستخدم navigate هنا. App.jsx سيتولى التوجيه فوراً.
+    } catch (error) {
+      console.error("حدث خطأ أثناء الحفظ:", error);
+      alert("حدث خطأ أثناء الحفظ. الرجاء المحاولة مرة أخرى.");
+      setIsSaving(false); // إعادة تفعيل الزر في حال الخطأ
+    }
   };
 
   return (
@@ -37,7 +45,9 @@ export default function AddVehicle() {
         <Input label="عداد السيارة الحالي (KM)" type="number" value={car.currentOdometer} onChange={(e) => setCar({...car, currentOdometer: e.target.value})} required />
         
         <div className="mt-10">
-          <Button type="submit">حفظ ومتابعة</Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? 'جاري الحفظ...' : 'حفظ ومتابعة'}
+          </Button>
         </div>
       </form>
     </div>
