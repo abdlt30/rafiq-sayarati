@@ -8,46 +8,48 @@ export const AppProvider = ({ children }) => {
   const [isDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. تحميل البيانات عند فتح التطبيق
   useEffect(() => {
     const loadCar = async () => {
       try {
-        // الأولوية القصوى: اقرأ من الذاكرة المحلية (أسرع ولا يعلق)
+        // 1. محاولة القراءة من الذاكرة المحلية
         const localCar = localStorage.getItem('savedCar');
         if (localCar) {
-          setCurrentCar(JSON.parse(localCar));
-          setIsLoading(false);
-          return; // انتهينا، لا داعي لقراءة قاعدة البيانات
-        }
-
-        // إذا لم توجد في الذاكرة، جرب قاعدة البيانات
-        const cars = await db.cars.toArray();
-        if (cars.length > 0) {
-          setCurrentCar(cars[0]);
+          try {
+            setCurrentCar(JSON.parse(localCar));
+          } catch (e) {
+            console.error("خطأ في قراءة البيانات المحلية:", e);
+            localStorage.removeItem('savedCar'); // مسح البيانات التالفة
+          }
+        } else {
+          // 2. إذا لم توجد، اقرأ من قاعدة البيانات
+          const cars = await db.cars.toArray();
+          if (cars && cars.length > 0) {
+            setCurrentCar(cars[0]);
+          }
         }
       } catch (error) {
-        console.error("Error loading car:", error);
+        console.error("خطأ في تحميل السيارة:", error);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // إنهاء التحميل في كل الأحوال
       }
     };
     loadCar();
   }, []);
 
-  // 2. دالة الحفظ (مصممة لعدم التعليق)
   const addNewCar = async (carData) => {
-    // الخطوة أ: الحفظ الفوري في الذاكرة المحلية (هذا يمنع التعليق)
-    const newCar = { ...carData, id: Date.now() };
-    localStorage.setItem('savedCar', JSON.stringify(newCar));
-    
-    // الخطوة ب: تحديث الحالة (هذا ينقل المستخدم فوراً للوحة التحكم)
-    setCurrentCar(newCar);
-
-    // الخطوة ج: محاولة الحفظ في قاعدة البيانات (في الخلفية بدون انتظار)
     try {
-      await db.cars.add(carData);
+      const newCar = { ...carData, id: Date.now() };
+      // 1. الحفظ الفوري (يمنع التعليق)
+      localStorage.setItem('savedCar', JSON.stringify(newCar));
+      setCurrentCar(newCar);
+
+      // 2. الحفظ في قاعدة البيانات (بدون انتظار)
+      db.cars.add(carData).catch(err => console.warn("فشل الحفظ في DB:", err));
+      
+      return newCar;
     } catch (error) {
-      console.warn("لم يتم الحفظ في IndexedDB (قد يكون المتصفح خفياً), لكن البيانات آمنة في LocalStorage.");
+      console.error("خطأ كارثي أثناء الحفظ:", error);
+      alert("حدث خطأ أثناء الحفظ. يرجى المحاولة.");
     }
   };
 
