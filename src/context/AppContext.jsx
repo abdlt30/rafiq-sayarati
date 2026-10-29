@@ -6,9 +6,9 @@ export const AppContext = createContext();
 export const AppProvider = ({ children }) => {
   const [currentCar, setCurrentCar] = useState(null);
   const [isDarkMode] = useState(true);
-  // حالة جديدة: هل التطبيق لا يزال يحمل البيانات؟
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
 
+  // جلب السيارة عند فتح التطبيق
   useEffect(() => {
     const loadCar = async () => {
       try {
@@ -19,17 +19,18 @@ export const AppProvider = ({ children }) => {
       } catch (error) {
         console.error("Error loading car:", error);
       } finally {
-        setIsLoading(false); // انتهى التحميل
+        setIsLoading(false);
       }
     };
     loadCar();
   }, []);
 
+  // دالة حفظ السيارة
   const addNewCar = async (carData) => {
     try {
       const id = await db.cars.add(carData);
       const newCar = { ...carData, id };
-      setCurrentCar(newCar); // تحديث فوري
+      setCurrentCar(newCar); // تحديث الحالة فوراً
       return newCar;
     } catch (error) {
       console.error("Error adding car:", error);
