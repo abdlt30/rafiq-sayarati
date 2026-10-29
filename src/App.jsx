@@ -3,7 +3,6 @@ import { useContext } from 'react';
 import { AppContext } from './context/AppContext';
 import Layout from './components/layout/Layout';
 
-// استدعاء الصفحات
 import Dashboard from './pages/Dashboard';
 import Fuel from './pages/Fuel';
 import Maintenance from './pages/Maintenance';
@@ -13,17 +12,26 @@ import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle';
 
 export default function App() {
-  const { currentCar } = useContext(AppContext);
+  // نضيف isLoading هنا
+  const { currentCar, isLoading } = useContext(AppContext);
   const hasCar = currentCar !== null; 
+
+  // 1. إذا كان التطبيق يحمل البيانات، اعرض شاشة تحميل (مثل شعار)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-dark-900 flex justify-center items-center text-brand-500 font-bold text-xl">
+        جاري التحميل...
+      </div>
+    );
+  }
 
   return (
     <HashRouter>
       <Routes>
-        {/* صفحة الترحيب (بدون Layout) */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
 
-        {/* باقي الصفحات (داخل الـ Layout) */}
+        {/* 2. الآن لن يتخذ قرار التوجيه إلا بعد انتهاء التحميل */}
         <Route path="/" element={hasCar ? <Layout><Dashboard /></Layout> : <Navigate to="/welcome" />} />
         <Route path="/fuel" element={<Layout><Fuel /></Layout>} />
         <Route path="/maintenance" element={<Layout><Maintenance /></Layout>} />
