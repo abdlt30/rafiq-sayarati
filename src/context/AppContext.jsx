@@ -8,43 +8,37 @@ export const AppProvider = ({ children }) => {
   const [isDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. تحميل البيانات عند بدء التطبيق
+  // 1. تحميل البيانات عند فتح التطبيق
   useEffect(() => {
-    const loadCar = async () => {
+    const loadData = async () => {
       try {
         const cars = await db.cars.toArray();
         if (cars.length > 0) {
           setCurrentCar(cars[0]);
         }
       } catch (error) {
-        console.error("خطأ في تحميل السيارة من قاعدة البيانات:", error);
-        // خطة بديلة: جلب من الذاكرة المحلية إذا فشلت قاعدة البيانات
-        const localCar = localStorage.getItem('savedCar');
-        if (localCar) setCurrentCar(JSON.parse(localCar));
+        console.error("Error loading data:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    loadCar();
+    loadData();
   }, []);
 
-  // 2. دالة الحفظ (مصممة لعدم التعليق)
+  // 2. دالة الحفظ المعمارية
   const addNewCar = async (carData) => {
     try {
-      // محاولة الحفظ في قاعدة البيانات
+      // الحفظ في قاعدة البيانات
       const id = await db.cars.add(carData);
       const newCar = { ...carData, id };
       
-      // تحديث الحالة (هذا سينقل المستخدم فوراً)
+      // التحديث الفوري للحالة (هذا ما يحرك الموجه)
       setCurrentCar(newCar); 
-      
-      // حفظ نسخة احتياطية في الذاكرة المحلية
-      localStorage.setItem('savedCar', JSON.stringify(newCar));
       
       return newCar;
     } catch (error) {
-      console.error("فشل الحفظ في قاعدة البيانات، جاري الحفظ في الذاكرة:", error);
-      // خطة بديلة: إذا فشلت Dexie، نحفظ في LocalStorage
+      console.error("Error adding car:", error);
+      // في حال فشل قاعدة البيانات، نحفظ في الذاكرة المحلية كخطة بديلة
       const fallbackCar = { ...carData, id: Date.now() };
       setCurrentCar(fallbackCar);
       localStorage.setItem('savedCar', JSON.stringify(fallbackCar));
