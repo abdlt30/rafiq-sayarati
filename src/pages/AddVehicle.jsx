@@ -1,14 +1,13 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 export default function AddVehicle() {
-  const { addNewCar, setCurrentCar } = useContext(AppContext); // أضفنا setCurrentCar
-  const navigate = useNavigate();
+  const { addNewCar } = useContext(AppContext);
   
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,21 +15,16 @@ export default function AddVehicle() {
       return alert('الرجاء تعبئة الحقول الأساسية (الماركة، الموديل، العداد)');
     }
     
-    // 1. حفظ السيارة في قاعدة البيانات
-    const newCarData = {
+    setIsSaving(true); // تعطيل الزر أثناء الحفظ
+    
+    // حفظ السيارة في قاعدة البيانات
+    await addNewCar({
       ...car,
       currentOdometer: Number(car.currentOdometer)
-    };
+    });
     
-    // حفظ في الـ DB
-    await addNewCar(newCarData);
-    
-    // 2. التحديث اليدوي (Force Update) لضمان أن التطبيق يعلم بوجود السيارة
-    // هذا السطر هو "المفتاح السحري" لحل المشكلة
-    setCurrentCar(newCarData); 
-
-    // 3. الانتقال إلى لوحة التحكم
-    navigate('/');
+    // لا نستخدم navigate هنا! 
+    // App.jsx سيكتشف أن currentCar أصبح له قيمة وسينقلك تلقائياً للوحة التحكم.
   };
 
   return (
@@ -47,9 +41,11 @@ export default function AddVehicle() {
         <Input label="عداد السيارة الحالي (KM)" type="number" value={car.currentOdometer} onChange={(e) => setCar({...car, currentOdometer: e.target.value})} required />
         
         <div className="mt-10">
-          <Button type="submit">حفظ ومتابعة</Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? 'جاري الحفظ...' : 'حفظ ومتابعة'}
+          </Button>
         </div>
       </form>
     </div>
   );
-}
+    }
