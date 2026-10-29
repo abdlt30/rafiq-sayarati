@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { AppContext } from './context/AppContext';
 import Layout from './components/layout/Layout';
 
@@ -19,6 +19,26 @@ const ProtectedRoute = ({ children }) => {
 
 export default function App() {
   const { isLoading } = useContext(AppContext);
+  const [error, setError] = useState(null);
+
+  // التقاط أي خطأ وعرضه على الشاشة
+  useEffect(() => {
+    const handleError = (event) => {
+      setError(event.error ? event.error.message : "حدث خطأ غير معروف في التطبيق");
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-red-900 text-white p-6 flex flex-col justify-center items-center text-center">
+        <h1 className="text-2xl font-bold mb-4">عذراً، حدث خطأ!</h1>
+        <p className="bg-black/50 p-4 rounded text-sm">{error}</p>
+        <button onClick={() => window.location.reload()} className="mt-6 bg-white text-red-900 px-6 py-2 rounded font-bold">إعادة المحاولة</button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
