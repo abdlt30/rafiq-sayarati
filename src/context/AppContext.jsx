@@ -5,56 +5,47 @@ export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const [currentCar, setCurrentCar] = useState(null);
-  const [isDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadCar = async () => {
+    const loadCar = () => {
       try {
-        // 1. محاولة القراءة من الذاكرة المحلية
+        // 1. الأولوية القصوى للقراءة من الذاكرة المحلية (LocalStorage)
         const localCar = localStorage.getItem('savedCar');
         if (localCar) {
-          try {
-            setCurrentCar(JSON.parse(localCar));
-          } catch (e) {
-            console.error("خطأ في قراءة البيانات المحلية:", e);
-            localStorage.removeItem('savedCar'); // مسح البيانات التالفة
-          }
-        } else {
-          // 2. إذا لم توجد، اقرأ من قاعدة البيانات
-          const cars = await db.cars.toArray();
-          if (cars && cars.length > 0) {
-            setCurrentCar(cars[0]);
-          }
+          setCurrentCar(JSON.parse(localCar));
         }
       } catch (error) {
-        console.error("خطأ في تحميل السيارة:", error);
+        console.error("خطأ في قراءة الذاكرة:", error);
       } finally {
-        setIsLoading(false); // إنهاء التحميل في كل الأحوال
+        setIsLoading(false); // انتهى التحميل فوراً
       }
     };
     loadCar();
   }, []);
 
-  const addNewCar = async (carData) => {
+  const addNewCar = (carData) => {
     try {
       const newCar = { ...carData, id: Date.now() };
-      // 1. الحفظ الفوري (يمنع التعليق)
+      
+      // 1. الحفظ الفوري في الذاكرة (يمنع التعليق)
       localStorage.setItem('savedCar', JSON.stringify(newCar));
+      
+      // 2. تحديث الحالة (هذا ينقل المستخدم فوراً إلى لوحة التحكم)
       setCurrentCar(newCar);
 
-      // 2. الحفظ في قاعدة البيانات (بدون انتظار)
-      db.cars.add(carData).catch(err => console.warn("فشل الحفظ في DB:", err));
+      // 3. محاولة الحفظ في قاعدة البيانات (بدون انتظار، في الخلفية)
+      db.cars.add(carData).catch(err => {
+        console.warn("لم يتم الحفظ في IndexedDB، لكن البيانات آمنة في LocalStorage.");
+      });
       
-      return newCar;
     } catch (error) {
-      console.error("خطأ كارثي أثناء الحفظ:", error);
-      alert("حدث خطأ أثناء الحفظ. يرجى المحاولة.");
+      console.error("خطأ كارثي في الحفظ:", error);
     }
   };
 
   return (
-    <AppContext.Provider value={{ currentCar, addNewCar, isDarkMode, isLoading }}>
+    <AppContext.Provider value={{ currentCar, addNewCar, isLoading }}>
       {children}
     </AppContext.Provider>
   );
