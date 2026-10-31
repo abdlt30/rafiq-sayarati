@@ -12,8 +12,7 @@ export default function AddVehicle() {
     if(!car.make || !car.model || !car.currentOdometer) {
       return alert('الرجاء تعبئة الحقول الأساسية');
     }
-    
-    // حفظ فوري
+    // الحفظ يتم فوراً وبدون await
     addNewCar({
       ...car,
       currentOdometer: Number(car.currentOdometer)
@@ -39,4 +38,4 @@ export default function AddVehicle() {
       </form>
     </div>
   );
-      }
+}
