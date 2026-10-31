@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
+import { db } from '../db/database';
 
 export const AppContext = createContext();
 
@@ -7,38 +8,28 @@ export const AppProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadCar = () => {
-      try {
-        // مسح أي بيانات قديمة لتجنب التداخل (للتشخيص فقط)
-        // localStorage.clear(); // (أزل التعليق إذا أردت البدء من الصفر دائماً)
-        
-        const localCar = localStorage.getItem('savedCar');
-        if (localCar) {
-          setCurrentCar(JSON.parse(localCar));
-        }
-      } catch (error) {
-        console.error("Error loading car:", error);
-      } finally {
-        setIsLoading(false);
+    const init = () => {
+      // نقرأ من LocalStorage أولاً (سريع ولا يعلق)
+      const savedCar = localStorage.getItem('rafiq_car');
+      if (savedCar) {
+        setCurrentCar(JSON.parse(savedCar));
       }
+      setIsLoading(false);
     };
-    loadCar();
+    init();
   }, []);
 
   const addNewCar = (carData) => {
-    try {
-      const newCar = { ...carData, id: Date.now() };
-      
-      // الحفظ الفوري في الذاكرة
-      localStorage.setItem('savedCar', JSON.stringify(newCar));
-      
-      // تحديث الحالة (هذا سينقل المستخدم للوحة التحكم)
-      setCurrentCar(newCar);
-      
-    } catch (error) {
-      console.error("Critical error saving car:", error);
-      alert("حدث خطأ أثناء الحفظ: " + error.message);
-    }
+    const newCar = { ...carData, id: Date.now() };
+    
+    // 1. الحفظ الفوري في الذاكرة المحلية (يمنع التعليق)
+    localStorage.setItem('rafiq_car', JSON.stringify(newCar));
+    
+    // 2. تحديث الحالة (هذا ينقل المستخدم للوحة التحكم فوراً)
+    setCurrentCar(newCar);
+
+    // 3. الحفظ في Dexie في الخلفية (لمنع التعليق)
+    db.cars.add(newCar).catch(err => console.warn("DB Save failed:", err));
   };
 
   return (
