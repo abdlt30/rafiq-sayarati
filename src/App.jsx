@@ -12,13 +12,12 @@ import More from './pages/More';
 
 const ProtectedRoute = ({ children }) => {
   const { currentCar } = useContext(AppContext);
-  // إذا لم تكن هناك سيارة، اذهب إلى صفحة الترحيب
   if (!currentCar) return <Navigate to="/welcome" replace />;
   return children;
 };
 
 export default function App() {
-  const { isLoading } = useContext(AppContext);
+  const { isLoading, currentCar } = useContext(AppContext);
 
   if (isLoading) {
     return <div className="min-h-screen bg-dark-900 flex justify-center items-center text-brand-500">جاري التحميل...</div>;
@@ -40,4 +39,4 @@ export default function App() {
       </Routes>
     </HashRouter>
   );
-    }
+}
