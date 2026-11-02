@@ -1,11 +1,20 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // استدعاء useNavigate
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 export default function AddVehicle() {
-  const { addNewCar } = useContext(AppContext);
+  const { currentCar, addNewCar } = useContext(AppContext);
+  const navigate = useNavigate(); // استخدام useNavigate
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
+
+  // مراقبة تغير الحالة (currentCar) للتوجيه
+  useEffect(() => {
+    if (currentCar) {
+      navigate('/', { replace: true }); // الانتقال إلى لوحة التحكم
+    }
+  }, [currentCar, navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -13,7 +22,7 @@ export default function AddVehicle() {
       return alert('الرجاء تعبئة الحقول الأساسية');
     }
     
-    // حفظ وتوجيه
+    // حفظ السيارة (سيؤدي إلى تغيير currentCar، مما يشغل useEffect)
     addNewCar({
       ...car,
       currentOdometer: Number(car.currentOdometer)
