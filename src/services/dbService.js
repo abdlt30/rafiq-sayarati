@@ -1,6 +1,5 @@
 const FUEL_KEY = 'fuel_records';
 const EXPENSES_KEY = 'expenses_records';
-const MAINTENANCE_KEY = 'maintenance_records';
 
 export const dbService = {
   // --- الوقود ---
