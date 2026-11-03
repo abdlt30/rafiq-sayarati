@@ -16,27 +16,100 @@
   --success: #22c55e;
   --warning: #f59e0b;
   --danger: #ef4444;
-}
-
-html[data-theme="light"] {
-  --bg: #f2f5fb;
-  --surface: #ffffff;
-  --surface-2: #f7f9fe;
-  --surface-3: #eef3fc;
-  --text: #0d1526;
-  --text-muted: #6b7a99;
-  --border: #e0e7f4;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 30px rgba(0,0,0,.45);
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Cairo', sans-serif; /* نحافظ على خطنا */
-  transition: background-color 0.3s, color 0.3s;
+  font-family: 'Cairo', sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* تخصيص بطاقاتنا الحالية لتتوافق مع الألوان الجديدة */
-.bg-dark-900 { background-color: var(--bg) !important; }
-.bg-dark-800 { background-color: var(--surface) !important; border-color: var(--border) !important; }
-.text-white { color: var(--text) !important; }
-.text-slate-400 { color: var(--text-muted) !important; }
+/* ===== COMPONENTS ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.3);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), #4d84ff);
+  color: #fff;
+  padding: 13px 20px;
+  border-radius: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-ghost {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 13px 20px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, .13);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, .3);
+  padding: 13px 20px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+/* بطاقة السيارة (Hero Card) */
+.hero-card {
+  background: radial-gradient(120% 120% at 90% 0%, rgba(47,107,255,.35) 0%, transparent 55%), linear-gradient(135deg, #0f1a33 0%, #111c36 45%, #0b1225 100%);
+  border: 1px solid rgba(47,107,255,.28);
+  border-radius: 26px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  inset-inline-end: -40px;
+  top: -40px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47,107,255,.3), transparent 70%);
+}
+
+/* القوائم (List Rows) */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 13px 14px;
+  width: 100%;
+  text-align: start;
+  transition: 0.2s;
+}
+.row:active {
+  background: var(--surface-2);
+}
+
+.row-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
