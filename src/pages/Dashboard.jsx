@@ -4,9 +4,9 @@ import { dbService } from '../services/dbService';
 import CarCard from '../components/cars/CarCard';
 import Card from '../components/ui/Card';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { Link } from 'react-router-dom';
 
-// ألوان الرسم البياني (أزرق، أصفر، أخضر)
-const COLORS = ['#3b82f6', '#f59e0b', '#10b981']; 
+const COLORS = ['#3b82f6', '#f59e0b', '#10b981']; // أزرق، أصفر، أخضر
 
 export default function Dashboard() {
   const { currentCar } = useContext(AppContext);
@@ -14,12 +14,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (currentCar) {
-      setTotals({
-        all: dbService.getTotalAllExpenses(),
-        fuel: dbService.getTotalFuel(),
-        maintenance: dbService.getTotalMaintenance(),
-        expenses: dbService.getTotalExpenses()
-      });
+      // جلب الإجماليات دفعة واحدة
+      const data = dbService.getTotals(currentCar.id);
+      setTotals(data);
     }
   }, [currentCar]);
 
@@ -30,7 +27,7 @@ export default function Dashboard() {
     { name: 'وقود', value: totals.fuel },
     { name: 'صيانة', value: totals.maintenance },
     { name: 'أخرى', value: totals.expenses },
-  ].filter(item => item.value > 0); 
+  ].filter(item => item.value > 0);
 
   return (
     <div className="space-y-6 pb-20">
@@ -44,6 +41,7 @@ export default function Dashboard() {
         
         <Card className="p-4 flex flex-col justify-between h-24">
           <span className="text-slate-400 text-xs">تكلفة الكيلومتر</span>
+          {/* ملاحظة: سنقوم بتفعيل الحساب الدقيق في خطوة لاحقة */}
           <span className="text-xl font-bold text-white">0.07 <span className="text-xs text-slate-400">MAD</span></span>
         </Card>
       </div>
@@ -82,14 +80,14 @@ export default function Dashboard() {
 
       <h3 className="text-white font-bold text-lg mt-4">إجراءات سريعة</h3>
       <div className="grid grid-cols-2 gap-4">
-        <button className="bg-dark-800 border border-dark-700 p-4 rounded-xl flex items-center justify-between hover:bg-dark-700 transition-colors">
+        <Link to="/fuel" className="bg-dark-800 border border-dark-700 p-4 rounded-xl flex items-center justify-between hover:bg-dark-700 transition-colors">
           <span className="text-slate-300">إضافة وقود</span>
           <span className="text-brand-500 bg-brand-500/10 p-2 rounded-lg">⛽</span>
-        </button>
-        <button className="bg-dark-800 border border-dark-700 p-4 rounded-xl flex items-center justify-between hover:bg-dark-700 transition-colors">
+        </Link>
+        <Link to="/maintenance" className="bg-dark-800 border border-dark-700 p-4 rounded-xl flex items-center justify-between hover:bg-dark-700 transition-colors">
           <span className="text-slate-300">إضافة صيانة</span>
           <span className="text-yellow-500 bg-yellow-500/10 p-2 rounded-lg">🔧</span>
-        </button>
+        </Link>
       </div>
     </div>
   );
