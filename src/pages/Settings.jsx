@@ -68,6 +68,10 @@ export default function Settings() {
           <button onClick={exportData} className="w-full bg-brand-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-brand-600 transition">
             <Download size={18} /> تصدير البيانات (JSON)
           </button>
+          // داخل قسم النسخ الاحتياطي:
+          <button onClick={() => window.print()} className="w-full mt-2 bg-dark-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-dark-600 transition">
+           <Printer size={18} /> طباعة التقرير (PDF)
+        </button>
         </div>
 
         {/* منطقة الخطر */}
