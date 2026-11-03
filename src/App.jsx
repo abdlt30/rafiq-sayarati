@@ -11,6 +11,8 @@ import More from './pages/More';
 import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle';
 import Settings from './pages/Settings';
+import Documents from './pages/Documents'; // مسار جديد
+import Reminders from './pages/Reminders'; // مسار جديد
 
 const ProtectedRoute = ({ children }) => {
   const { currentCar } = useContext(AppContext);
@@ -37,6 +39,10 @@ export default function App() {
         <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
         <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+        
+        {/* المسارات الجديدة */}
+        <Route path="/documents" element={<ProtectedRoute><Layout><Documents /></Layout></ProtectedRoute>} />
+        <Route path="/reminders" element={<ProtectedRoute><Layout><Reminders /></Layout></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
