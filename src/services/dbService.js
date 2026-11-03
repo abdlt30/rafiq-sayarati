@@ -1,25 +1,20 @@
 const FUEL_KEY = 'fuel_records';
 const EXPENSES_KEY = 'expenses_records';
 const MAINTENANCE_KEY = 'maintenance_records';
+const DOCUMENTS_KEY = 'documents_records';
+const REMINDERS_KEY = 'reminders_records';
 
 export const dbService = {
   // --- الوقود ---
-  getFuelRecords: () => JSON.parse(localStorage.getItem(FUEL_KEY)) || [],
-  addFuelRecord: (record) => {
-    const records = dbService.getFuelRecords();
+  getFuel: () => JSON.parse(localStorage.getItem(FUEL_KEY)) || [],
+  addFuel: (record) => {
+    const records = dbService.getFuel();
     const newRecord = { ...record, id: Date.now() };
     localStorage.setItem(FUEL_KEY, JSON.stringify([newRecord, ...records]));
     return newRecord;
   },
-  deleteFuelRecord: (id) => {
-    const records = dbService.getFuelRecords();
-    const updated = records.filter(r => r.id !== id);
-    localStorage.setItem(FUEL_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateFuelRecord: (id, updatedRecord) => {
-    const records = dbService.getFuelRecords();
-    const updated = records.map(r => r.id === id ? { ...r, ...updatedRecord } : r);
+  deleteFuel: (id) => {
+    const updated = dbService.getFuel().filter(r => r.id !== id);
     localStorage.setItem(FUEL_KEY, JSON.stringify(updated));
     return updated;
   },
@@ -33,14 +28,7 @@ export const dbService = {
     return newRecord;
   },
   deleteExpense: (id) => {
-    const records = dbService.getExpenses();
-    const updated = records.filter(r => r.id !== id);
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateExpense: (id, updatedRecord) => {
-    const records = dbService.getExpenses();
-    const updated = records.map(r => r.id === id ? { ...r, ...updatedRecord } : r);
+    const updated = dbService.getExpenses().filter(r => r.id !== id);
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(updated));
     return updated;
   },
@@ -54,35 +42,48 @@ export const dbService = {
     return newRecord;
   },
   deleteMaintenance: (id) => {
-    const records = dbService.getMaintenance();
-    const updated = records.filter(r => r.id !== id);
-    localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateMaintenance: (id, updatedRecord) => {
-    const records = dbService.getMaintenance();
-    const updated = records.map(r => r.id === id ? { ...r, ...updatedRecord } : r);
+    const updated = dbService.getMaintenance().filter(r => r.id !== id);
     localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(updated));
     return updated;
   },
 
-  // --- الإحصائيات (محدثة لتعمل حتى مع البيانات القديمة) ---
+  // --- الوثائق (جديد) ---
+  getDocuments: () => JSON.parse(localStorage.getItem(DOCUMENTS_KEY)) || [],
+  addDocument: (record) => {
+    const records = dbService.getDocuments();
+    const newRecord = { ...record, id: Date.now() };
+    localStorage.setItem(DOCUMENTS_KEY, JSON.stringify([newRecord, ...records]));
+    return newRecord;
+  },
+  deleteDocument: (id) => {
+    const updated = dbService.getDocuments().filter(r => r.id !== id);
+    localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  // --- التذكيرات (جديد) ---
+  getReminders: () => JSON.parse(localStorage.getItem(REMINDERS_KEY)) || [],
+  addReminder: (record) => {
+    const records = dbService.getReminders();
+    const newRecord = { ...record, id: Date.now() };
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify([newRecord, ...records]));
+    return newRecord;
+  },
+  deleteReminder: (id) => {
+    const updated = dbService.getReminders().filter(r => r.id !== id);
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  // --- الإحصائيات العامة ---
   getTotals: (carId) => {
-    // دالة مساعدة لفلترة السجلات (تتعامل مع البيانات القديمة والجديدة)
-    const filterByCar = (records) => {
-      if (!carId) return records; // إذا لم يكن هناك سيارة، اجمع الكل (احتياطي)
-      return records.filter(r => String(r.carId) === String(carId) || r.carId === undefined);
-    };
-
-    const fuel = filterByCar(dbService.getFuelRecords()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+    const filterByCar = (records) => records.filter(r => String(r.carId) === String(carId) || r.carId === undefined);
+    
+    const fuel = filterByCar(dbService.getFuel()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
     const maintenance = filterByCar(dbService.getMaintenance()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
     const expenses = filterByCar(dbService.getExpenses()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+    const totalLiters = filterByCar(dbService.getFuel()).reduce((sum, r) => sum + (Number(r.liters) || 0), 0);
 
-    return {
-      fuel,
-      maintenance,
-      expenses,
-      all: fuel + maintenance + expenses
-    };
+    return { fuel, maintenance, expenses, total: fuel + maintenance + expenses, totalLiters };
   }
 };
