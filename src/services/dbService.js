@@ -1,6 +1,6 @@
 const FUEL_KEY = 'fuel_records';
 const EXPENSES_KEY = 'expenses_records';
-const MAINTENANCE_KEY = 'maintenance_records'; // المفتاح الجديد للصيانة
+const MAINTENANCE_KEY = 'maintenance_records';
 
 export const dbService = {
   // --- الوقود ---
@@ -45,7 +45,7 @@ export const dbService = {
     return updated;
   },
 
-  // --- الصيانة (الإضافة الجديدة) ---
+  // --- الصيانة ---
   getMaintenance: () => JSON.parse(localStorage.getItem(MAINTENANCE_KEY)) || [],
   addMaintenance: (record) => {
     const records = dbService.getMaintenance();
@@ -64,5 +64,28 @@ export const dbService = {
     const updated = records.map(r => r.id === id ? { ...r, ...updatedRecord } : r);
     localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(updated));
     return updated;
+  },
+
+  // ==========================================
+  // --- دوال الإحصائيات (الإضافة الجديدة) ---
+  // ==========================================
+  
+  getTotalFuel: () => {
+    const records = dbService.getFuelRecords();
+    return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+  },
+  
+  getTotalExpenses: () => {
+    const records = dbService.getExpenses();
+    return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+  },
+  
+  getTotalMaintenance: () => {
+    const records = dbService.getMaintenance();
+    return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+  },
+  
+  getTotalAllExpenses: () => {
+    return dbService.getTotalFuel() + dbService.getTotalExpenses() + dbService.getTotalMaintenance();
   }
 };
