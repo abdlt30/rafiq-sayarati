@@ -1,25 +1,35 @@
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import CarCard from '../components/cars/CarCard';
 import Card from '../components/ui/Card';
+import { dbService } from '../services/dbService';
 
 export default function Dashboard() {
   const { currentCar } = useContext(AppContext);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [totalFuel, setTotalFuel] = useState(0);
+
+  // جلب الإحصائيات عند تحميل الصفحة
+  useEffect(() => {
+    if (currentCar) {
+      setTotalExpenses(dbService.getTotalExpenses());
+      setTotalFuel(dbService.getTotalFuel());
+    }
+  }, [currentCar]);
 
   return (
-    <div className="space-y-6">
-      {/* عرض بطاقة السيارة */}
+    <div className="space-y-6 pb-20">
       <CarCard car={currentCar} />
 
       <div className="grid grid-cols-2 gap-4">
         <Card className="flex flex-col items-center justify-center py-6">
-          <span className="text-slate-400 text-sm mb-1">تكلفة الكيلومتر</span>
-          <span className="text-2xl font-bold text-white">0.05 <span className="text-sm text-slate-400">MAD</span></span>
+          <span className="text-slate-400 text-sm mb-1">إجمالي المصاريف</span>
+          <span className="text-2xl font-bold text-white">{totalExpenses.toLocaleString()} <span className="text-sm text-slate-400">MAD</span></span>
         </Card>
         
         <Card className="flex flex-col items-center justify-center py-6">
-          <span className="text-slate-400 text-sm mb-1">إجمالي المصاريف</span>
-          <span className="text-2xl font-bold text-white">0 <span className="text-sm text-slate-400">MAD</span></span>
+          <span className="text-slate-400 text-sm mb-1">إجمالي الوقود</span>
+          <span className="text-2xl font-bold text-white">{totalFuel.toLocaleString()} <span className="text-sm text-slate-400">MAD</span></span>
         </Card>
       </div>
 
@@ -36,4 +46,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
+        }
