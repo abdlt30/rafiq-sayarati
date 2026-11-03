@@ -2,11 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-dl-bg text-dl-text font-sans antialiased;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-  }
+:root {
+  --primary: #2f6bff;
+  --primary-2: #5b8dff;
+  --primary-soft: rgba(47, 107, 255, .14);
+  --bg: #070b14;
+  --surface: #0e1526;
+  --surface-2: #141d33;
+  --surface-3: #1a2540;
+  --text: #e9eefc;
+  --text-muted: #7f8dae;
+  --border: #1e2a44;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
 }
+
+html[data-theme="light"] {
+  --bg: #f2f5fb;
+  --surface: #ffffff;
+  --surface-2: #f7f9fe;
+  --surface-3: #eef3fc;
+  --text: #0d1526;
+  --text-muted: #6b7a99;
+  --border: #e0e7f4;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Cairo', sans-serif; /* نحافظ على خطنا */
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* تخصيص بطاقاتنا الحالية لتتوافق مع الألوان الجديدة */
+.bg-dark-900 { background-color: var(--bg) !important; }
+.bg-dark-800 { background-color: var(--surface) !important; border-color: var(--border) !important; }
+.text-white { color: var(--text) !important; }
+.text-slate-400 { color: var(--text-muted) !important; }
