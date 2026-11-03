@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import ConfirmModal from '../components/ui/ConfirmModal';
-import { Edit2, Trash2, Wrench } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 
 export default function Maintenance() {
   const { currentCar } = useContext(AppContext);
