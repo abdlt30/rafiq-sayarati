@@ -86,4 +86,24 @@ export const dbService = {
 
     return { fuel, maintenance, expenses, total: fuel + maintenance + expenses, totalLiters };
   }
+  const REMINDERS_KEY = 'reminders_records';
+
+// داخل dbService:
+  getReminders: () => JSON.parse(localStorage.getItem(REMINDERS_KEY)) || [],
+  addReminder: (record) => {
+    const records = dbService.getReminders();
+    const newRecord = { ...record, id: Date.now() };
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify([newRecord, ...records]));
+    return newRecord;
+  },
+  deleteReminder: (id) => {
+    const updated = dbService.getReminders().filter(r => r.id !== id);
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+  updateReminder: (id, updatedRecord) => {
+    const updated = dbService.getReminders().map(r => r.id === id ? { ...r, ...updatedRecord } : r);
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(updated));
+    return updated;
+  },
 };
