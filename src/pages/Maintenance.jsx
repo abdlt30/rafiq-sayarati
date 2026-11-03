@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import ConfirmModal from '../components/ui/ConfirmModal';
+import CustomSelect from '../components/ui/CustomSelect'; // <-- استدعاء القائمة المخصصة
 import { Edit2, Trash2 } from 'lucide-react';
 
 export default function Maintenance() {
@@ -113,21 +114,13 @@ export default function Maintenance() {
         <form onSubmit={handleSave} className="space-y-4">
           <Input label="التاريخ" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
           
-          <div className="flex flex-col gap-1 w-full mb-4">
-            <label className="text-xs text-slate-400">نوع الصيانة</label>
-            <select 
-              value={formData.type} 
-              onChange={e => setFormData({...formData, type: e.target.value})} 
-              className="w-full bg-dark-900 border border-dark-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500"
-            >
-              <option value="تغيير زيت">تغيير زيت</option>
-              <option value="إطارات">إطارات</option>
-              <option value="فرامل">فرامل</option>
-              <option value="بطارية">بطارية</option>
-              <option value="فحص شامل">فحص شامل</option>
-              <option value="أخرى">أخرى</option>
-            </select>
-          </div>
+          {/* استخدام القائمة المخصصة الداكنة */}
+          <CustomSelect
+            label="نوع الصيانة"
+            options={['تغيير زيت', 'إطارات', 'فرامل', 'بطارية', 'فحص شامل', 'أخرى']}
+            value={formData.type}
+            onChange={(val) => setFormData({ ...formData, type: val })}
+          />
 
           <Input label="التكلفة (MAD)" type="number" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} required />
           <Input label="ملاحظات (اختياري)" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
