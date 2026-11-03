@@ -1,25 +1,27 @@
 import { Link } from 'react-router-dom';
-import { Car, Bell, Settings } from 'lucide-react';
+import { Settings, Bell } from 'lucide-react';
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-40 bg-dl-bg/80 backdrop-blur-md border-b border-dl-border px-4 py-3 flex justify-between items-center">
-      {/* الشعار */}
-      <Link to="/" className="flex items-center gap-2 text-dl-primary">
-        <div className="w-8 h-8 bg-dl-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-dl-primary/40">
-          <Car size={18} />
-        </div>
-        <span className="font-bold text-lg text-dl-text">DriveLife</span>
-      </Link>
+    <header className="sticky top-0 z-40 backdrop-blur-md px-4 py-4 flex justify-between items-center" style={{ backgroundColor: 'rgba(7, 11, 20, 0.8)', borderBottom: '1px solid var(--border)' }}>
+      
+      {/* الأيقونات على اليسار */}
+      <div className="flex items-center gap-3">
+        <Link to="/settings" className="p-2 rounded-xl border border-slate-700/50 text-slate-300">
+          <Settings size={20} />
+        </Link>
+        <Link to="/notifications" className="p-2 rounded-xl border border-slate-700/50 text-slate-300 relative">
+          <Bell size={20} />
+          <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+        </Link>
+      </div>
 
-      {/* الأزرار */}
-      <div className="flex gap-2">
-        <Link to="/more" className="p-2 rounded-xl bg-dl-surface border border-dl-border text-dl-muted hover:text-dl-text transition-colors">
-          <Bell size={18} />
-        </Link>
-        <Link to="/settings" className="p-2 rounded-xl bg-dl-surface border border-dl-border text-dl-muted hover:text-dl-text transition-colors">
-          <Settings size={18} />
-        </Link>
+      {/* الشعار على اليمين */}
+      <div className="flex items-center gap-2">
+        <span className="font-bold text-lg text-white">DriveLife</span>
+        <div className="text-white">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm14 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M3 17v-4l2-6h11l3 6h2v4"/><path d="M5 7h9"/></svg>
+        </div>
       </div>
     </header>
   );
