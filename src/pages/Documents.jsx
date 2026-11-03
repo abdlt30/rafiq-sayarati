@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { getVehicles, getDocumentsByVehicle, addDocument, deleteDocument } from '../services/dataService';
+import React, { useEffect, useState, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
+import { dbService } from '../services/dbService'; // استخدام خدمة قاعدة البيانات الخاصة بنا
 import { FileText, Plus, Shield, Trash2, X, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function Documents() {
+  const { currentCar } = useContext(AppContext); // جلب السيارة الحالية من السياق
   const [documents, setDocuments] = useState([]);
-  const [vehicleId, setVehicleId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   
   // حالة تأكيد الحذف المخصصة
@@ -25,37 +26,42 @@ export default function Documents() {
     { id: 'أخرى', label: 'أخرى', icon: FileText },
   ];
 
-  const loadData = async () => {
-    const vehs = await getVehicles();
-    if (vehs.length > 0) {
-      setVehicleId(vehs[0].id);
-      const docs = await getDocumentsByVehicle(vehs[0].id);
-      setDocuments(docs.sort((a, b) => new Date(a.endDate) - new Date(b.endDate)));
+  // تحميل البيانات عند فتح الصفحة أو تغيير السيارة
+  const loadData = () => {
+    if (currentCar) {
+      const allDocs = dbService.getDocuments();
+      // تصفية الوثائق الخاصة بالسيارة الحالية وترتيبها حسب تاريخ الانتهاء
+      const carDocs = allDocs
+        .filter(d => d.carId === currentCar.id)
+        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+      setDocuments(carDocs);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [currentCar]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!vehicleId) return;
-    try {
-      await addDocument({ vehicleId, ...formData });
-      setShowForm(false);
-      setFormData({ type: 'تأمين', endDate: '', notes: '' });
-      loadData();
-    } catch (error) {
-      console.error(error);
-    }
+    if (!currentCar) return;
+    
+    // حفظ الوثيقة الجديدة
+    dbService.addDocument({ 
+      carId: currentCar.id, 
+      ...formData 
+    });
+    
+    setShowForm(false);
+    setFormData({ type: 'تأمين', endDate: '', notes: '' });
+    loadData(); // إعادة تحميل القائمة
   };
 
-  const executeDelete = async () => {
+  const executeDelete = () => {
     if (deleteConfirmId) {
-      await deleteDocument(deleteConfirmId);
+      dbService.deleteDocument(deleteConfirmId); // حذف الوثيقة
       setDeleteConfirmId(null);
-      loadData();
+      loadData(); // تحديث القائمة
     }
   };
 
@@ -72,10 +78,10 @@ export default function Documents() {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in relative">
+    <div className="space-y-4 animate-in fade-in relative pb-20">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">الوثائق</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-brand-500 text-white p-3 rounded-full hover:bg-brand-600 transition shadow-lg shadow-brand-500/30">
+        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">
           {showForm ? <X size={24} /> : <Plus size={24} />}
         </button>
       </div>
@@ -88,7 +94,7 @@ export default function Documents() {
             </button>
             <h3 className="font-bold text-white text-xl mb-4 text-center">إضافة وثيقة جديدة</h3>
             
-            {/* أزرار نوع الوثيقة بدلاً من القائمة المنسدلة */}
+            {/* أزرار نوع الوثيقة */}
             <div>
               <label className="block text-sm text-slate-400 mb-3">نوع الوثيقة</label>
               <div className="grid grid-cols-2 gap-2">
@@ -101,7 +107,7 @@ export default function Documents() {
                       onClick={() => setFormData({ ...formData, type: doc.id })}
                       className={`p-3 rounded-xl border flex items-center justify-center gap-2 transition ${
                         formData.type === doc.id 
-                          ? 'border-brand-500 bg-brand-500/10 text-white' 
+                          ? 'border-blue-500 bg-blue-500/10 text-white' 
                           : 'border-dark-700 bg-dark-900 text-slate-400'
                       }`}
                     >
@@ -121,11 +127,11 @@ export default function Documents() {
                 type="date" 
                 value={formData.endDate} 
                 onChange={handleChange} 
-                className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" 
+                className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white outline-none focus:border-blue-500" 
               />
             </div>
 
-            <button type="submit" className="w-full bg-brand-500 text-white font-bold py-4 rounded-xl hover:bg-brand-600 transition-colors">
+            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors">
               حفظ الوثيقة
             </button>
           </form>
