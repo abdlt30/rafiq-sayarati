@@ -19,40 +19,41 @@ export default function Dashboard() {
     }
   }, [currentCar]);
 
-  if (!currentCar) {
-    return <div className="text-center text-white mt-10">لا توجد سيارة مسجلة.</div>;
-  }
+  if (!currentCar) return <div className="text-center text-white mt-10">لا توجد سيارة مسجلة.</div>;
 
   return (
     <div className="space-y-6 pb-20">
       <CarCard car={currentCar} />
 
+      {/* شبكة الإحصائيات 2x2 */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="flex flex-col items-center justify-center py-6">
-          <span className="text-slate-400 text-sm mb-1">إجمالي المصاريف</span>
-          <span className="text-2xl font-bold text-white">{totals.all} <span className="text-sm text-slate-400">MAD</span></span>
+        <Card className="p-4 flex flex-col justify-between h-28">
+          <span className="text-slate-400 text-xs">إجمالي المصاريف</span>
+          <span className="text-2xl font-bold text-white">{totals.all} <span className="text-xs text-slate-400">MAD</span></span>
         </Card>
         
-        <Card className="flex flex-col items-center justify-center py-6">
-          <span className="text-slate-400 text-sm mb-1">تكلفة الكيلومتر</span>
-          <span className="text-2xl font-bold text-white">0.05 <span className="text-sm text-slate-400">MAD</span></span>
+        <Card className="p-4 flex flex-col justify-between h-28">
+          <span className="text-slate-400 text-xs">تكلفة الكيلومتر</span>
+          <span className="text-2xl font-bold text-white">0.05 <span className="text-xs text-slate-400">MAD</span></span>
         </Card>
-      </div>
 
-      <h3 className="text-white font-bold text-lg mt-4">توزيع المصاريف</h3>
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-dark-800 p-3 rounded-xl text-center border border-dark-700">
-          <span className="text-slate-400 text-xs">وقود</span>
-          <p className="text-white font-bold mt-1">{totals.fuel}</p>
-        </div>
-        <div className="bg-dark-800 p-3 rounded-xl text-center border border-dark-700">
-          <span className="text-slate-400 text-xs">صيانة</span>
-          <p className="text-white font-bold mt-1">{totals.maintenance}</p>
-        </div>
-        <div className="bg-dark-800 p-3 rounded-xl text-center border border-dark-700">
-          <span className="text-slate-400 text-xs">أخرى</span>
-          <p className="text-white font-bold mt-1">{totals.expenses}</p>
-        </div>
+        <Card className="p-4 flex flex-col justify-between h-28 col-span-2">
+          <span className="text-slate-400 text-xs mb-2">توزيع المصاريف</span>
+          <div className="flex justify-between items-end">
+            <div className="text-center">
+              <span className="text-xs text-slate-500 block">وقود</span>
+              <span className="text-white font-bold">{totals.fuel}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-xs text-slate-500 block">صيانة</span>
+              <span className="text-white font-bold">{totals.maintenance}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-xs text-slate-500 block">أخرى</span>
+              <span className="text-white font-bold">{totals.expenses}</span>
+            </div>
+          </div>
+        </Card>
       </div>
 
       <h3 className="text-white font-bold text-lg mt-4">إجراءات سريعة</h3>
