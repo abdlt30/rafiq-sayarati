@@ -5,7 +5,8 @@ import CarCard from '../components/cars/CarCard';
 import Card from '../components/ui/Card';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#3b82f6', '#f59e0b', '#10b981']; // أزرق، أصفر، أخضر
+// ألوان الرسم البياني (أزرق، أصفر، أخضر)
+const COLORS = ['#3b82f6', '#f59e0b', '#10b981']; 
 
 export default function Dashboard() {
   const { currentCar } = useContext(AppContext);
@@ -14,10 +15,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (currentCar) {
       setTotals({
-        all: dbService.getTotalAllExpenses(currentCar.id),
-        fuel: dbService.getTotalFuel(currentCar.id),
-        maintenance: dbService.getTotalMaintenance(currentCar.id),
-        expenses: dbService.getTotalExpenses(currentCar.id)
+        all: dbService.getTotalAllExpenses(),
+        fuel: dbService.getTotalFuel(),
+        maintenance: dbService.getTotalMaintenance(),
+        expenses: dbService.getTotalExpenses()
       });
     }
   }, [currentCar]);
@@ -29,7 +30,7 @@ export default function Dashboard() {
     { name: 'وقود', value: totals.fuel },
     { name: 'صيانة', value: totals.maintenance },
     { name: 'أخرى', value: totals.expenses },
-  ].filter(item => item.value > 0); // لا نعرض القيم الصفرية
+  ].filter(item => item.value > 0); 
 
   return (
     <div className="space-y-6 pb-20">
