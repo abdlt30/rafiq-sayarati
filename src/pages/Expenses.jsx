@@ -5,13 +5,18 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
-import { Edit2, Trash2 } from 'lucide-react'; // أيقونات التعديل والحذف
+import ConfirmModal from '../components/ui/ConfirmModal'; // استدعاء نافذة التأكيد المخصصة
+import { Edit2, Trash2 } from 'lucide-react'; 
 
 export default function Expenses() {
   const { currentCar } = useContext(AppContext);
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null); // حالة التعديل
+  const [editingId, setEditingId] = useState(null); 
+  
+  // حالات نافذة التأكيد
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
 
   const [formData, setFormData] = useState({ date: '', type: 'تأمين', cost: '' });
 
@@ -29,20 +34,27 @@ export default function Expenses() {
     };
 
     if (editingId) {
-      // تعديل
       setRecords(dbService.updateExpense(editingId, data));
     } else {
-      // إضافة جديدة
       setRecords([dbService.addExpense(data), ...records]);
     }
     
     closeModal();
   };
 
-  const handleDelete = (id) => {
-    if(window.confirm('هل أنت متأكد من حذف هذا المصروف؟')) {
-      setRecords(dbService.deleteExpense(id));
+  // 1. دالة تفتح نافذة التأكيد
+  const handleDeleteClick = (id) => {
+    setDeleteId(id);
+    setIsConfirmOpen(true);
+  };
+
+  // 2. دالة تنفذ الحذف الفعلي عند التأكيد
+  const confirmDelete = () => {
+    if (deleteId) {
+      setRecords(dbService.deleteExpense(deleteId));
     }
+    setIsConfirmOpen(false);
+    setDeleteId(null);
   };
 
   const openEdit = (record) => {
@@ -80,7 +92,8 @@ export default function Expenses() {
                 <button onClick={() => openEdit(record)} className="text-blue-400 hover:text-blue-300 bg-blue-400/10 p-2 rounded-lg">
                   <Edit2 size={16} />
                 </button>
-                <button onClick={() => handleDelete(record.id)} className="text-red-400 hover:text-red-300 bg-red-400/10 p-2 rounded-lg">
+                {/* زر الحذف يستدعي النافذة المخصصة */}
+                <button onClick={() => handleDeleteClick(record.id)} className="text-red-400 hover:text-red-300 bg-red-400/10 p-2 rounded-lg">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -92,11 +105,11 @@ export default function Expenses() {
         ))
       )}
 
+      {/* نافذة الإضافة/التعديل */}
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "تعديل المصروف" : "إضافة مصروف"}>
         <form onSubmit={handleSave} className="space-y-4">
           <Input label="التاريخ" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
           
-          {/* قائمة منسدلة مخصصة (Custom Select) لتبدو احترافية */}
           <div className="flex flex-col gap-1 w-full mb-4">
             <label className="text-xs text-slate-400">نوع المصروف</label>
             <select 
@@ -117,6 +130,15 @@ export default function Expenses() {
           <Button type="submit">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
         </form>
       </Modal>
+
+      {/* نافذة التأكيد المخصصة (Custom Confirm Modal) */}
+      <ConfirmModal 
+        isOpen={isConfirmOpen} 
+        onClose={() => setIsConfirmOpen(false)} 
+        onConfirm={confirmDelete} 
+        message="هل أنت متأكد من حذف هذا المصروف؟"
+      />
+
     </div>
   );
 }
