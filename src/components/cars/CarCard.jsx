@@ -1,22 +1,28 @@
-import { Car, Gauge } from 'lucide-react';
+import { Gauge } from 'lucide-react';
 
 export default function CarCard({ car }) {
   if (!car) return null;
 
   return (
-    <div className="bg-gradient-to-br from-brand-600 to-brand-500 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
-      <div className="absolute -right-4 -top-4 opacity-10">
-        <Car size={80} />
+    <div className="hero-card mb-6">
+      <div className="flex justify-between items-start relative z-10">
+        <div className="bg-blue-500/20 px-4 py-2 rounded-xl backdrop-blur-sm flex items-center gap-2">
+          <Gauge size={18} className="text-white" />
+          <span className="font-bold text-white text-lg">{(car.currentOdometer || 0).toLocaleString()} KM</span>
+        </div>
+        <div className="text-right">
+          <h2 className="text-2xl font-bold text-white">{car.make} {car.model}</h2>
+          <p className="text-blue-200 text-sm mt-1">{car.plate}</p>
+        </div>
       </div>
-      <div className="relative z-10 flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-bold">{car.make} {car.model}</h2>
-          <p className="text-brand-100 text-xs mt-1">{car.plate}</p>
-        </div>
-        <div className="bg-black/20 px-3 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1">
-          <Gauge size={14} />
-          <span className="text-sm font-bold">{(car.currentOdometer || 0).toLocaleString()} KM</span>
-        </div>
+      
+      {/* أيقونة السيارة الخفيفة في الخلفية */}
+      <div className="absolute -bottom-6 -left-6 opacity-10">
+        <svg width="160" height="160" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+          <path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm14 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
+          <path d="M3 17v-4l2-6h11l3 6h2v4"/>
+          <path d="M5 7h9"/>
+        </svg>
       </div>
     </div>
   );
