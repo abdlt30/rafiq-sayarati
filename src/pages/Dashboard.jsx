@@ -1,21 +1,29 @@
 import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
+import { calculateCostPerKm } from '../utils/calculations';
 import CarCard from '../components/cars/CarCard';
 import Card from '../components/ui/Card';
 
 export default function Dashboard() {
   const { currentCar } = useContext(AppContext);
   const [totals, setTotals] = useState({ all: 0, fuel: 0, maintenance: 0, expenses: 0 });
+  const [costPerKm, setCostPerKm] = useState(0);
 
   useEffect(() => {
     if (currentCar) {
-      setTotals({
-        all: dbService.getTotalAllExpenses(),
-        fuel: dbService.getTotalFuel(),
-        maintenance: dbService.getTotalMaintenance(),
-        expenses: dbService.getTotalExpenses()
-      });
+      const all = dbService.getTotalAllExpenses();
+      const fuel = dbService.getTotalFuel();
+      const maintenance = dbService.getTotalMaintenance();
+      const expenses = dbService.getTotalExpenses();
+
+      setTotals({ all, fuel, maintenance, expenses });
+
+      // حساب تكلفة الكيلومتر
+      const initialOdometer = currentCar.initialOdometer || 0;
+      const currentOdometer = currentCar.currentOdometer || 0;
+      const kmCost = calculateCostPerKm(all, initialOdometer, currentOdometer);
+      setCostPerKm(kmCost);
     }
   }, [currentCar]);
 
@@ -25,7 +33,6 @@ export default function Dashboard() {
     <div className="space-y-6 pb-20">
       <CarCard car={currentCar} />
 
-      {/* شبكة الإحصائيات 2x2 */}
       <div className="grid grid-cols-2 gap-4">
         <Card className="p-4 flex flex-col justify-between h-28">
           <span className="text-slate-400 text-xs">إجمالي المصاريف</span>
@@ -34,7 +41,7 @@ export default function Dashboard() {
         
         <Card className="p-4 flex flex-col justify-between h-28">
           <span className="text-slate-400 text-xs">تكلفة الكيلومتر</span>
-          <span className="text-2xl font-bold text-white">0.05 <span className="text-xs text-slate-400">MAD</span></span>
+          <span className="text-2xl font-bold text-white">{costPerKm} <span className="text-xs text-slate-400">MAD</span></span>
         </Card>
 
         <Card className="p-4 flex flex-col justify-between h-28 col-span-2">
