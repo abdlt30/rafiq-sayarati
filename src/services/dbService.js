@@ -66,20 +66,23 @@ export const dbService = {
     return updated;
   },
 
-  // --- الإحصائيات (مع تصفية حسب السيارة) ---
-  getTotalFuel: (carId) => {
-    const records = dbService.getFuelRecords().filter(r => r.carId === carId);
-    return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
-  },
-  getTotalExpenses: (carId) => {
-    const records = dbService.getExpenses().filter(r => r.carId === carId);
-    return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
-  },
-  getTotalMaintenance: (carId) => {
-    const records = dbService.getMaintenance().filter(r => r.carId === carId);
-    return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
-  },
-  getTotalAllExpenses: (carId) => {
-    return dbService.getTotalFuel(carId) + dbService.getTotalExpenses(carId) + dbService.getTotalMaintenance(carId);
+  // --- الإحصائيات (محدثة لتعمل حتى مع البيانات القديمة) ---
+  getTotals: (carId) => {
+    // دالة مساعدة لفلترة السجلات (تتعامل مع البيانات القديمة والجديدة)
+    const filterByCar = (records) => {
+      if (!carId) return records; // إذا لم يكن هناك سيارة، اجمع الكل (احتياطي)
+      return records.filter(r => String(r.carId) === String(carId) || r.carId === undefined);
+    };
+
+    const fuel = filterByCar(dbService.getFuelRecords()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+    const maintenance = filterByCar(dbService.getMaintenance()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+    const expenses = filterByCar(dbService.getExpenses()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+
+    return {
+      fuel,
+      maintenance,
+      expenses,
+      all: fuel + maintenance + expenses
+    };
   }
 };
