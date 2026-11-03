@@ -1,13 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { dbService } from '../services/dbService';
-import { Download, Trash2, Shield, ArrowRight } from 'lucide-react';
+import { Download, Trash2, Shield, ArrowRight, Printer } from 'lucide-react'; // تمت إضافة Printer هنا
 
 export default function Settings() {
   const navigate = useNavigate();
 
   const exportData = () => {
     try {
-      // جلب البيانات باستخدام dbService (الذي يعتمد على LocalStorage)
       const backupData = {
         car: JSON.parse(localStorage.getItem('savedCar')) || null,
         fuel: dbService.getFuelRecords(),
@@ -32,13 +31,11 @@ export default function Settings() {
 
   const clearData = () => {
     if (window.confirm("تحذير: سيتم حذف جميع البيانات نهائياً. هل أنت متأكد؟")) {
-      // مسح جميع المفاتيح من LocalStorage
       localStorage.removeItem('savedCar');
       localStorage.removeItem('fuel_records');
       localStorage.removeItem('expenses_records');
       localStorage.removeItem('maintenance_records');
       
-      // إعادة تحميل الصفحة لتعود إلى شاشة الترحيب
       window.location.href = '/#/welcome';
       window.location.reload();
     }
@@ -65,13 +62,15 @@ export default function Settings() {
           <p className="text-xs text-slate-400 mb-4 leading-relaxed">
             بياناتك محفوظة على هاتفك فقط. قم بتصديرها كملف احتياطي لضمان عدم ضياعها إذا قمت بتغيير هاتفك.
           </p>
+          
           <button onClick={exportData} className="w-full bg-brand-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-brand-600 transition">
             <Download size={18} /> تصدير البيانات (JSON)
           </button>
-          // داخل قسم النسخ الاحتياطي:
+          
+          {/* زر الطباعة */}
           <button onClick={() => window.print()} className="w-full mt-2 bg-dark-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-dark-600 transition">
-           <Printer size={18} /> طباعة التقرير (PDF)
-        </button>
+            <Printer size={18} /> طباعة التقرير (PDF)
+          </button>
         </div>
 
         {/* منطقة الخطر */}
