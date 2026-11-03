@@ -1,9 +1,12 @@
-export default function Button({ children, className = '', ...props }) {
+export default function Button({ children, variant = 'primary', className = '', ...props }) {
+  let baseClass = '';
+  
+  if (variant === 'primary') baseClass = 'btn-primary';
+  else if (variant === 'ghost') baseClass = 'btn-ghost';
+  else if (variant === 'danger') baseClass = 'btn-danger';
+
   return (
-    <button 
-      className={`w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-brand-500/30 ${className}`}
-      {...props}
-    >
+    <button className={`${baseClass} ${className}`} {...props}>
       {children}
     </button>
   );
