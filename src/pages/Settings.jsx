@@ -1,20 +1,20 @@
-import React from 'react';
-import { db } from '../db/database';
-import { Download, Trash2, Shield, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { dbService } from '../services/dbService';
+import { Download, Trash2, Shield, ArrowRight } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
 
-  const exportData = async () => {
+  const exportData = () => {
     try {
-      const vehicles = await db.vehicles.toArray();
-      const expenses = await db.expenses.toArray();
-      const maintenance = await db.maintenance.toArray();
-      const documents = await db.documents.toArray();
-      const fuel = await db.fuel.toArray();
+      // جلب البيانات باستخدام dbService (الذي يعتمد على LocalStorage)
+      const backupData = {
+        car: JSON.parse(localStorage.getItem('savedCar')) || null,
+        fuel: dbService.getFuelRecords(),
+        expenses: dbService.getExpenses(),
+        maintenance: dbService.getMaintenance()
+      };
 
-      const backupData = { vehicles, expenses, maintenance, documents, fuel };
       const jsonString = JSON.stringify(backupData, null, 2);
       
       const blob = new Blob([jsonString], { type: "application/json" });
@@ -30,13 +30,16 @@ export default function Settings() {
     }
   };
 
-  const clearData = async () => {
+  const clearData = () => {
     if (window.confirm("تحذير: سيتم حذف جميع البيانات نهائياً. هل أنت متأكد؟")) {
-      await db.vehicles.clear();
-      await db.expenses.clear();
-      await db.maintenance.clear();
-      await db.documents.clear();
-      await db.fuel.clear();
+      // مسح جميع المفاتيح من LocalStorage
+      localStorage.removeItem('savedCar');
+      localStorage.removeItem('fuel_records');
+      localStorage.removeItem('expenses_records');
+      localStorage.removeItem('maintenance_records');
+      
+      // إعادة تحميل الصفحة لتعود إلى شاشة الترحيب
+      window.location.href = '/#/welcome';
       window.location.reload();
     }
   };
