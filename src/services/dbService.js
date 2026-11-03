@@ -64,9 +64,9 @@ export const dbService = {
     const updated = records.map(r => r.id === id ? { ...r, ...updatedRecord } : r);
     localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(updated));
     return updated;
-  }    
-  
-  // استبدل دوال الإحصائيات بهذه:
+  },
+
+  // --- الإحصائيات (مع تصفية حسب السيارة) ---
   getTotalFuel: (carId) => {
     const records = dbService.getFuelRecords().filter(r => r.carId === carId);
     return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
@@ -82,3 +82,4 @@ export const dbService = {
   getTotalAllExpenses: (carId) => {
     return dbService.getTotalFuel(carId) + dbService.getTotalExpenses(carId) + dbService.getTotalMaintenance(carId);
   }
+};
