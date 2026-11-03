@@ -64,28 +64,21 @@ export const dbService = {
     const updated = records.map(r => r.id === id ? { ...r, ...updatedRecord } : r);
     localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(updated));
     return updated;
-  },
-
-  // ==========================================
-  // --- دوال الإحصائيات (الإضافة الجديدة) ---
-  // ==========================================
+  }    
   
-  getTotalFuel: () => {
-    const records = dbService.getFuelRecords();
+  // استبدل دوال الإحصائيات بهذه:
+  getTotalFuel: (carId) => {
+    const records = dbService.getFuelRecords().filter(r => r.carId === carId);
     return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
   },
-  
-  getTotalExpenses: () => {
-    const records = dbService.getExpenses();
+  getTotalExpenses: (carId) => {
+    const records = dbService.getExpenses().filter(r => r.carId === carId);
     return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
   },
-  
-  getTotalMaintenance: () => {
-    const records = dbService.getMaintenance();
+  getTotalMaintenance: (carId) => {
+    const records = dbService.getMaintenance().filter(r => r.carId === carId);
     return records.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
   },
-  
-  getTotalAllExpenses: () => {
-    return dbService.getTotalFuel() + dbService.getTotalExpenses() + dbService.getTotalMaintenance();
+  getTotalAllExpenses: (carId) => {
+    return dbService.getTotalFuel(carId) + dbService.getTotalExpenses(carId) + dbService.getTotalMaintenance(carId);
   }
-};
