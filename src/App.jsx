@@ -10,6 +10,7 @@ import Expenses from './pages/Expenses';
 import More from './pages/More';
 import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle';
+import Settings from './pages/Settings'; // <-- استدعاء صفحة الإعدادات
 
 const ProtectedRoute = ({ children }) => {
   const { currentCar } = useContext(AppContext);
@@ -58,6 +59,9 @@ export default function App() {
         <Route path="/maintenance" element={<ProtectedRoute><Layout><Maintenance /></Layout></ProtectedRoute>} />
         <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
         <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
+        
+        {/* المسار الجديد لصفحة الإعدادات */}
+        <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
