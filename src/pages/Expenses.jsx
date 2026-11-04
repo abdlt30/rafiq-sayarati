@@ -5,56 +5,34 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
-import ConfirmModal from '../components/ui/ConfirmModal'; // استدعاء نافذة التأكيد المخصصة
-import { Edit2, Trash2 } from 'lucide-react'; 
+import ConfirmModal from '../components/ui/ConfirmModal';
+import CustomSelect from '../components/ui/CustomSelect';
+import { Edit2, Trash2 } from 'lucide-react';
 
 export default function Expenses() {
   const { currentCar } = useContext(AppContext);
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null); 
-  
-  // حالات نافذة التأكيد
+  const [editingId, setEditingId] = useState(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
   const [formData, setFormData] = useState({ date: '', type: 'تأمين', cost: '' });
 
   useEffect(() => {
-    if (currentCar) setRecords(dbService.getExpenses());
+    if (currentCar) setRecords(dbService.getExpenses().filter(r => r.carId === currentCar.id));
   }, [currentCar]);
 
   const handleSave = (e) => {
     e.preventDefault();
-    const data = {
-      carId: currentCar.id,
-      date: formData.date,
-      type: formData.type,
-      cost: Number(formData.cost)
-    };
-
+    const data = { carId: currentCar.id, ...formData, cost: Number(formData.cost) };
+    
     if (editingId) {
       setRecords(dbService.updateExpense(editingId, data));
     } else {
       setRecords([dbService.addExpense(data), ...records]);
     }
-    
     closeModal();
-  };
-
-  // 1. دالة تفتح نافذة التأكيد
-  const handleDeleteClick = (id) => {
-    setDeleteId(id);
-    setIsConfirmOpen(true);
-  };
-
-  // 2. دالة تنفذ الحذف الفعلي عند التأكيد
-  const confirmDelete = () => {
-    if (deleteId) {
-      setRecords(dbService.deleteExpense(deleteId));
-    }
-    setIsConfirmOpen(false);
-    setDeleteId(null);
   };
 
   const openEdit = (record) => {
@@ -69,11 +47,16 @@ export default function Expenses() {
     setFormData({ date: '', type: 'تأمين', cost: '' });
   };
 
+  const confirmDelete = () => {
+    if (deleteId) setRecords(dbService.deleteExpense(deleteId));
+    setIsConfirmOpen(false);
+  };
+
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-4 pb-24">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">المصاريف</h1>
-        <button onClick={() => setIsModalOpen(true)} className="bg-brand-500 text-white p-2 rounded-full shadow-lg">
+        <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white p-3 rounded-full shadow-lg shadow-blue-500/30">
           +
         </button>
       </div>
@@ -92,53 +75,35 @@ export default function Expenses() {
                 <button onClick={() => openEdit(record)} className="text-blue-400 hover:text-blue-300 bg-blue-400/10 p-2 rounded-lg">
                   <Edit2 size={16} />
                 </button>
-                {/* زر الحذف يستدعي النافذة المخصصة */}
-                <button onClick={() => handleDeleteClick(record.id)} className="text-red-400 hover:text-red-300 bg-red-400/10 p-2 rounded-lg">
+                <button onClick={() => { setDeleteId(record.id); setIsConfirmOpen(true); }} className="text-red-400 hover:text-red-300 bg-red-400/10 p-2 rounded-lg">
                   <Trash2 size={16} />
                 </button>
               </div>
             </div>
-            <div className="bg-dark-900/50 px-3 py-2 rounded-lg text-brand-500 text-sm font-bold w-fit">
+            <div className="bg-dark-900/50 px-3 py-2 rounded-lg text-blue-500 text-sm font-bold w-fit">
               {record.type}
             </div>
           </Card>
         ))
       )}
 
-      {/* نافذة الإضافة/التعديل */}
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "تعديل المصروف" : "إضافة مصروف"}>
         <form onSubmit={handleSave} className="space-y-4">
           <Input label="التاريخ" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
           
-          <div className="flex flex-col gap-1 w-full mb-4">
-            <label className="text-xs text-slate-400">نوع المصروف</label>
-            <select 
-              value={formData.type} 
-              onChange={e => setFormData({...formData, type: e.target.value})} 
-              className="w-full bg-dark-900 border border-dark-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 appearance-none"
-              style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'left 1rem center', backgroundSize: '0.8rem' }}
-            >
-              <option value="تأمين">تأمين</option>
-              <option value="ضرائب">ضرائب</option>
-              <option value="غسيل">غسيل</option>
-              <option value="فحص سيارة">فحص سيارة</option>
-              <option value="أخرى">أخرى</option>
-            </select>
-          </div>
+          <CustomSelect 
+            label="نوع المصروف"
+            options={['تأمين', 'ضرائب', 'غسيل', 'فحص سيارة', 'أخرى']}
+            value={formData.type}
+            onChange={(val) => setFormData({ ...formData, type: val })}
+          />
 
           <Input label="التكلفة (MAD)" type="number" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} required />
           <Button type="submit">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
         </form>
       </Modal>
 
-      {/* نافذة التأكيد المخصصة (Custom Confirm Modal) */}
-      <ConfirmModal 
-        isOpen={isConfirmOpen} 
-        onClose={() => setIsConfirmOpen(false)} 
-        onConfirm={confirmDelete} 
-        message="هل أنت متأكد من حذف هذا المصروف؟"
-      />
-
+      <ConfirmModal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} onConfirm={confirmDelete} message="هل أنت متأكد من حذف هذا المصروف؟" />
     </div>
   );
 }
