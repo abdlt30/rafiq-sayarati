@@ -1,8 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/rafiq-sayarati/', // هذا السطر هو "المفتاح السحري" لحل المشكلة
+  base: '/rafiq-sayarati/',
 })
