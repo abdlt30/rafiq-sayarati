@@ -130,3 +130,9 @@ body {
   place-items: center;
   color: var(--text-muted) !important;
 }
+/* إجبار منتقي التاريخ على الوضع الداكن */
+input[type="date"] {
+  color-scheme: dark;
+  background-color: var(--surface-2);
+  color: var(--text);
+}
