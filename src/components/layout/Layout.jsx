@@ -14,6 +14,7 @@ export default function Layout({ children }) {
       {/* المحتوى الرئيسي */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <Header />
+        {/* أضفنا pb-24 لترك مساحة للشريط السفلي */}
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-8 w-full max-w-4xl mx-auto">
           {children || <Outlet />}
         </main>
