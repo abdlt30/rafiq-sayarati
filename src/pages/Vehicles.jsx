@@ -1,23 +1,34 @@
-import { useContext, useState } from 'react';
+import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Car, Plus, CheckCircle, Edit2 } from 'lucide-react';
+import { Car, Plus, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Vehicles() {
-  const { vehicles, currentCar, selectCar } = useContext(AppContext);
+  const { currentCar, setCurrentCar, t } = useContext(AppContext);
   const navigate = useNavigate();
+  
+  // جلب السيارات من الذاكرة (مؤقتاً لحين ربطها بـ dbService)
+  const vehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
+
+  const selectCar = (car) => {
+    localStorage.setItem('savedCar', JSON.stringify(car));
+    setCurrentCar(car);
+    window.location.href = '/'; // العودة للرئيسية
+  };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    <div className="space-y-4 pb-24">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text)]">سياراتي</h1>
-        <button onClick={() => navigate('/add-vehicle')} className="bg-[var(--primary)] text-white p-3 rounded-full shadow-lg">
+        <h1 className="text-2xl font-bold">{t('vehicles') || 'سياراتي'}</h1>
+        <button onClick={() => navigate('/add-vehicle')} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg">
           <Plus size={24} />
         </button>
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="text-center text-[var(--text-muted)] mt-10">لا توجد سيارات مضافة.</div>
+        <div className="text-center text-[var(--text-muted)] mt-10">
+          {t('noVehicles')}
+        </div>
       ) : (
         <div className="space-y-3">
           {vehicles.map(car => {
