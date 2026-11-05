@@ -136,3 +136,22 @@ input[type="date"] {
   background-color: var(--surface-2);
   color: var(--text);
 }
+/* إجبار منتقي التاريخ على الوضع الداكن */
+input[type="date"] {
+  color-scheme: dark;
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+
+/* إجبار الصفحة على التمرير بشكل صحيح */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* منع التمرير المزدوج */
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Cairo', sans-serif;
+  }
