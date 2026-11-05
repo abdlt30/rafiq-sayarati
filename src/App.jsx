@@ -13,7 +13,8 @@ import AddVehicle from './pages/AddVehicle';
 import Settings from './pages/Settings';
 import Documents from './pages/Documents'; 
 import Reminders from './pages/Reminders'; 
-import Backup from './pages/Backup'; // <-- استدعاء صفحة النسخ الاحتياطي
+import Backup from './pages/Backup'; 
+import Vehicles from './pages/Vehicles'; // <-- استدعاء صفحة إدارة السيارات
 
 const ProtectedRoute = ({ children }) => {
   const { currentCar } = useContext(AppContext);
@@ -34,17 +35,17 @@ export default function App() {
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
+        {/* المسارات المحمية */}
         <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+        <Route path="/vehicles" element={<ProtectedRoute><Layout><Vehicles /></Layout></ProtectedRoute>} /> {/* <-- مسار السيارات */}
         <Route path="/fuel" element={<ProtectedRoute><Layout><Fuel /></Layout></ProtectedRoute>} />
         <Route path="/maintenance" element={<ProtectedRoute><Layout><Maintenance /></Layout></ProtectedRoute>} />
         <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
-        <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         <Route path="/documents" element={<ProtectedRoute><Layout><Documents /></Layout></ProtectedRoute>} />
         <Route path="/reminders" element={<ProtectedRoute><Layout><Reminders /></Layout></ProtectedRoute>} />
-        
-        {/* المسار الجديد للنسخ الاحتياطي */}
         <Route path="/backup" element={<ProtectedRoute><Layout><Backup /></Layout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+        <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
