@@ -84,7 +84,7 @@ export default function Documents() {
             ))}
           </div>
 
-          <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none" />
+          <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none [color-scheme:dark]" />
           <div className="flex gap-2">
             <button type="submit" className="flex-1 bg-[var(--primary)] text-white font-bold py-3 rounded-xl">حفظ</button>
             <button type="button" onClick={closeForm} className="flex-1 bg-[var(--surface-2)] text-[var(--text-muted)] font-bold py-3 rounded-xl">إلغاء</button>
