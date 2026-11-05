@@ -2,26 +2,23 @@ import { createContext, useState, useEffect } from 'react';
 
 export const AppContext = createContext();
 
+// قاموس الترجمة
+const translations = {
+  ar: { home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', darkMode: 'الوضع الداكن', language: 'اللغة' },
+  en: { home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', darkMode: 'Dark Mode', language: 'Language' },
+  fr: { home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', darkMode: 'Mode Sombre', language: 'Langue' }
+};
+
 export const AppProvider = ({ children }) => {
   const [currentCar, setCurrentCar] = useState(null);
-  const [vehicles, setVehicles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'ar');
 
-  // دالة تحميل البيانات
   useEffect(() => {
-    try {
-      const savedCar = JSON.parse(localStorage.getItem('savedCar'));
-      const savedVehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
-      
-      if (savedCar) setCurrentCar(savedCar);
-      setVehicles(savedVehicles);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
+    const savedCar = JSON.parse(localStorage.getItem('savedCar'));
+    if (savedCar) setCurrentCar(savedCar);
+    setIsLoading(false);
   }, []);
 
   // تحديث المظهر واللغة
@@ -29,7 +26,6 @@ export const AppProvider = ({ children }) => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('lang', lang);
     document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
-    
     localStorage.setItem('theme', theme);
     localStorage.setItem('lang', lang);
   }, [theme, lang]);
@@ -37,38 +33,17 @@ export const AppProvider = ({ children }) => {
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   const changeLang = (newLang) => setLang(newLang);
 
-  // إضافة سيارة جديدة
   const addNewCar = (carData) => {
     const newCar = { ...carData, id: Date.now().toString() };
-    
-    // تحديث قائمة السيارات
-    const updatedVehicles = [...vehicles, newCar];
-    setVehicles(updatedVehicles);
-    localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-
-    // تعيينها كسيارة نشطة
     localStorage.setItem('savedCar', JSON.stringify(newCar));
     setCurrentCar(newCar);
   };
 
-  // تبديل السيارة النشطة
-  const selectCar = (car) => {
-    localStorage.setItem('savedCar', JSON.stringify(car));
-    setCurrentCar(car);
-  };
+  // دالة الترجمة
+  const t = (key) => translations[lang]?.[key] || key;
 
   return (
-    <AppContext.Provider value={{ 
-      currentCar, 
-      vehicles, 
-      addNewCar, 
-      selectCar,
-      isLoading, 
-      theme, 
-      toggleTheme,
-      lang,
-      changeLang
-    }}>
+    <AppContext.Provider value={{ currentCar, addNewCar, isLoading, theme, toggleTheme, lang, changeLang, t }}>
       {children}
     </AppContext.Provider>
   );
