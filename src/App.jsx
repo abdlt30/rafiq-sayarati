@@ -11,8 +11,9 @@ import More from './pages/More';
 import Welcome from './pages/Welcome';
 import AddVehicle from './pages/AddVehicle';
 import Settings from './pages/Settings';
-import Documents from './pages/Documents'; // مسار جديد
-import Reminders from './pages/Reminders'; // مسار جديد
+import Documents from './pages/Documents'; 
+import Reminders from './pages/Reminders'; 
+import Backup from './pages/Backup'; // <-- استدعاء صفحة النسخ الاحتياطي
 
 const ProtectedRoute = ({ children }) => {
   const { currentCar } = useContext(AppContext);
@@ -24,7 +25,7 @@ export default function App() {
   const { isLoading } = useContext(AppContext);
 
   if (isLoading) {
-    return <div className="min-h-screen bg-dark-900 flex justify-center items-center text-brand-500 font-bold text-xl">جاري التحميل...</div>;
+    return <div className="min-h-screen bg-[var(--bg)] flex justify-center items-center text-[var(--primary)] font-bold text-xl">جاري التحميل...</div>;
   }
 
   return (
@@ -39,10 +40,11 @@ export default function App() {
         <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
         <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-        
-        {/* المسارات الجديدة */}
         <Route path="/documents" element={<ProtectedRoute><Layout><Documents /></Layout></ProtectedRoute>} />
         <Route path="/reminders" element={<ProtectedRoute><Layout><Reminders /></Layout></ProtectedRoute>} />
+        
+        {/* المسار الجديد للنسخ الاحتياطي */}
+        <Route path="/backup" element={<ProtectedRoute><Layout><Backup /></Layout></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
