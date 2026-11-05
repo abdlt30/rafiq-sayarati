@@ -2,7 +2,6 @@ import { createContext, useState, useEffect } from 'react';
 
 export const AppContext = createContext();
 
-// قاموس الترجمة الشامل والنهائي
 const translations = {
   ar: { 
     home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', 
@@ -11,9 +10,8 @@ const translations = {
     addMaintenance: 'إضافة صيانة', addExpense: 'إضافة مصروف', noVehicles: 'لا توجد سيارة مسجلة.',
     noData: 'لا توجد بيانات كافية', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', edit: 'تعديل',
     confirmDelete: 'هل أنت متأكد من الحذف؟', noDocuments: 'لا توجد وثائق', addDocument: 'إضافة وثيقة',
-    expired: 'منتهية', valid: 'صالحة', expiringSoon: 'تنتهي قريباً', endsOn: 'ينتهي في',
-    totalRecords: 'إجمالي السجلات', oilChanges: 'تغيير زيت', fuelLog: 'سجل الوقود', date: 'التاريخ',
-    amount: 'المبلغ', type: 'النوع', notes: 'ملاحظات', appName: 'DriveLife'
+    expired: 'منتهية', valid: 'صالحة', endsOn: 'ينتهي في', totalRecords: 'إجمالي السجلات', 
+    oilChanges: 'تغيير زيت', fuelLog: 'سجل الوقود', date: 'التاريخ', amount: 'المبلغ', type: 'النوع', notes: 'ملاحظات'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -22,9 +20,8 @@ const translations = {
     addMaintenance: 'Add Maintenance', addExpense: 'Add Expense', noVehicles: 'No vehicle registered.',
     noData: 'Not enough data', save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit',
     confirmDelete: 'Are you sure you want to delete?', noDocuments: 'No documents', addDocument: 'Add Document',
-    expired: 'Expired', valid: 'Valid', expiringSoon: 'Expiring Soon', endsOn: 'Ends on',
-    totalRecords: 'Total Records', oilChanges: 'Oil Changes', fuelLog: 'Fuel Log', date: 'Date',
-    amount: 'Amount', type: 'Type', notes: 'Notes', appName: 'DriveLife'
+    expired: 'Expired', valid: 'Valid', endsOn: 'Ends on', totalRecords: 'Total Records', 
+    oilChanges: 'Oil Changes', fuelLog: 'Fuel Log', date: 'Date', amount: 'Amount', type: 'Type', notes: 'Notes'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -33,9 +30,8 @@ const translations = {
     addMaintenance: 'Ajouter Entretien', addExpense: 'Ajouter Dépense', noVehicles: 'Aucun véhicule enregistré.',
     noData: 'Pas assez de données', save: 'Enregistrer', cancel: 'Annuler', delete: 'Supprimer', edit: 'Modifier',
     confirmDelete: 'Êtes-vous sûr de vouloir supprimer?', noDocuments: 'Aucun document', addDocument: 'Ajouter Document',
-    expired: 'Expiré', valid: 'Valide', expiringSoon: 'Expire bientôt', endsOn: 'Se termine le',
-    totalRecords: 'Total des Enregistrements', oilChanges: 'Vidanges', fuelLog: 'Journal de Carburant', date: 'Date',
-    amount: 'Montant', type: 'Type', notes: 'Notes', appName: 'DriveLife'
+    expired: 'Expiré', valid: 'Valide', endsOn: 'Se termine le', totalRecords: 'Total des Enregistrements', 
+    oilChanges: 'Vidanges', fuelLog: 'Journal de Carburant', date: 'Date', amount: 'Montant', type: 'Type', notes: 'Notes'
   }
 };
 
@@ -61,13 +57,11 @@ export const AppProvider = ({ children }) => {
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   const changeLang = (newLang) => setLang(newLang);
-
   const addNewCar = (carData) => {
     const newCar = { ...carData, id: Date.now().toString() };
     localStorage.setItem('savedCar', JSON.stringify(newCar));
     setCurrentCar(newCar);
   };
-
   const t = (key) => translations[lang]?.[key] || key;
 
   return (
