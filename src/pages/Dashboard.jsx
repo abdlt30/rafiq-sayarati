@@ -2,7 +2,7 @@ import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Wallet, Gauge, Fuel, Wrench, FileText } from 'lucide-react';
+import { Wallet, Gauge, Fuel, Wrench, FileText, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const COLORS = ['#2f6bff', '#f59e0b', '#22c55e'];
