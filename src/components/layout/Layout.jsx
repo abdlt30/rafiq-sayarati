@@ -5,16 +5,16 @@ import Sidebar from './Sidebar';
 
 export default function Layout({ children }) {
   return (
-    <div className="flex min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans">
+    <div className="flex h-screen w-full bg-[var(--bg)] text-[var(--text)] font-sans overflow-hidden">
       {/* الشريط الجانبي */}
-      <div className="hidden md:block w-64 flex-shrink-0 border-l border-[var(--border)] bg-[var(--surface)] h-screen sticky top-0">
+      <div className="hidden md:block w-64 flex-shrink-0 border-l border-[var(--border)] bg-[var(--surface)] h-full">
         <Sidebar />
       </div>
 
       {/* المحتوى الرئيسي */}
-      <div className="flex-1 flex flex-col min-h-screen max-w-full">
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         <Header />
-        <main className="flex-1 p-4 pb-24 md:pb-8 w-full max-w-4xl mx-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-8 w-full max-w-4xl mx-auto">
           {children || <Outlet />}
         </main>
       </div>
