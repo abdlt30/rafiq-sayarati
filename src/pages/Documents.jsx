@@ -1,16 +1,13 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Shield, Trash2, X, Edit2, FileText } from 'lucide-react';
+import { FileText, Plus, Shield, Trash2, X, AlertTriangle, CheckCircle, Edit2 } from 'lucide-react';
 
 export default function Documents() {
-  const { currentCar } = useContext(AppContext);
+  const { currentCar, t } = useContext(AppContext); // استدعاء دالة الترجمة
   const [documents, setDocuments] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ type: 'تأمين', endDate: '' });
-
-  const docTypes = ['تأمين', 'فحص تقني', 'رخصة', 'أخرى'];
 
   const loadData = () => {
     if (currentCar) {
@@ -24,25 +21,17 @@ export default function Documents() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentCar) return;
-    if (editingId) {
-      dbService.updateDocument(editingId, formData);
-    } else {
-      dbService.addDocument({ carId: currentCar.id, ...formData });
-    }
-    closeForm();
+    dbService.addDocument({ carId: currentCar.id, ...formData });
+    setShowForm(false);
+    setFormData({ type: 'تأمين', endDate: '' });
     loadData();
   };
 
-  const openEdit = (doc) => {
-    setEditingId(doc.id);
-    setFormData({ type: doc.type, endDate: doc.endDate });
-    setShowForm(true);
-  };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({ type: 'تأمين', endDate: '' });
+  const handleDelete = (id) => {
+    if(window.confirm('هل أنت متأكد من الحذف؟')) {
+      dbService.deleteDocument(id);
+      loadData();
+    }
   };
 
   const getStatus = (endDate) => {
@@ -54,45 +43,63 @@ export default function Documents() {
   };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    <div className="space-y-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text)]">الوثائق</h1>
+        <h1 className="text-2xl font-bold">{t('documents')}</h1> {/* استخدام الترجمة */}
         <button onClick={() => setShowForm(!showForm)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg">
           {showForm ? <X size={24} /> : <Plus size={24} />}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border)] space-y-4 shadow-xl">
-          <h2 className="text-lg font-bold text-[var(--text)]">{editingId ? 'تعديل وثيقة' : 'إضافة وثيقة'}</h2>
-          
-          {/* أزرار النوع بدلاً من القائمة البيضاء */}
-          <div className="grid grid-cols-2 gap-2">
-            {docTypes.map(type => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setFormData({...formData, type})}
-                className={`p-3 rounded-xl border flex items-center justify-center gap-2 transition ${
-                  formData.type === type 
-                    ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--text)]' 
-                    : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]'
-                }`}
-              >
-                <FileText size={16} /> {type}
-              </button>
-            ))}
-          </div>
-
-          <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none [color-scheme:dark]" />
-          <div className="flex gap-2">
-            <button type="submit" className="flex-1 bg-[var(--primary)] text-white font-bold py-3 rounded-xl">حفظ</button>
-            <button type="button" onClick={closeForm} className="flex-1 bg-[var(--surface-2)] text-[var(--text-muted)] font-bold py-3 rounded-xl">إلغاء</button>
-          </div>
+        <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border)] space-y-4">
+          <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]">
+            <option value="تأمين">تأمين</option>
+            <option value="فحص تقني">فحص تقني</option>
+            <option value="رخصة">رخصة</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+          <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark]" />
+          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl">حفظ</button>
         </form>
       )}
 
-      {/* عرض الوثائق ... (كما هو) */}
+      {/* الحالة الفارغة (إصلاح الشاشة السوداء) */}
+      {documents.length === 0 ? (
+        <div className="text-center mt-20 flex flex-col items-center">
+          <div className="w-20 h-20 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-4">
+            <FileText size={40} className="text-[var(--text-muted)]" />
+          </div>
+          <h3 className="text-lg font-bold mb-2">{t('noDocuments')}</h3>
+          <p className="text-[var(--text-muted)] text-sm mb-4">{t('noDocumentsText')}</p>
+          <button onClick={() => setShowForm(true)} className="bg-[var(--primary)] text-white px-6 py-2 rounded-xl text-sm font-bold">
+            + {t('addDocument')}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {documents.map(doc => {
+            const status = getStatus(doc.endDate);
+            return (
+              <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-xl ${status.bg} ${status.color}`}><Shield size={20} /></div>
+                  <div>
+                    <p className="font-bold">{doc.type}</p>
+                    <p className={`text-xs ${status.color}`}>{status.label}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-xs text-[var(--text-muted)]">ينتهي: <span className="font-mono text-[var(--text)]">{doc.endDate}</span></p>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleDelete(doc.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
