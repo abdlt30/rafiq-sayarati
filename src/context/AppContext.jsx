@@ -2,11 +2,29 @@ import { createContext, useState, useEffect } from 'react';
 
 export const AppContext = createContext();
 
-// قاموس الترجمة
+// قاموس الترجمة الشامل
 const translations = {
-  ar: { home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', darkMode: 'الوضع الداكن', language: 'اللغة' },
-  en: { home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', darkMode: 'Dark Mode', language: 'Language' },
-  fr: { home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', darkMode: 'Mode Sombre', language: 'Langue' }
+  ar: { 
+    home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', 
+    darkMode: 'الوضع الداكن', language: 'اللغة', total: 'إجمالي المصاريف', costPerKm: 'تكلفة الكيلومتر',
+    distributionByType: 'توزيع المصاريف', quickActions: 'إجراءات سريعة', addFuel: 'إضافة وقود',
+    addMaintenance: 'إضافة صيانة', addExpense: 'إضافة مصروف', noVehicles: 'لا توجد سيارة مسجلة.',
+    noData: 'لا توجد بيانات كافية', save: 'حفظ', cancel: 'إلغاء', appName: 'DriveLife'
+  },
+  en: { 
+    home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
+    darkMode: 'Dark Mode', language: 'Language', total: 'Total Expenses', costPerKm: 'Cost per KM',
+    distributionByType: 'Expense Distribution', quickActions: 'Quick Actions', addFuel: 'Add Fuel',
+    addMaintenance: 'Add Maintenance', addExpense: 'Add Expense', noVehicles: 'No vehicle registered.',
+    noData: 'Not enough data', save: 'Save', cancel: 'Cancel', appName: 'DriveLife'
+  },
+  fr: { 
+    home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
+    darkMode: 'Mode Sombre', language: 'Langue', total: 'Dépenses Totales', costPerKm: 'Coût par KM',
+    distributionByType: 'Répartition des Dépenses', quickActions: 'Actions Rapides', addFuel: 'Ajouter Carburant',
+    addMaintenance: 'Ajouter Entretien', addExpense: 'Ajouter Dépense', noVehicles: 'Aucun véhicule enregistré.',
+    noData: 'Pas assez de données', save: 'Enregistrer', cancel: 'Annuler', appName: 'DriveLife'
+  }
 };
 
 export const AppProvider = ({ children }) => {
@@ -21,7 +39,7 @@ export const AppProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  // تحديث المظهر واللغة
+  // تحديث المظهر واللغة والاتجاه (RTL/LTR)
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('lang', lang);
@@ -39,7 +57,7 @@ export const AppProvider = ({ children }) => {
     setCurrentCar(newCar);
   };
 
-  // دالة الترجمة
+  // دالة الترجمة الذكية
   const t = (key) => translations[lang]?.[key] || key;
 
   return (
