@@ -11,15 +11,19 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="bottom-nav">
+    <nav className="flex justify-around items-center h-16 bg-[#0e1526]/95 backdrop-blur-md border-t border-[#1e2a44]">
       {navItems.map((item) => (
         <NavLink
           key={item.path}
           to={item.path}
-          className={({ isActive }) => `bn-item ${isActive ? 'active' : ''}`}
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center w-full h-full space-y-1 ${
+              isActive ? 'text-blue-500' : 'text-slate-400'
+            }`
+          }
         >
-          <item.icon />
-          <span>{item.label}</span>
+          <item.icon size={22} />
+          <span className="text-[10px] font-medium">{item.label}</span>
         </NavLink>
       ))}
     </nav>
