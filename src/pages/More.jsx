@@ -1,26 +1,27 @@
 import { Link } from 'react-router-dom';
-import { Car, Database, Settings, Info, FileText, Bell } from 'lucide-react';
+import { Car, Bell, Database, Settings, Info, FileText } from 'lucide-react';
 
 export default function More() {
-  const menuItems = [
-    { path: '/documents', icon: FileText, label: 'الوثائق', color: 'text-purple-400' },
-    { path: '/reminders', icon: Bell, label: 'التذكيرات', color: 'text-yellow-400' },
-    { path: '/settings', icon: Database, label: 'النسخ الاحتياطي', color: 'text-green-400' },
-    { path: '/settings', icon: Settings, label: 'الإعدادات', color: 'text-slate-400' },
-    { path: '/settings', icon: Info, label: 'حول التطبيق', color: 'text-blue-400' },
+  const items = [
+    { path: '/documents', icon: FileText, label: 'الوثائق', color: '#a78bfa' },
+    { path: '/reminders', icon: Bell, label: 'التذكيرات', color: '#f59e0b' },
+    { path: '/settings', icon: Database, label: 'النسخ الاحتياطي', color: '#22c55e' },
+    { path: '/settings', icon: Settings, label: 'الإعدادات', color: '#64748b' },
+    { path: '/settings', icon: Info, label: 'حول التطبيق', color: '#3b82f6' },
   ];
 
   return (
-    <div className="space-y-6 pb-20">
-      <h1 className="text-2xl font-bold text-white mb-6">المزيد</h1>
-      <div className="card p-0 overflow-hidden">
-        {menuItems.map((item, index) => (
-          <Link key={index} to={item.path} className="flex items-center justify-between p-4 border-b border-dark-700 last:border-0 hover:bg-dark-700/50">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg bg-dark-900 ${item.color}`}><item.icon size={20} /></div>
-              <span className="text-slate-200 font-medium">{item.label}</span>
+    <div style={{ paddingBottom: '80px' }}>
+      <h1 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '20px' }}>المزيد</h1>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {items.map((item, index) => (
+          <Link key={index} to={item.path} className="row" style={{ textDecoration: 'none' }}>
+            <div style={{ background: 'var(--surface-2)', padding: '10px', borderRadius: '10px', color: item.color }}>
+              <item.icon size={20} />
             </div>
-            <span className="text-slate-500">←</span>
+            <span style={{ flex: 1, fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>{item.label}</span>
+            <span style={{ color: 'var(--text-muted)' }}>←</span>
           </Link>
         ))}
       </div>
