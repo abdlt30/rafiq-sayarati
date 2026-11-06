@@ -12,12 +12,16 @@ const translations = {
     month: 'هذا الشهر', distance: 'المسافة المقطوعة', nextMaintenance: 'الصيانة القادمة', 
     expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات', viewAll: 'عرض الكل',
     switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', vehicles: 'سياراتي', carInfo: 'معلومات السيارة',
-    // الكلمات الجديدة المضافة
+    // كلمات الوقود والمصاريف
     fuel: 'سجل الوقود', date: 'التاريخ', expenseType: 'نوع المصروف', amount: 'المبلغ', 
     insurance: 'تأمين', taxes: 'ضرائب', carWash: 'غسيل', fines: 'مخالفات مرورية', 
     parking: 'رسوم مواقف', other: 'أخرى', enterAmount: 'أدخل المبلغ',
     odometer: 'العداد', liters: 'اللترات', cost: 'التكلفة', noFuelRecords: 'لا توجد سجلات وقود.',
-    confirmDelete: 'هل أنت متأكد من الحذف؟', edit: 'تعديل'
+    confirmDelete: 'هل أنت متأكد من الحذف؟', edit: 'تعديل',
+    // كلمات الوثائق الجديدة
+    documentType: 'نوع الوثيقة', endDate: 'تاريخ الانتهاء', technicalInspection: 'فحص تقني', 
+    license: 'رخصة', expired: 'منتهية', expiringSoon: 'تنتهي قريباً', valid: 'صالح', 
+    endsOn: 'ينتهي في', noDocuments: 'لا توجد وثائق مسجلة.'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -28,12 +32,16 @@ const translations = {
     month: 'This Month', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
     expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity', viewAll: 'View All',
     switchCar: 'Switch Car', addNewCar: 'Add Vehicle', vehicles: 'My Vehicles', carInfo: 'Car Information',
-    // New keys
+    // Fuel & Expenses keys
     fuel: 'Fuel Log', date: 'Date', expenseType: 'Expense Type', amount: 'Amount', 
     insurance: 'Insurance', taxes: 'Taxes', carWash: 'Car Wash', fines: 'Traffic Fines', 
     parking: 'Parking', other: 'Other', enterAmount: 'Enter amount',
     odometer: 'Odometer', liters: 'Liters', cost: 'Cost', noFuelRecords: 'No fuel records found.',
-    confirmDelete: 'Are you sure you want to delete?', edit: 'Edit'
+    confirmDelete: 'Are you sure you want to delete?', edit: 'Edit',
+    // Documents keys
+    documentType: 'Document Type', endDate: 'End Date', technicalInspection: 'Technical Inspection', 
+    license: 'License', expired: 'Expired', expiringSoon: 'Expiring Soon', valid: 'Valid', 
+    endsOn: 'Ends on', noDocuments: 'No documents registered.'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -44,12 +52,16 @@ const translations = {
     month: 'Ce Mois', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
     expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente', viewAll: 'Voir Tout',
     switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule',
-    // Nouvelles clés
+    // Clés Carburant & Dépenses
     fuel: 'Journal de Carburant', date: 'Date', expenseType: 'Type de dépense', amount: 'Montant', 
     insurance: 'Assurance', taxes: 'Impôts', carWash: 'Lavage', fines: 'Amendes', 
     parking: 'Stationnement', other: 'Autre', enterAmount: 'Entrer le montant',
     odometer: 'Compteur Kilométrique', liters: 'Litres', cost: 'Coût', noFuelRecords: 'Aucun enregistrement de carburant.',
-    confirmDelete: 'Êtes-vous sûr de vouloir supprimer?', edit: 'Modifier'
+    confirmDelete: 'Êtes-vous sûr de vouloir supprimer?', edit: 'Modifier',
+    // Clés Documents
+    documentType: 'Type de document', endDate: 'Date d\'expiration', technicalInspection: 'Contrôle technique', 
+    license: 'Permis', expired: 'Expiré', expiringSoon: 'Expire bientôt', valid: 'Valide', 
+    endsOn: 'Expire le', noDocuments: 'Aucun document enregistré.'
   }
 };
 
