@@ -11,15 +11,15 @@ export default function Vehicles() {
     <div className="space-y-4 pb-24">
       {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{t('vehicles')}</h1>
-        <button onClick={() => navigate('/add-vehicle')} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg">
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('vehicles') || 'سياراتي'}</h1>
+        <button onClick={() => navigate('/add-vehicle')} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg transition-transform hover:scale-105">
           <Plus size={24} />
         </button>
       </div>
 
       {vehicles.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-10">
-          لا توجد سيارات مضافة. اضغط على زر (+) لإضافة سيارة.
+          {t('noVehiclesAdded') || 'لا توجد سيارات مضافة. اضغط على زر (+) لإضافة سيارة.'}
         </div>
       ) : (
         <div className="space-y-3">
@@ -30,7 +30,7 @@ export default function Vehicles() {
                 key={car.id} 
                 onClick={() => { selectCar(car); navigate('/'); }}
                 className={`p-4 rounded-2xl border flex justify-between items-center cursor-pointer transition-all ${
-                  isActive ? 'border-[var(--primary)] bg-[var(--primary-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'
+                  isActive ? 'border-[var(--primary)] bg-[var(--primary-soft)]' : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--text-muted)]'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -39,11 +39,11 @@ export default function Vehicles() {
                   </div>
                   <div>
                     <h3 className="font-bold text-[var(--text)]">{car.make} {car.model}</h3>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">{car.plate} • {car.currentOdometer} KM</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">{car.plate || '---'} • {car.currentOdometer} KM</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                   <button onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} className="p-2 text-blue-400 bg-blue-400/10 rounded-lg">
+                   <button onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} className="p-2 text-blue-400 bg-blue-400/10 rounded-lg hover:bg-blue-400/20 transition-colors">
                      <Edit2 size={16} />
                    </button>
                    {isActive && <CheckCircle className="text-[var(--primary)]" size={20} />}
