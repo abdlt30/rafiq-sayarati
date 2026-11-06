@@ -19,9 +19,10 @@ const translations = {
     
     // السيارات
     vehicles: 'سياراتي', carInfo: 'معلومات السيارة', switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', 
-    noVehicles: 'لا توجد سيارة مسجلة.', fillRequiredFields: 'الرجاء تعبئة الحقول الأساسية', 
-    addYourCar: 'أضف سيارتك', addYourCarSubtitle: 'أدخل بيانات سيارتك الأولى لنبدأ التتبع.', 
-    carMake: 'الماركة (مثال: تويوتا)', carModel: 'الموديل (مثال: كورولا)', plateNumber: 'رقم اللوحة (اختياري)', 
+    noVehicles: 'لا توجد سيارة مسجلة.', noVehiclesAdded: 'لا توجد سيارات مضافة. اضغط على زر (+) لإضافة سيارة.',
+    fillRequiredFields: 'الرجاء تعبئة الحقول الأساسية', addYourCar: 'أضف سيارتك', 
+    addYourCarSubtitle: 'أدخل بيانات سيارتك الأولى لنبدأ التتبع.', carMake: 'الماركة (مثال: تويوتا)', 
+    carModel: 'الموديل (مثال: كورولا)', plateNumber: 'رقم اللوحة (اختياري)', 
     currentOdometer: 'عداد السيارة الحالي (KM)', saveAndContinue: 'حفظ ومتابعة',
     
     // صفحة الترحيب
@@ -45,7 +46,18 @@ const translations = {
     // الوثائق (Documents)
     addDocument: 'إضافة وثيقة', documentType: 'نوع الوثيقة', endDate: 'تاريخ الانتهاء', 
     technicalInspection: 'فحص تقني', license: 'رخصة', expired: 'منتهية', 
-    expiringSoon: 'تنتهي قريباً', valid: 'صالح', endsOn: 'ينتهي في', noDocuments: 'لا توجد وثائق مسجلة.'
+    expiringSoon: 'تنتهي قريباً', valid: 'صالح', endsOn: 'ينتهي في', noDocuments: 'لا توجد وثائق مسجلة.',
+
+    // التذكيرات (Reminders)
+    reminders: 'التذكيرات', addReminder: 'إضافة تذكير', noReminders: 'لا توجد تذكيرات حالياً.',
+    oil: 'زيت', inspection: 'فحص', overdue: 'متأخر', soon: 'قريب', after: 'بعد', days: 'يوم', km: 'كم', active: 'نشط',
+
+    // صفحة المزيد (More)
+    backup: 'النسخ الاحتياطي', aboutApp: 'حول التطبيق',
+
+    // النسخ الاحتياطي (Backup)
+    dataProtection: 'حماية البيانات', backupDesc: 'بياناتك محفوظة على هاتفك فقط. قم بتصديرها كملف احتياطي لضمان عدم ضياعها إذا قمت بتغيير هاتفك أو مسح المتصفح.',
+    exportData: 'تصدير البيانات (JSON)', importDataSoon: 'استيراد البيانات (قريباً)'
   },
   en: { 
     // General
@@ -63,9 +75,10 @@ const translations = {
     
     // Vehicles
     vehicles: 'My Vehicles', carInfo: 'Car Information', switchCar: 'Switch Car', addNewCar: 'Add Vehicle', 
-    noVehicles: 'No vehicle registered.', fillRequiredFields: 'Please fill in the required fields', 
-    addYourCar: 'Add Your Car', addYourCarSubtitle: 'Enter your first car details to start tracking.', 
-    carMake: 'Make (e.g., Toyota)', carModel: 'Model (e.g., Corolla)', plateNumber: 'Plate Number (Optional)', 
+    noVehicles: 'No vehicle registered.', noVehiclesAdded: 'No vehicles added. Click (+) to add a vehicle.',
+    fillRequiredFields: 'Please fill in the required fields', addYourCar: 'Add Your Car', 
+    addYourCarSubtitle: 'Enter your first car details to start tracking.', carMake: 'Make (e.g., Toyota)', 
+    carModel: 'Model (e.g., Corolla)', plateNumber: 'Plate Number (Optional)', 
     currentOdometer: 'Current Odometer (KM)', saveAndContinue: 'Save and Continue',
     
     // Welcome Page
@@ -89,7 +102,18 @@ const translations = {
     // Documents
     addDocument: 'Add Document', documentType: 'Document Type', endDate: 'End Date', 
     technicalInspection: 'Technical Inspection', license: 'License', expired: 'Expired', 
-    expiringSoon: 'Expiring Soon', valid: 'Valid', endsOn: 'Ends on', noDocuments: 'No documents registered.'
+    expiringSoon: 'Expiring Soon', valid: 'Valid', endsOn: 'Ends on', noDocuments: 'No documents registered.',
+
+    // Reminders
+    reminders: 'Reminders', addReminder: 'Add Reminder', noReminders: 'No reminders yet.',
+    oil: 'Oil', inspection: 'Inspection', overdue: 'Overdue', soon: 'Soon', after: 'After', days: 'days', km: 'km', active: 'Active',
+
+    // More
+    backup: 'Backup', aboutApp: 'About App',
+
+    // Backup
+    dataProtection: 'Data Protection', backupDesc: 'Your data is saved on your phone only. Export it as a backup file to ensure it is not lost if you change your phone or clear your browser.',
+    exportData: 'Export Data (JSON)', importDataSoon: 'Import Data (Soon)'
   },
   fr: { 
     // Général
@@ -107,9 +131,10 @@ const translations = {
     
     // Véhicules
     vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule', switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', 
-    noVehicles: 'Aucun véhicule enregistré.', fillRequiredFields: 'Veuillez remplir les champs obligatoires', 
-    addYourCar: 'Ajoutez votre voiture', addYourCarSubtitle: 'Entrez les détails de votre première voiture pour commencer le suivi.', 
-    carMake: 'Marque (ex: Toyota)', carModel: 'Modèle (ex: Corolla)', plateNumber: 'Numéro de plaque (Optionnel)', 
+    noVehicles: 'Aucun véhicule enregistré.', noVehiclesAdded: 'Aucun véhicule ajouté. Cliquez sur (+) pour ajouter un véhicule.',
+    fillRequiredFields: 'Veuillez remplir les champs obligatoires', addYourCar: 'Ajoutez votre voiture', 
+    addYourCarSubtitle: 'Entrez les détails de votre première voiture pour commencer le suivi.', carMake: 'Marque (ex: Toyota)', 
+    carModel: 'Modèle (ex: Corolla)', plateNumber: 'Numéro de plaque (Optionnel)', 
     currentOdometer: 'Compteur actuel (KM)', saveAndContinue: 'Enregistrer et Continuer',
     
     // Page d'accueil
@@ -133,7 +158,18 @@ const translations = {
     // Documents
     addDocument: 'Ajouter Document', documentType: 'Type de document', endDate: 'Date d\'expiration', 
     technicalInspection: 'Contrôle technique', license: 'Permis', expired: 'Expiré', 
-    expiringSoon: 'Expire bientôt', valid: 'Valide', endsOn: 'Expire le', noDocuments: 'Aucun document enregistré.'
+    expiringSoon: 'Expire bientôt', valid: 'Valide', endsOn: 'Expire le', noDocuments: 'Aucun document enregistré.',
+
+    // Rappels
+    reminders: 'Rappels', addReminder: 'Ajouter un rappel', noReminders: 'Aucun rappel pour le moment.',
+    oil: 'Huile', inspection: 'Inspection', overdue: 'En retard', soon: 'Bientôt', after: 'Après', days: 'jours', km: 'km', active: 'Actif',
+
+    // Plus
+    backup: 'Sauvegarde', aboutApp: 'À propos',
+
+    // Sauvegarde
+    dataProtection: 'Protection des données', backupDesc: 'Vos données sont enregistrées sur votre téléphone uniquement. Exportez-les sous forme de fichier de sauvegarde pour éviter toute perte si vous changez de téléphone ou effacez votre navigateur.',
+    exportData: 'Exporter les données (JSON)', importDataSoon: 'Importer des données (Bientôt)'
   }
 };
 
