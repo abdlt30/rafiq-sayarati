@@ -1,9 +1,8 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react'; // <-- هذا هو السطر المهم
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Fuel as FuelIcon } from 'lucide-react';
 
-// هذا هو السطر الأهم: يجب أن يكون هناك export default
 export default function Fuel() {
   const { currentCar, t } = useContext(AppContext);
   const [records, setRecords] = useState([]);
