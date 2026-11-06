@@ -1,114 +1,146 @@
-const FUEL_KEY = 'fuel_records';
-const EXPENSES_KEY = 'expenses_records';
-const MAINTENANCE_KEY = 'maintenance_records';
-const DOCUMENTS_KEY = 'documents_records';
-const REMINDERS_KEY = 'reminders_records';
+// مفاتيح التخزين المحلي
+const KEYS = {
+  FUEL: 'fuel_records',
+  EXPENSES: 'expenses_records',
+  MAINTENANCE: 'maintenance_records',
+  DOCUMENTS: 'documents_records',
+  REMINDERS: 'reminders_records',
+};
+
+// دالة مساعدة لإنشاء معرف فريد (متوافق مع Supabase UUID)
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString() + Math.random().toString(36).substring(2);
+};
+
+// مصنع لإدارة عمليات التخزين (يمنع تكرار الكود)
+const createLocalStore = (storageKey) => ({
+  get: () => {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey)) || [];
+    } catch (e) {
+      console.error(`Error reading ${storageKey}:`, e);
+      return [];
+    }
+  },
+  add: (record) => {
+    try {
+      const records = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const newRecord = { ...record, id: generateId(), createdAt: new Date().toISOString() };
+      localStorage.setItem(storageKey, JSON.stringify([newRecord, ...records]));
+      return newRecord;
+    } catch (e) {
+      console.error(`Error adding to ${storageKey}:`, e);
+      alert('حدث خطأ أثناء الحفظ، قد تكون مساحة التخزين ممتلئة.');
+      return null;
+    }
+  },
+  update: (id, updatedRecord) => {
+    try {
+      const records = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const updated = records.map(r => r.id === id ? { ...r, ...updatedRecord, updatedAt: new Date().toISOString() } : r);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      return updated;
+    } catch (e) {
+      console.error(`Error updating ${storageKey}:`, e);
+      alert('حدث خطأ أثناء التعديل، قد تكون مساحة التخزين ممتلئة.');
+      return [];
+    }
+  },
+  delete: (id) => {
+    try {
+      const records = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const updated = records.filter(r => r.id !== id);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      return updated;
+    } catch (e) {
+      console.error(`Error deleting from ${storageKey}:`, e);
+      return [];
+    }
+  }
+});
+
+// إنشاء كائنات الخدمة لكل قسم
+const fuelStore = createLocalStore(KEYS.FUEL);
+const expenseStore = createLocalStore(KEYS.EXPENSES);
+const maintenanceStore = createLocalStore(KEYS.MAINTENANCE);
+const documentStore = createLocalStore(KEYS.DOCUMENTS);
+const reminderStore = createLocalStore(KEYS.REMINDERS);
 
 export const dbService = {
   // --- الوقود ---
-  getFuel: () => JSON.parse(localStorage.getItem(FUEL_KEY)) || [],
-  addFuel: (record) => {
-    const records = dbService.getFuel();
-    const newRecord = { ...record, id: Date.now() };
-    localStorage.setItem(FUEL_KEY, JSON.stringify([newRecord, ...records]));
-    return newRecord;
-  },
-  deleteFuel: (id) => {
-    const updated = dbService.getFuel().filter(r => r.id !== id);
-    localStorage.setItem(FUEL_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateFuel: (id, updatedRecord) => {
-    const updated = dbService.getFuel().map(r => r.id === id ? { ...r, ...updatedRecord } : r);
-    localStorage.setItem(FUEL_KEY, JSON.stringify(updated));
-    return updated;
-  },
+  getFuel: fuelStore.get,
+  addFuel: fuelStore.add,
+  updateFuel: fuelStore.update,
+  deleteFuel: fuelStore.delete,
 
   // --- المصاريف ---
-  getExpenses: () => JSON.parse(localStorage.getItem(EXPENSES_KEY)) || [],
-  addExpense: (record) => {
-    const records = dbService.getExpenses();
-    const newRecord = { ...record, id: Date.now() };
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify([newRecord, ...records]));
-    return newRecord;
-  },
-  deleteExpense: (id) => {
-    const updated = dbService.getExpenses().filter(r => r.id !== id);
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateExpense: (id, updatedRecord) => {
-    const updated = dbService.getExpenses().map(r => r.id === id ? { ...r, ...updatedRecord } : r);
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify(updated));
-    return updated;
-  },
+  getExpenses: expenseStore.get,
+  addExpense: expenseStore.add,
+  updateExpense: expenseStore.update,
+  deleteExpense: expenseStore.delete,
 
   // --- الصيانة ---
-  getMaintenance: () => JSON.parse(localStorage.getItem(MAINTENANCE_KEY)) || [],
-  addMaintenance: (record) => {
-    const records = dbService.getMaintenance();
-    const newRecord = { ...record, id: Date.now() };
-    localStorage.setItem(MAINTENANCE_KEY, JSON.stringify([newRecord, ...records]));
-    return newRecord;
-  },
-  deleteMaintenance: (id) => {
-    const updated = dbService.getMaintenance().filter(r => r.id !== id);
-    localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateMaintenance: (id, updatedRecord) => {
-    const updated = dbService.getMaintenance().map(r => r.id === id ? { ...r, ...updatedRecord } : r);
-    localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(updated));
-    return updated;
-  },
+  getMaintenance: maintenanceStore.get,
+  addMaintenance: maintenanceStore.add,
+  updateMaintenance: maintenanceStore.update,
+  deleteMaintenance: maintenanceStore.delete,
 
   // --- الوثائق ---
-  getDocuments: () => JSON.parse(localStorage.getItem(DOCUMENTS_KEY)) || [],
-  addDocument: (record) => {
-    const records = dbService.getDocuments();
-    const newRecord = { ...record, id: Date.now() };
-    localStorage.setItem(DOCUMENTS_KEY, JSON.stringify([newRecord, ...records]));
-    return newRecord;
-  },
-  deleteDocument: (id) => {
-    const updated = dbService.getDocuments().filter(r => r.id !== id);
-    localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateDocument: (id, updatedRecord) => {
-    const updated = dbService.getDocuments().map(r => r.id === id ? { ...r, ...updatedRecord } : r);
-    localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(updated));
-    return updated;
-  },
+  getDocuments: documentStore.get,
+  addDocument: documentStore.add,
+  updateDocument: documentStore.update,
+  deleteDocument: documentStore.delete,
 
   // --- التذكيرات ---
-  getReminders: () => JSON.parse(localStorage.getItem(REMINDERS_KEY)) || [],
-  addReminder: (record) => {
-    const records = dbService.getReminders();
-    const newRecord = { ...record, id: Date.now() };
-    localStorage.setItem(REMINDERS_KEY, JSON.stringify([newRecord, ...records]));
-    return newRecord;
-  },
-  deleteReminder: (id) => {
-    const updated = dbService.getReminders().filter(r => r.id !== id);
-    localStorage.setItem(REMINDERS_KEY, JSON.stringify(updated));
-    return updated;
-  },
-  updateReminder: (id, updatedRecord) => {
-    const updated = dbService.getReminders().map(r => r.id === id ? { ...r, ...updatedRecord } : r);
-    localStorage.setItem(REMINDERS_KEY, JSON.stringify(updated));
-    return updated;
-  },
+  getReminders: reminderStore.get,
+  addReminder: reminderStore.add,
+  updateReminder: reminderStore.update,
+  deleteReminder: reminderStore.delete,
 
-  // --- الإحصائيات العامة ---
+  // --- الإحصائيات العامة (تم تحسينها لتعمل بكفاءة) ---
   getTotals: (carId) => {
-    const filterByCar = (records) => records.filter(r => String(r.carId) === String(carId) || r.carId === undefined);
+    // دالة مساعدة لفلترة السجلات حسب السيارة
+    const filterByCar = (records) => records.filter(r => !r.carId || String(r.carId) === String(carId));
     
-    const fuel = filterByCar(dbService.getFuel()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
-    const maintenance = filterByCar(dbService.getMaintenance()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
-    const expenses = filterByCar(dbService.getExpenses()).reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
-    const totalLiters = filterByCar(dbService.getFuel()).reduce((sum, r) => sum + (Number(r.liters) || 0), 0);
+    const fuel = filterByCar(dbService.getFuel());
+    const maintenance = filterByCar(dbService.getMaintenance());
+    const expenses = filterByCar(dbService.getExpenses());
 
-    return { fuel, maintenance, expenses, total: fuel + maintenance + expenses, totalLiters };
+    const totalFuel = fuel.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+    const totalMaint = maintenance.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+    const totalExp = expenses.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+    const totalLiters = fuel.reduce((sum, r) => sum + (Number(r.liters) || 0), 0);
+
+    return { 
+      fuel: totalFuel, 
+      maintenance: totalMaint, 
+      expenses: totalExp, 
+      total: totalFuel + totalMaint + totalExp, 
+      totalLiters 
+    };
   }
 };
+
+/* 
+  =========================================================
+  🚀 خطة المستقبل (عند الانتقال إلى Supabase):
+  =========================================================
+  عندما نصل لمرحلة Supabase، سنقوم فقط بتعديل هذا الملف.
+  سنقوم باستبدال دوال localStorage بـ:
+  
+  get: async () => {
+    const { data, error } = await supabase.from('fuel').select('*').eq('car_id', carId);
+    return data;
+  },
+  add: async (record) => {
+    const { data, error } = await supabase.from('fuel').insert([record]).select();
+    return data[0];
+  }
+  
+  ...وهكذا لبقية الدوال. 
+  المكونات (Components) لن تحتاج إلى أي تعديل لأنها تستدعي dbService.
+  =========================================================
+*/
