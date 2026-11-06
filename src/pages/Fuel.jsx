@@ -1,10 +1,12 @@
-import { useState, useEffect, useContext } from 'react'; // <-- هذا هو السطر المهم
+import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Fuel as FuelIcon } from 'lucide-react';
 
 export default function Fuel() {
-  const { currentCar, t } = useContext(AppContext);
+  // 1. إضافة currency من الـ Context
+  const { currentCar, t, currency } = useContext(AppContext); 
+  
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -56,7 +58,9 @@ export default function Fuel() {
       </div>
 
       {records.length === 0 ? (
-        <div className="text-center text-[var(--text-muted)] mt-10">لا توجد سجلات وقود.</div>
+        <div className="text-center text-[var(--text-muted)] mt-10">
+          {t('noFuelRecords') || 'لا توجد سجلات وقود.'}
+        </div>
       ) : (
         records.map(record => (
           <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-3">
@@ -64,7 +68,8 @@ export default function Fuel() {
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500"><FuelIcon size={20}/></div>
                 <div>
-                  <p className="font-bold text-[var(--text)]">{record.cost} MAD</p>
+                  {/* 2. استخدام العملة الديناميكية */}
+                  <p className="font-bold text-[var(--text)]">{record.cost} {currency}</p>
                   <p className="text-xs text-[var(--text-muted)]">{record.date}</p>
                 </div>
               </div>
@@ -92,19 +97,20 @@ export default function Fuel() {
             
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">التاريخ</label>
+                {/* 3. استخدام الترجمة للنصوص */}
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none" />
               </div>
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">العداد (KM)</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد'} (KM)</label>
                 <input type="number" required value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none" />
               </div>
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">اللترات</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('liters') || 'اللترات'}</label>
                 <input type="number" required value={formData.liters} onChange={e => setFormData({...formData, liters: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none" />
               </div>
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">التكلفة (MAD)</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
                 <input type="number" required value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none" />
               </div>
             </div>
