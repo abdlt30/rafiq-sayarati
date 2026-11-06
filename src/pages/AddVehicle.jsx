@@ -25,31 +25,47 @@ export default function AddVehicle() {
     }
   }, [isEditing, editId, vehicles]);
 
-  // دالة ذكية لضغط الصورة قبل حفظها لتجنب امتلاء الذاكرة
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // دالة ضغط الصورة (هندسة عالية المستوى)
+  const compressImage = (file, maxWidth = 600, maxHeight = 600) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 600; // تصغير العرض
-        const scaleSize = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scaleSize;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        // ضغط الصورة بنسبة 70% بصيغة JPEG
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        setCar({ ...car, image: compressedBase64 });
+          if (width > height) {
+            if (width > maxWidth) {
+              height *= maxWidth / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width *= maxHeight / height;
+              height = maxHeight;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          // جودة 0.7 تضمن حجم صغير جداً وصورة واضحة
+          resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+        };
       };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const compressedBase64 = await compressImage(file);
+      setCar({ ...car, image: compressedBase64 });
+    }
   };
 
   const handleSubmit = (e) => {
@@ -60,12 +76,16 @@ export default function AddVehicle() {
     
     const carData = { ...car, currentOdometer: Number(car.currentOdometer) };
 
-    if (isEditing) {
-      updateCar({ ...carData, id: editId });
-      navigate('/vehicles');
-    } else {
-      addNewCar(carData);
-      navigate('/');
+    try {
+      if (isEditing) {
+        updateCar({ ...carData, id: editId });
+        navigate('/vehicles');
+      } else {
+        addNewCar(carData);
+        navigate('/');
+      }
+    } catch (error) {
+      alert('حدث خطأ أثناء الحفظ، قد تكون مساحة التخزين ممتلئة.');
     }
   };
 
@@ -81,7 +101,7 @@ export default function AddVehicle() {
       </div>
 
       <div className="flex justify-center mb-8">
-        <div className="relative w-32 h-32 rounded-3xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-[var(--primary)] transition-colors shadow-lg">
+        <div className="relative w-32 h-32 rounded-3xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-[var(--primary)] transition-colors">
           {car.image ? (
             <>
               <img src={car.image} alt="Car" className="w-full h-full object-cover" />
