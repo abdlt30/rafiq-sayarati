@@ -4,12 +4,15 @@ import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Wrench } from 'lucide-react';
 
 export default function Maintenance() {
-  const { currentCar, t } = useContext(AppContext);
+  // 1. إضافة currency من الـ Context
+  const { currentCar, t, currency } = useContext(AppContext);
+  
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
-  const [formData, setFormData] = useState({ date: '', type: 'تغيير زيت', cost: '', nextKm: '', notes: '' });
+  // 2. تغيير القيمة الافتراضية للنوع إلى مفتاح ترجمة
+  const [formData, setFormData] = useState({ date: '', type: 'oilChange', cost: '', nextKm: '', notes: '' });
 
   useEffect(() => {
     if (currentCar) {
@@ -22,6 +25,7 @@ export default function Maintenance() {
     const data = { 
       carId: currentCar.id, 
       ...formData, 
+      // نحفظ المفتاح (key) في قاعدة البيانات، وسنقوم بترجمته عند العرض
       cost: Number(formData.cost), 
       nextKm: Number(formData.nextKm) || null 
     };
@@ -55,7 +59,7 @@ export default function Maintenance() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ date: '', type: 'تغيير زيت', cost: '', nextKm: '', notes: '' });
+    setFormData({ date: '', type: 'oilChange', cost: '', nextKm: '', notes: '' });
   };
 
   return (
@@ -70,7 +74,7 @@ export default function Maintenance() {
 
       {/* قائمة السجلات */}
       {records.length === 0 ? (
-        <div className="text-center text-[var(--text-muted)] mt-10">لا توجد سجلات صيانة.</div>
+        <div className="text-center text-[var(--text-muted)] mt-10">{t('noMaintenanceRecords') || 'لا توجد سجلات صيانة.'}</div>
       ) : (
         records.map(record => (
           <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-3">
@@ -78,7 +82,8 @@ export default function Maintenance() {
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-yellow-500/10 text-yellow-500"><Wrench size={20}/></div>
                 <div>
-                  <p className="font-bold text-[var(--text)]">{record.type}</p>
+                  {/* ترجمة نوع الصيانة عند العرض */}
+                  <p className="font-bold text-[var(--text)]">{t(record.type) || record.type}</p>
                   <p className="text-xs text-[var(--text-muted)]">{record.date}</p>
                 </div>
               </div>
@@ -88,8 +93,11 @@ export default function Maintenance() {
               </div>
             </div>
             <div className="flex justify-between items-center bg-[var(--surface-2)] p-2 rounded-lg text-xs">
-              <span className="text-[var(--text-muted)]">{record.nextKm ? `التغيير القادم: ${record.nextKm} KM` : 'لا توجد صيانة قادمة'}</span>
-              <span className="font-bold text-[var(--primary)]">{record.cost} MAD</span>
+              <span className="text-[var(--text-muted)]">
+                {record.nextKm ? `${t('nextChange')}: ${record.nextKm} KM` : t('noNextMaintenance')}
+              </span>
+              {/* 3. استخدام العملة الديناميكية */}
+              <span className="font-bold text-[var(--primary)]">{record.cost} {currency}</span>
             </div>
           </div>
         ))
@@ -98,7 +106,6 @@ export default function Maintenance() {
       {/* نافذة إضافة/تعديل الصيانة */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          {/* تمت إضافة max-h و overflow-y-auto لتمكين التمرير */}
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] overflow-y-auto">
             
             <button type="button" onClick={closeModal} className="absolute top-4 left-4 text-[var(--text-muted)] hover:text-white">
@@ -112,41 +119,41 @@ export default function Maintenance() {
             <div className="space-y-4">
               {/* التاريخ */}
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">التاريخ</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input 
                   type="date" 
                   required 
                   value={formData.date} 
                   onChange={e => setFormData({...formData, date: e.target.value})} 
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark]" 
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none" 
                 />
               </div>
 
               {/* النوع */}
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">نوع الصيانة</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('maintenanceType') || 'نوع الصيانة'}</label>
                 <select 
                   value={formData.type} 
                   onChange={e => setFormData({...formData, type: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none"
                 >
-                  <option value="تغيير زيت">تغيير زيت</option>
-                  <option value="إطارات">إطارات</option>
-                  <option value="فرامل">فرامل</option>
-                  <option value="بطارية">بطارية</option>
-                  <option value="فلتر هواء">فلتر هواء</option>
-                  <option value="فحص شامل">فحص شامل</option>
-                  <option value="أخرى">أخرى</option>
+                  <option value="oilChange">{t('oilChange') || 'تغيير زيت'}</option>
+                  <option value="tires">{t('tires') || 'إطارات'}</option>
+                  <option value="brakes">{t('brakes') || 'فرامل'}</option>
+                  <option value="battery">{t('battery') || 'بطارية'}</option>
+                  <option value="airFilter">{t('airFilter') || 'فلتر هواء'}</option>
+                  <option value="fullInspection">{t('fullInspection') || 'فحص شامل'}</option>
+                  <option value="other">{t('other') || 'أخرى'}</option>
                 </select>
               </div>
 
               {/* التكلفة */}
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">التكلفة (MAD)</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
                 <input 
                   type="number" 
                   required 
-                  placeholder="أدخل التكلفة" 
+                  placeholder={t('enterCost') || 'أدخل التكلفة'} 
                   value={formData.cost} 
                   onChange={e => setFormData({...formData, cost: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none" 
@@ -155,10 +162,10 @@ export default function Maintenance() {
 
               {/* العداد القادم */}
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">العداد للصيانة القادمة (KM)</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('nextOdometer') || 'العداد للصيانة القادمة'} (KM)</label>
                 <input 
                   type="number" 
-                  placeholder="اختياري" 
+                  placeholder={t('optional') || 'اختياري'} 
                   value={formData.nextKm} 
                   onChange={e => setFormData({...formData, nextKm: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none" 
