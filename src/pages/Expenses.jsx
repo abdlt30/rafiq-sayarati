@@ -78,14 +78,16 @@ export default function Expenses() {
             <button type="button" onClick={closeModal} className="absolute top-4 left-4 text-[var(--text-muted)]"><X size={20} /></button>
             <h2 className="text-xl font-bold text-center mb-4">{editingId ? t('edit') : t('addExpense')}</h2>
             <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark]" />
+            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-x
+            <input type="number" placeholder={t('amount')} required value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]" />
             <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]">
-              <option value="تأمين">تأمين</option>
+             <option value="تأمين">تأمين</option>
               <option value="ضرائب">ضرائب</option>
               <option value="غسيل">غسيل</option>
-              <option value="أخرى">أخرى</option>
+               <option value="مخالفات">مخالفات مرورية</option>
+               <option value="مواقف">رسوم مواقف</option>
+               <option value="أخرى">أخرى</option>
             </select>
-            <input type="number" placeholder={t('amount')} required value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]" />
-            <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl">{t('save')}</button>
           </form>
         </div>
       )}
