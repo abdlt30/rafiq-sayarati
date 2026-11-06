@@ -1,11 +1,18 @@
 import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Car, Plus, CheckCircle, Edit2 } from 'lucide-react';
+import { Car, Plus, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Vehicles() {
-  const { currentCar, vehicles, selectCar, t } = useContext(AppContext);
+  const { currentCar, vehicles, selectCar, deleteCar, t } = useContext(AppContext);
   const navigate = useNavigate();
+
+  const handleDelete = (e, id, make, model) => {
+    e.stopPropagation(); // منع فتح السيارة عند الضغط على الحذف
+    if (window.confirm(`${t('confirmDeleteCar') || 'هل أنت متأكد من حذف'} ${make} ${model}؟`)) {
+      deleteCar(id);
+    }
+  };
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-6 relative min-h-screen">
@@ -22,7 +29,6 @@ export default function Vehicles() {
           </div>
         </div>
         
-        {/* زر الإضافة في الهيدر */}
         <button 
           onClick={() => navigate('/add-vehicle')} 
           className="flex items-center gap-1.5 bg-[var(--primary)] text-white px-3 py-2 rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-colors text-sm font-bold"
@@ -50,7 +56,6 @@ export default function Vehicles() {
                     : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--text-muted)]'
                 }`}
               >
-                {/* صورة السيارة */}
                 <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden ${isActive ? 'bg-[var(--primary)]/20 text-[var(--primary)]' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
                   {car.image ? (
                     <img src={car.image} alt="car" className="w-full h-full object-cover" />
@@ -74,12 +79,21 @@ export default function Vehicles() {
                   
                   <div className="flex justify-between items-end mt-3">
                     <span className="text-sm font-bold bg-[var(--surface-2)] px-2.5 py-1 rounded-lg text-[var(--text)]">{car.currentOdometer} KM</span>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} 
-                      className="p-2 text-[var(--primary)] bg-[var(--primary)]/10 rounded-xl hover:bg-[var(--primary)]/20 transition-colors"
-                    >
-                      <Edit2 size={16} />
-                    </button>
+                    
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} 
+                        className="p-2 text-blue-400 bg-blue-400/10 rounded-xl hover:bg-blue-400/20 transition-colors"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => handleDelete(e, car.id, car.make, car.model)} 
+                        className="p-2 text-red-400 bg-red-400/10 rounded-xl hover:bg-red-400/20 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
