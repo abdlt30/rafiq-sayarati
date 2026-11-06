@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { Camera, X } from 'lucide-react'; // أيقونات جديدة
+import { Camera, X } from 'lucide-react';
 
 export default function AddVehicle() {
   const { addNewCar, updateCar, vehicles, t } = useContext(AppContext); 
@@ -13,7 +13,6 @@ export default function AddVehicle() {
   const editId = searchParams.get('id');
   const isEditing = Boolean(editId);
 
-  // إضافة حقول جديدة (صورة، سنة، لون)
   const [car, setCar] = useState({ 
     make: '', model: '', plate: '', currentOdometer: '', 
     year: '', color: '', image: '' 
@@ -26,16 +25,31 @@ export default function AddVehicle() {
     }
   }, [isEditing, editId, vehicles]);
 
-  // دالة تحويل الصورة إلى Base64 لتخزينها
+  // دالة ذكية لضغط الصورة قبل حفظها لتجنب امتلاء الذاكرة
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCar({ ...car, image: reader.result });
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600; // تصغير العرض
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // ضغط الصورة بنسبة 70% بصيغة JPEG
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        setCar({ ...car, image: compressedBase64 });
       };
-      reader.readAsDataURL(file);
-    }
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e) => {
@@ -66,16 +80,15 @@ export default function AddVehicle() {
         </p>
       </div>
 
-      {/* رفع الصورة */}
       <div className="flex justify-center mb-8">
-        <div className="relative w-32 h-32 rounded-3xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-[var(--primary)] transition-colors">
+        <div className="relative w-32 h-32 rounded-3xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-[var(--primary)] transition-colors shadow-lg">
           {car.image ? (
             <>
               <img src={car.image} alt="Car" className="w-full h-full object-cover" />
               <button 
                 type="button" 
                 onClick={() => setCar({...car, image: ''})}
-                className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full backdrop-blur-sm"
+                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm"
               >
                 <X size={14} />
               </button>
