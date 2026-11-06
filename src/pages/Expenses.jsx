@@ -1,10 +1,12 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Trash2, Edit2, X, Wallet } from 'lucide-react';
+import { Plus, Trash2, Edit2, X } from 'lucide-react'; // تم حذف Wallet لأنها غير مستخدمة
 
 export default function Expenses() {
-  const { currentCar, t } = useContext(AppContext);
+  // 1. إضافة currency من الـ Context
+  const { currentCar, t, currency } = useContext(AppContext); 
+  
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -62,7 +64,10 @@ export default function Expenses() {
           <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-3">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-white font-bold text-lg">{record.cost} <span className="text-sm text-[var(--text-muted)]">MAD</span></p>
+                {/* 2. استخدام العملة الديناميكية */}
+                <p className="text-white font-bold text-lg">
+                  {record.cost} <span className="text-sm text-[var(--text-muted)]">{currency}</span>
+                </p>
                 <p className="text-[var(--text-muted)] text-xs mt-1">{record.date}</p>
               </div>
               <div className="flex gap-2">
@@ -92,7 +97,7 @@ export default function Expenses() {
             <div className="space-y-4">
               {/* التاريخ */}
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">التاريخ</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input 
                   type="date" 
                   required 
@@ -104,28 +109,28 @@ export default function Expenses() {
 
               {/* النوع (الخيارات الشاملة) */}
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">نوع المصروف</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('expenseType') || 'نوع المصروف'}</label>
                 <select 
                   value={formData.type} 
                   onChange={e => setFormData({...formData, type: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none"
                 >
-                  <option value="تأمين">تأمين</option>
-                  <option value="ضرائب">ضرائب</option>
-                  <option value="غسيل">غسيل</option>
-                  <option value="مخالفات">مخالفات مرورية</option>
-                  <option value="مواقف">رسوم مواقف</option>
-                  <option value="أخرى">أخرى</option>
+                  <option value="تأمين">{t('insurance') || 'تأمين'}</option>
+                  <option value="ضرائب">{t('taxes') || 'ضرائب'}</option>
+                  <option value="غسيل">{t('carWash') || 'غسيل'}</option>
+                  <option value="مخالفات">{t('fines') || 'مخالفات مرورية'}</option>
+                  <option value="مواقف">{t('parking') || 'رسوم مواقف'}</option>
+                  <option value="أخرى">{t('other') || 'أخرى'}</option>
                 </select>
               </div>
 
               {/* المبلغ */}
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">المبلغ (MAD)</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('amount') || 'المبلغ'} ({currency})</label>
                 <input 
                   type="number" 
                   required 
-                  placeholder="أدخل المبلغ" 
+                  placeholder={t('enterAmount') || 'أدخل المبلغ'} 
                   value={formData.cost} 
                   onChange={e => setFormData({...formData, cost: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none" 
