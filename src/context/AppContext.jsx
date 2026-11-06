@@ -11,7 +11,13 @@ const translations = {
     noData: 'لا توجد بيانات كافية', save: 'حفظ', cancel: 'إلغاء', welcome: 'مرحباً،', 
     month: 'هذا الشهر', distance: 'المسافة المقطوعة', nextMaintenance: 'الصيانة القادمة', 
     expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات', viewAll: 'عرض الكل',
-    switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', vehicles: 'سياراتي', carInfo: 'معلومات السيارة'
+    switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', vehicles: 'سياراتي', carInfo: 'معلومات السيارة',
+    // الكلمات الجديدة المضافة
+    fuel: 'سجل الوقود', date: 'التاريخ', expenseType: 'نوع المصروف', amount: 'المبلغ', 
+    insurance: 'تأمين', taxes: 'ضرائب', carWash: 'غسيل', fines: 'مخالفات مرورية', 
+    parking: 'رسوم مواقف', other: 'أخرى', enterAmount: 'أدخل المبلغ',
+    odometer: 'العداد', liters: 'اللترات', cost: 'التكلفة', noFuelRecords: 'لا توجد سجلات وقود.',
+    confirmDelete: 'هل أنت متأكد من الحذف؟', edit: 'تعديل'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -21,7 +27,13 @@ const translations = {
     noData: 'Not enough data', save: 'Save', cancel: 'Cancel', welcome: 'Welcome,', 
     month: 'This Month', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
     expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity', viewAll: 'View All',
-    switchCar: 'Switch Car', addNewCar: 'Add Vehicle', vehicles: 'My Vehicles', carInfo: 'Car Information'
+    switchCar: 'Switch Car', addNewCar: 'Add Vehicle', vehicles: 'My Vehicles', carInfo: 'Car Information',
+    // New keys
+    fuel: 'Fuel Log', date: 'Date', expenseType: 'Expense Type', amount: 'Amount', 
+    insurance: 'Insurance', taxes: 'Taxes', carWash: 'Car Wash', fines: 'Traffic Fines', 
+    parking: 'Parking', other: 'Other', enterAmount: 'Enter amount',
+    odometer: 'Odometer', liters: 'Liters', cost: 'Cost', noFuelRecords: 'No fuel records found.',
+    confirmDelete: 'Are you sure you want to delete?', edit: 'Edit'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -31,7 +43,13 @@ const translations = {
     noData: 'Pas assez de données', save: 'Enregistrer', cancel: 'Annuler', welcome: 'Bienvenue,', 
     month: 'Ce Mois', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
     expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente', viewAll: 'Voir Tout',
-    switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule'
+    switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule',
+    // Nouvelles clés
+    fuel: 'Journal de Carburant', date: 'Date', expenseType: 'Type de dépense', amount: 'Montant', 
+    insurance: 'Assurance', taxes: 'Impôts', carWash: 'Lavage', fines: 'Amendes', 
+    parking: 'Stationnement', other: 'Autre', enterAmount: 'Entrer le montant',
+    odometer: 'Compteur Kilométrique', liters: 'Litres', cost: 'Coût', noFuelRecords: 'Aucun enregistrement de carburant.',
+    confirmDelete: 'Êtes-vous sûr de vouloir supprimer?', edit: 'Modifier'
   }
 };
 
