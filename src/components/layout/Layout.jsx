@@ -4,21 +4,22 @@ import Sidebar from './Sidebar';
 
 export default function Layout({ children }) {
   return (
-    <div className="flex h-screen w-full bg-[var(--bg)] text-[var(--text)] font-sans overflow-hidden">
+    // 1. استخدام min-h-screen لضمان التمرير السليم على الهواتف
+    <div className="flex min-h-screen w-full bg-[var(--bg)] text-[var(--text)] font-sans">
+      
       {/* الشريط الجانبي (للكمبيوتر فقط) */}
-      <div className="hidden md:block w-64 flex-shrink-0 border-l border-[var(--border)] bg-[var(--surface)] h-full">
+      <div className="hidden md:block w-64 flex-shrink-0 border-l border-[var(--border)] bg-[var(--surface)] sticky top-0 h-screen">
         <Sidebar />
       </div>
 
       {/* المحتوى الرئيسي */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* تم إزالة <Header /> من هنا لأن كل صفحة لها شريطها الخاص */}
-        <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-8 w-full max-w-4xl mx-auto">
+      <div className="flex-1 flex flex-col min-h-screen">
+        <main className="flex-1 p-4 pb-24 md:pb-8 w-full max-w-4xl mx-auto">
           {children || <Outlet />}
         </main>
       </div>
 
-      {/* الشريط السفلي */}
+      {/* الشريط السفلي (للهواتف فقط) */}
       <div className="md:hidden fixed bottom-0 w-full z-50">
         <BottomNav />
       </div>
