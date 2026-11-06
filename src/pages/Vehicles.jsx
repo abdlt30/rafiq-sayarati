@@ -1,25 +1,17 @@
 import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Car, Plus, CheckCircle } from 'lucide-react';
+import { Car, Plus, CheckCircle, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Vehicles() {
-  const { currentCar, setCurrentCar, t } = useContext(AppContext);
+  const { currentCar, vehicles, selectCar, t } = useContext(AppContext);
   const navigate = useNavigate();
-  
-  // جلب السيارات من الذاكرة
-  const vehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
-
-  const selectCar = (car) => {
-    localStorage.setItem('savedCar', JSON.stringify(car));
-    setCurrentCar(car);
-    navigate('/'); // العودة للرئيسية
-  };
 
   return (
     <div className="space-y-4 pb-24">
+      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{t('vehicles') || 'سياراتي'}</h1>
+        <h1 className="text-2xl font-bold">{t('vehicles')}</h1>
         <button onClick={() => navigate('/add-vehicle')} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg">
           <Plus size={24} />
         </button>
@@ -36,7 +28,7 @@ export default function Vehicles() {
             return (
               <div 
                 key={car.id} 
-                onClick={() => selectCar(car)}
+                onClick={() => { selectCar(car); navigate('/'); }}
                 className={`p-4 rounded-2xl border flex justify-between items-center cursor-pointer transition-all ${
                   isActive ? 'border-[var(--primary)] bg-[var(--primary-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'
                 }`}
@@ -50,7 +42,12 @@ export default function Vehicles() {
                     <p className="text-xs text-[var(--text-muted)] mt-1">{car.plate} • {car.currentOdometer} KM</p>
                   </div>
                 </div>
-                {isActive && <CheckCircle className="text-[var(--primary)]" size={20} />}
+                <div className="flex items-center gap-2">
+                   <button onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} className="p-2 text-blue-400 bg-blue-400/10 rounded-lg">
+                     <Edit2 size={16} />
+                   </button>
+                   {isActive && <CheckCircle className="text-[var(--primary)]" size={20} />}
+                </div>
               </div>
             );
           })}
