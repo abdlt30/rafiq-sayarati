@@ -1,10 +1,11 @@
-import { useContext } from 'react'; // 1. إضافة استدعاء useContext
-import { AppContext } from '../context/AppContext'; // 2. استدعاء الـ Context
+import { useContext } from 'react';
+// ✅ تصحيح المسار هنا: الصعود مستويين للأعلى للوصول إلى مجلد context
+import { AppContext } from '../../context/AppContext.jsx'; 
 import { NavLink } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
-  const { t } = useContext(AppContext); // 3. جلب دالة الترجمة
+  const { t } = useContext(AppContext);
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
@@ -15,7 +16,6 @@ export default function BottomNav() {
   ];
 
   return (
-    // 4. استخدام متغيرات الألوان الديناميكية
     <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)]">
       {navItems.map((item) => (
         <NavLink
