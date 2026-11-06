@@ -29,7 +29,6 @@ export default function Dashboard() {
     const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const grandTotal = totalFuel + totalExp + totalMaint;
 
-    // إصلاح حساب مصاريف الشهر الحالي
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -37,7 +36,6 @@ export default function Dashboard() {
     const isThisMonth = (dateStr) => {
       if (!dateStr) return false;
       const d = new Date(dateStr);
-      // التحقق من صحة التاريخ
       if (isNaN(d.getTime())) return false; 
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     };
@@ -86,10 +84,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-4 pb-24 px-4 pt-0">
+    <div className="space-y-4 pb-24 px-4">
       
-      {/* الشريط العلوي الثابت - الآن يعمل بشكل مثالي */}
-      <div className="sticky top-0 z-50 bg-[var(--bg)]/90 backdrop-blur-xl pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 transition-all">
+      {/* الشريط العلوي الثابت - تم جعله بلون صلب لضمان رؤيته */}
+      <div className="sticky top-0 z-50 bg-[var(--bg)] pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
           <p className="text-xs text-[var(--text-muted)]">{getFormattedDate()}</p>
@@ -105,7 +103,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* بطاقة السيارة الحالية - تصميم محسن */}
+      {/* بطاقة السيارة الحالية */}
       <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10">
         <div className="flex justify-between items-start">
           <div>
@@ -127,7 +125,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* إجراءات سريعة - تصميم أنيق */}
+      {/* إجراءات سريعة */}
       <div className="grid grid-cols-4 gap-2.5">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] hover:border-blue-500/30 transition-all group">
           <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl mb-2 group-hover:scale-110 transition-transform"><Fuel size={20} /></div>
@@ -147,7 +145,7 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* لوحة البيانات (KPIs) - تصميم متقدم */}
+      {/* لوحة البيانات (KPIs) */}
       <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/5 rounded-bl-full"></div>
@@ -183,9 +181,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* التنبيهات وآخر العمليات... (نفس الكود السابق، مع إزالة px-4 ليعمل بشكل صحيح) */}
+      {/* التنبيهات وآخر العمليات */}
       {data.upcomingMaintenance.length > 0 && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
               <Wrench size={16} className="text-yellow-500"/> {t('upcomingMaintenance') || 'الصيانة القادمة'}
@@ -204,7 +202,7 @@ export default function Dashboard() {
       )}
 
       {data.expiringDocs.length > 0 && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
               <AlertCircle size={16} className="text-red-500"/> {t('expiringDocs') || 'وثائق تنتهي قريباً'}
@@ -222,7 +220,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
         <h3 className="font-bold text-sm text-[var(--text)] mb-3 flex items-center gap-2">
           <Calendar size={16} className="text-[var(--primary)]"/> {t('recentActivity') || 'آخر العمليات'}
         </h3>
