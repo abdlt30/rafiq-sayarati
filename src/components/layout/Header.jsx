@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Settings, Bell, Car, Sun, Moon } from 'lucide-react';
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { AppContext } from '../../context/AppContext.jsx';
 
 export default function Header() {
   const { theme, toggleTheme } = useContext(AppContext);
