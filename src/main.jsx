@@ -15,15 +15,23 @@ class ErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error, errorInfo) {
+    // هذا السطر سيطبع الخطأ الحقيقي في كونسول المتصفح لسهولة اكتشافه
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '20px', backgroundColor: '#7f1d1d', color: 'white', minHeight: '100vh', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>عذراً، حدث خطأ!</h1>
-          <p style={{ backgroundColor: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '10px', fontSize: '14px', direction: 'ltr' }}>
+        <div className="min-h-screen bg-red-900 text-white flex flex-col items-center justify-center p-6 text-center">
+          <h1 className="text-2xl font-bold mb-4">عذراً، حدث خطأ!</h1>
+          <div className="bg-black/30 p-4 rounded-xl w-full max-w-lg overflow-auto text-sm font-mono mb-6" dir="ltr">
             {this.state.error.toString()}
-          </p>
-          <button onClick={() => window.location.reload()} style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: 'white', color: '#7f1d1d', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-3 bg-white text-red-900 font-bold rounded-xl hover:bg-gray-100 transition-colors"
+          >
             إعادة المحاولة
           </button>
         </div>
