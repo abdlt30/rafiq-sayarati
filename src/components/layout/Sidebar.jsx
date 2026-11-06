@@ -1,5 +1,5 @@
 import { useContext } from 'react'; // 1. إضافة استدعاء useContext
-import { AppContext } from '../context/AppContext'; // 2. استدعاء الـ Context
+import { AppContext } from '../../context/AppContext.jsx';
 import { NavLink } from 'react-router-dom';
 // 3. حذف الأيقونات غير المستخدمة (PieChart, Database)
 import { Home, Car, Wallet, Fuel, Wrench, FileText, Bell, Settings } from 'lucide-react';
