@@ -16,6 +16,10 @@ const translations = {
     totalCost: 'إجمالي المصاريف', costPerKm: 'تكلفة الكيلومتر', distributionByType: 'توزيع المصاريف', 
     quickActions: 'إجراءات سريعة', distance: 'المسافة المقطوعة', nextMaintenance: 'الصيانة القادمة', 
     expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات',
+    currentCar: 'السيارة الحالية', // جديد
+    monthlyCost: 'مصاريف الشهر', // جديد
+    upcomingMaintenance: 'الصيانة القادمة', // جديد
+    expense: 'مصروف', // جديد (مفرد لآخر العمليات)
     
     // السيارات
     vehicles: 'سياراتي', carInfo: 'معلومات السيارة', switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', 
@@ -72,6 +76,10 @@ const translations = {
     totalCost: 'Total Cost', costPerKm: 'Cost per KM', distributionByType: 'Expense Distribution', 
     quickActions: 'Quick Actions', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
     expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity',
+    currentCar: 'Current Car', // New
+    monthlyCost: 'Monthly Cost', // New
+    upcomingMaintenance: 'Upcoming Maintenance', // New
+    expense: 'Expense', // New
     
     // Vehicles
     vehicles: 'My Vehicles', carInfo: 'Car Information', switchCar: 'Switch Car', addNewCar: 'Add Vehicle', 
@@ -128,6 +136,10 @@ const translations = {
     totalCost: 'Coût Total', costPerKm: 'Coût par KM', distributionByType: 'Répartition des Dépenses', 
     quickActions: 'Actions Rapides', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
     expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente',
+    currentCar: 'Voiture Actuelle', // Nouveau
+    monthlyCost: 'Coût Mensuel', // Nouveau
+    upcomingMaintenance: 'Prochain Entretien', // Nouveau
+    expense: 'Dépense', // Nouveau
     
     // Véhicules
     vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule', switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', 
