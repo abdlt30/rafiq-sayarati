@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, Gauge } from 'lucide-react';
+import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, Gauge, AlertTriangle } from 'lucide-react';
 
 export default function Reminders() {
   const { currentCar, t } = useContext(AppContext); 
@@ -9,28 +9,22 @@ export default function Reminders() {
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // المفاتيح (Keys) يجب أن تتطابق مع الترجمات
+  // النموذج يدعم التاريخ والعداد في نفس الوقت
   const [formData, setFormData] = useState({ type: 'oil', date: '', odometer: '' });
-
-  // دالة ترتيب السجلات (الأحدث أولاً)
-  const sortRecords = (data) => {
-    return [...data].sort((a, b) => {
-      // ترتيب حسب التاريخ إذا وجد، وإلا حسب العداد
-      if (a.date && b.date) return new Date(a.date) - new Date(b.date);
-      if (a.odometer && b.odometer) return a.odometer - b.odometer;
-      return 0;
-    });
-  };
 
   useEffect(() => {
     if (currentCar) {
       const carReminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
-      setRecords(sortRecords(carReminders));
+      setRecords(carReminders);
     }
   }, [currentCar]);
 
   const handleSave = (e) => {
     e.preventDefault();
+    if (!formData.date && !formData.odometer) {
+      return alert(t('fillRequiredFields') || 'الرجاء إدخال التاريخ أو العداد على الأقل.');
+    }
+
     const data = { 
       carId: currentCar.id, 
       type: formData.type, 
@@ -40,8 +34,7 @@ export default function Reminders() {
 
     const newRecord = dbService.addReminder(data);
     if (newRecord) {
-      const updatedRecords = dbService.getReminders().filter(r => r.carId === currentCar.id);
-      setRecords(sortRecords(updatedRecords));
+      setRecords([...records, newRecord]);
     }
     
     setIsModalOpen(false);
@@ -55,26 +48,55 @@ export default function Reminders() {
     }
   };
 
-  const getStatus = (record) => {
-    // 1. حساب الحالة بناءً على التاريخ
+  // 🧠 الخوارزمية الذكية: تحسب أيهما أقرب (التاريخ أم المسافة)
+  const getSmartStatus = (record) => {
+    const now = new Date();
+    let daysLeft = null;
+    let kmLeft = null;
+
     if (record.date) {
-      const daysLeft = Math.ceil((new Date(record.date) - new Date()) / (1000 * 60 * 60 * 24));
-      if (daysLeft < 0) return { label: t('overdue') || 'متأخر', color: 'text-red-500', bg: 'bg-red-500/10', icon: Bell };
-      if (daysLeft <= 7) return { label: `${t('soon') || 'قريب'} (${daysLeft} ${t('days') || 'يوم'})`, color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Bell };
-      return { label: `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'}`, color: 'text-green-500', bg: 'bg-green-500/10', icon: Calendar };
+      daysLeft = Math.ceil((new Date(record.date) - now) / (1000 * 60 * 60 * 24));
     }
     
-    // 2. حساب الحالة بناءً على العداد (مع حماية من الأخطاء)
-    if (record.odometer) {
-      const currentOdo = Number(currentCar?.currentOdometer) || 0;
-      const kmLeft = Number(record.odometer) - currentOdo;
-      
-      if (kmLeft < 0) return { label: t('overdue') || 'متأخر', color: 'text-red-500', bg: 'bg-red-500/10', icon: Gauge };
-      if (kmLeft <= 1000) return { label: `${t('soon') || 'قريب'} (${kmLeft} ${t('km') || 'كم'})`, color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Gauge };
-      return { label: `${t('after') || 'بعد'} ${kmLeft} ${t('km') || 'كم'}`, color: 'text-green-500', bg: 'bg-green-500/10', icon: Gauge };
+    if (record.odometer && currentCar?.currentOdometer) {
+      kmLeft = Number(record.odometer) - Number(currentCar.currentOdometer);
     }
-    
-    return { label: t('active') || 'نشط', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Bell };
+
+    // إذا لم يكن هناك تاريخ ولا عداد
+    if (daysLeft === null && kmLeft === null) {
+      return { label: t('active') || 'نشط', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Bell };
+    }
+
+    // تحديد ما إذا كان متأخراً
+    const isOverdue = (daysLeft !== null && daysLeft < 0) || (kmLeft !== null && kmLeft < 0);
+    if (isOverdue) {
+      return { label: t('overdue') || 'متأخر', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
+    }
+
+    // تحديد أي منهما أقرب
+    let message = '';
+    let isSoon = false;
+
+    if (daysLeft !== null && kmLeft !== null) {
+      // كلاهما موجود
+      if (daysLeft <= 7 || kmLeft <= 500) isSoon = true;
+      message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'} / ${kmLeft} ${t('km') || 'كم'}`;
+    } else if (daysLeft !== null) {
+      // تاريخ فقط
+      if (daysLeft <= 7) isSoon = true;
+      message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'}`;
+    } else if (kmLeft !== null) {
+      // عداد فقط
+      if (kmLeft <= 500) isSoon = true;
+      message = `${t('after') || 'بعد'} ${kmLeft} ${t('km') || 'كم'}`;
+    }
+
+    return {
+      label: message,
+      color: isSoon ? 'text-yellow-500' : 'text-green-500',
+      bg: isSoon ? 'bg-yellow-500/10' : 'bg-green-500/10',
+      icon: isSoon ? AlertTriangle : Shield
+    };
   };
 
   const getRecordIcon = (type) => {
@@ -85,7 +107,7 @@ export default function Reminders() {
 
   return (
     <div className="space-y-4 pb-24 px-4">
-      {/* الشريط العلوي المحسن (Sticky) */}
+      {/* الشريط العلوي المحسن */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('reminders') || 'التذكيرات'}</h1>
         <button onClick={() => setIsModalOpen(true)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform">
@@ -93,7 +115,7 @@ export default function Reminders() {
         </button>
       </div>
 
-      {/* حالة عدم وجود تذكيرات */}
+      {/* قائمة التذكيرات */}
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
@@ -104,7 +126,7 @@ export default function Reminders() {
       ) : (
         <div className="space-y-3">
           {records.map(record => {
-            const status = getStatus(record);
+            const status = getSmartStatus(record);
             const StatusIcon = status.icon;
             
             return (
@@ -117,8 +139,8 @@ export default function Reminders() {
                     <p className="font-bold text-[var(--text)] text-lg">
                       {t(record.type) || record.type}
                     </p>
-                    <div className={`flex items-center gap-1 text-xs font-bold mt-0.5 ${status.color}`}>
-                      <StatusIcon size={12} />
+                    <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${status.color}`}>
+                      <StatusIcon size={14} />
                       {status.label}
                     </div>
                   </div>
@@ -152,32 +174,31 @@ export default function Reminders() {
               <button type="button" onClick={() => setFormData({...formData, type: 'inspection'})} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'inspection' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('inspection') || 'فحص'}</button>
             </div>
             
-            {/* حقل العداد أو التاريخ بناءً على النوع */}
-            {formData.type === 'oil' ? (
+            {/* الحقول الجديدة: التاريخ والعداد معاً */}
+            <div className="space-y-3 pt-2">
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد (KM)'}</label>
-                <input 
-                  type="number" 
-                  required 
-                  value={formData.odometer} 
-                  onChange={e => setFormData({...formData, odometer: e.target.value})} 
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'تاريخ الانتهاء'}</label>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'التاريخ (اختياري)'}</label>
                 <input 
                   type="date" 
-                  required 
                   value={formData.date} 
                   onChange={e => setFormData({...formData, date: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none [color-scheme:dark] focus:border-[var(--primary)]" 
                 />
               </div>
-            )}
+              <div>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد (اختياري)'}</label>
+                <input 
+                  type="number" 
+                  value={formData.odometer} 
+                  onChange={e => setFormData({...formData, odometer: e.target.value})} 
+                  placeholder="مثال: 95000"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
+                />
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)] text-center">التطبيق سينبهك بأيهما يأتي أولاً.</p>
+            </div>
             
-            <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl mt-6 shadow-lg hover:bg-blue-600 transition-colors">
+            <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl mt-4 shadow-lg hover:bg-blue-600 transition-colors">
               {t('save') || 'حفظ'}
             </button>
           </form>
