@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useMemo } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { 
@@ -11,46 +11,42 @@ export default function Dashboard() {
   const { currentCar, currency, t, lang } = useContext(AppContext); 
   const navigate = useNavigate();
 
-  // --- 1. جلب البيانات وحساب الإحصائيات ---
   const [data, setData] = useState({
-    totalCost: 0,
-    monthlyCost: 0,
-    costPerKm: 0,
-    distance: 0,
-    upcomingMaintenance: [],
-    expiringDocs: [],
-    recentActivity: []
+    totalCost: 0, monthlyCost: 0, costPerKm: 0, distance: 0,
+    upcomingMaintenance: [], expiringDocs: [], recentActivity: []
   });
 
   useEffect(() => {
     if (!currentCar) return;
 
-    // جلب كل السجلات
     const fuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
     const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
     const maintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
     const docs = dbService.getDocuments().filter(r => r.carId === currentCar.id);
 
-    // 1. حساب التكاليف
-    const totalFuel = fuel.reduce((sum, r) => sum + Number(r.cost), 0);
-    const totalExp = expenses.reduce((sum, r) => sum + Number(r.cost), 0);
-    const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost), 0);
+    const totalFuel = fuel.reduce((sum, r) => sum + Number(r.cost || 0), 0);
+    const totalExp = expenses.reduce((sum, r) => sum + Number(r.cost || 0), 0);
+    const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const grandTotal = totalFuel + totalExp + totalMaint;
 
-    // 2. حساب مصاريف الشهر الحالي
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+    // إصلاح حساب مصاريف الشهر الحالي
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
     const isThisMonth = (dateStr) => {
+      if (!dateStr) return false;
       const d = new Date(dateStr);
+      // التحقق من صحة التاريخ
+      if (isNaN(d.getTime())) return false; 
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     };
 
-    const monthFuel = fuel.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost), 0);
-    const monthExp = expenses.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost), 0);
-    const monthMaint = maintenance.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost), 0);
+    const monthFuel = fuel.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0);
+    const monthExp = expenses.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0);
+    const monthMaint = maintenance.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const monthlyTotal = monthFuel + monthExp + monthMaint;
 
-    // 3. حساب المسافة وتكلفة الكيلومتر
     const odometers = fuel.map(r => Number(r.odometer)).filter(o => o > 0).sort((a, b) => a - b);
     let distance = 0;
     if (odometers.length > 1) distance = odometers[odometers.length - 1] - odometers[0];
@@ -58,21 +54,19 @@ export default function Dashboard() {
     
     const costPerKm = distance > 0 ? (grandTotal / distance).toFixed(2) : 0;
 
-    // 4. تنبيهات الصيانة (أقرب 3)
     const maintAlerts = maintenance
-      .filter(m => m.nextKm && m.nextKm > currentCar.currentOdometer)
-      .sort((a, b) => a.nextKm - b.nextKm)
+      .filter(m => m.nextKm && Number(m.nextKm) > (currentCar.currentOdometer || 0))
+      .sort((a, b) => Number(a.nextKm) - Number(b.nextKm))
       .slice(0, 3);
 
-    // 5. تنبيهات الوثائق (التي تنتهي قريباً)
     const docAlerts = docs
       .filter(d => {
+        if (!d.endDate) return false;
         const daysLeft = Math.ceil((new Date(d.endDate) - new Date()) / (1000 * 60 * 60 * 24));
-        return daysLeft <= 30; // تنتهي خلال 30 يوم
+        return daysLeft <= 30; 
       })
       .sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
 
-    // 6. آخر العمليات (Recent Activity) - دمج وترتيب
     const allActivities = [
       ...fuel.map(r => ({ ...r, type: 'fuel', icon: Fuel, color: 'text-blue-500' })),
       ...expenses.map(r => ({ ...r, type: 'expense', icon: Wallet, color: 'text-purple-500' })),
@@ -80,13 +74,8 @@ export default function Dashboard() {
     ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
 
     setData({
-      totalCost: grandTotal,
-      monthlyCost: monthlyTotal,
-      costPerKm,
-      distance,
-      upcomingMaintenance: maintAlerts,
-      expiringDocs: docAlerts,
-      recentActivity: allActivities
+      totalCost: grandTotal, monthlyCost: monthlyTotal, costPerKm, distance,
+      upcomingMaintenance: maintAlerts, expiringDocs: docAlerts, recentActivity: allActivities
     });
 
   }, [currentCar]);
@@ -97,10 +86,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-24 px-4 pt-0">
       
-      {/* 1. الشريط العلوي الثابت (Sticky Header) */}
-      <div className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-3 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 transition-all">
+      {/* الشريط العلوي الثابت - الآن يعمل بشكل مثالي */}
+      <div className="sticky top-0 z-50 bg-[var(--bg)]/90 backdrop-blur-xl pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 transition-all">
         <div>
           <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
           <p className="text-xs text-[var(--text-muted)]">{getFormattedDate()}</p>
@@ -116,107 +105,123 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 2. بطاقة السيارة الحالية (Car Card) */}
-      <div className="hero-card p-5 mt-2">
+      {/* بطاقة السيارة الحالية - تصميم محسن */}
+      <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10">
         <div className="flex justify-between items-start">
           <div>
-            <p className="text-xs opacity-70 mb-1">{t('currentCar') || 'السيارة الحالية'}</p>
-            <h3 className="text-2xl font-bold">{currentCar?.make} {currentCar?.model}</h3>
-            <p className="text-sm opacity-80 mt-1">{currentCar?.plate}</p>
+            <p className="text-xs font-medium text-blue-200/70 mb-1">{t('currentCar') || 'السيارة الحالية'}</p>
+            <h3 className="text-2xl font-extrabold text-white tracking-wide">{currentCar?.make} {currentCar?.model}</h3>
+            <p className="text-sm font-medium text-blue-100/80 mt-1 bg-black/20 w-fit px-2 py-0.5 rounded-md">{currentCar?.plate}</p>
           </div>
-          <Car size={32} className="opacity-40" />
+          <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+            <Car size={32} className="text-white/80" />
+          </div>
         </div>
-        <div className="flex gap-2 mt-4 pt-4 border-t border-white/10">
-          <button onClick={() => navigate('/vehicles')} className="flex-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 rounded-lg flex justify-center items-center gap-1 transition-colors">
-            <ArrowLeftRight size={14} /> {t('switchCar') || 'تغيير'}
+        <div className="flex gap-3 mt-5">
+          <button onClick={() => navigate('/vehicles')} className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all">
+            <ArrowLeftRight size={16} /> {t('switchCar') || 'تغيير'}
           </button>
-          <button onClick={() => navigate('/add-vehicle')} className="flex-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 rounded-lg flex justify-center items-center gap-1 transition-colors">
-            <Plus size={14} /> {t('addNewCar') || 'إضافة'}
+          <button onClick={() => navigate('/add-vehicle')} className="flex-1 bg-[var(--primary)] hover:bg-blue-600 text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg shadow-blue-500/30">
+            <Plus size={16} /> {t('addNewCar') || 'إضافة'}
           </button>
         </div>
       </div>
 
-      {/* 3. إجراءات سريعة (Quick Actions) */}
-      <div className="grid grid-cols-4 gap-2">
-        <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-colors">
-          <div className="p-2 bg-blue-500/10 text-blue-500 rounded-full mb-2"><Fuel size={20} /></div>
+      {/* إجراءات سريعة - تصميم أنيق */}
+      <div className="grid grid-cols-4 gap-2.5">
+        <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] hover:border-blue-500/30 transition-all group">
+          <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl mb-2 group-hover:scale-110 transition-transform"><Fuel size={20} /></div>
           <span className="text-[10px] font-bold text-[var(--text-muted)]">{t('fuel') || 'وقود'}</span>
         </Link>
-        <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-colors">
-          <div className="p-2 bg-purple-500/10 text-purple-500 rounded-full mb-2"><Wallet size={20} /></div>
+        <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] hover:border-purple-500/30 transition-all group">
+          <div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-xl mb-2 group-hover:scale-110 transition-transform"><Wallet size={20} /></div>
           <span className="text-[10px] font-bold text-[var(--text-muted)]">{t('expenses') || 'مصاريف'}</span>
         </Link>
-        <Link to="/maintenance" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-colors">
-          <div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-full mb-2"><Wrench size={20} /></div>
+        <Link to="/maintenance" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] hover:border-yellow-500/30 transition-all group">
+          <div className="p-2.5 bg-yellow-500/10 text-yellow-500 rounded-xl mb-2 group-hover:scale-110 transition-transform"><Wrench size={20} /></div>
           <span className="text-[10px] font-bold text-[var(--text-muted)]">{t('maintenance') || 'صيانة'}</span>
         </Link>
-        <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-colors">
-          <div className="p-2 bg-green-500/10 text-green-500 rounded-full mb-2"><FileText size={20} /></div>
+        <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] hover:border-green-500/30 transition-all group">
+          <div className="p-2.5 bg-green-500/10 text-green-500 rounded-xl mb-2 group-hover:scale-110 transition-transform"><FileText size={20} /></div>
           <span className="text-[10px] font-bold text-[var(--text-muted)]">{t('documents') || 'وثائق'}</span>
         </Link>
       </div>
 
-      {/* 4. لوحة البيانات (KPIs) */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <span className="text-[10px] text-[var(--text-muted)] block mb-1">{t('totalCost') || 'إجمالي المصاريف'}</span>
-          <span className="text-lg font-bold text-[var(--text)]">{data.totalCost} <span className="text-xs font-normal">{currency}</span></span>
+      {/* لوحة البيانات (KPIs) - تصميم متقدم */}
+      <div className="grid grid-cols-2 gap-3 mt-4">
+        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/5 rounded-bl-full"></div>
+          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalCost') || 'إجمالي المصاريف'}</span>
+          <div className="flex items-end gap-1">
+            <span className="text-xl font-extrabold text-[var(--text)]">{data.totalCost}</span>
+            <span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span>
+          </div>
         </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <span className="text-[10px] text-[var(--text-muted)] block mb-1">{t('monthlyCost') || 'مصاريف الشهر'}</span>
-          <span className="text-lg font-bold text-[var(--text)]">{data.monthlyCost} <span className="text-xs font-normal">{currency}</span></span>
+        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-bl-full"></div>
+          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('monthlyCost') || 'مصاريف الشهر'}</span>
+          <div className="flex items-end gap-1">
+            <span className="text-xl font-extrabold text-[var(--text)]">{data.monthlyCost}</span>
+            <span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span>
+          </div>
         </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <span className="text-[10px] text-[var(--text-muted)] block mb-1">{t('costPerKm') || 'تكلفة الكيلومتر'}</span>
-          <span className="text-lg font-bold text-[var(--text)]">{data.costPerKm} <span className="text-xs font-normal">{currency}</span></span>
+        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/5 rounded-bl-full"></div>
+          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('costPerKm') || 'تكلفة الكيلومتر'}</span>
+          <div className="flex items-end gap-1">
+            <span className="text-xl font-extrabold text-[var(--text)]">{data.costPerKm}</span>
+            <span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span>
+          </div>
         </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <span className="text-[10px] text-[var(--text-muted)] block mb-1">{t('distance') || 'المسافة المقطوعة'}</span>
-          <span className="text-lg font-bold text-[var(--text)]">{data.distance} <span className="text-xs font-normal">KM</span></span>
+        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 rounded-bl-full"></div>
+          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('distance') || 'المسافة المقطوعة'}</span>
+          <div className="flex items-end gap-1">
+            <span className="text-xl font-extrabold text-[var(--text)]">{data.distance}</span>
+            <span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">KM</span>
+          </div>
         </div>
       </div>
 
-      {/* 5. تنبيهات الصيانة القادمة */}
+      {/* التنبيهات وآخر العمليات... (نفس الكود السابق، مع إزالة px-4 ليعمل بشكل صحيح) */}
       {data.upcomingMaintenance.length > 0 && (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
               <Wrench size={16} className="text-yellow-500"/> {t('upcomingMaintenance') || 'الصيانة القادمة'}
             </h3>
-            <Link to="/maintenance" className="text-xs text-[var(--primary)]">{t('viewAll') || 'عرض الكل'}</Link>
+            <Link to="/maintenance" className="text-xs text-[var(--primary)] font-medium">{t('viewAll') || 'عرض الكل'}</Link>
           </div>
           <div className="space-y-2">
             {data.upcomingMaintenance.map(maint => (
-              <div key={maint.id} className="flex justify-between items-center bg-[var(--surface-2)] p-2 rounded-lg text-xs">
-                <span className="font-medium text-[var(--text)]">{t(maint.type) || maint.type}</span>
-                <span className="text-[var(--text-muted)]">عند {maint.nextKm} KM</span>
+              <div key={maint.id} className="flex justify-between items-center bg-[var(--surface-2)] p-3 rounded-xl text-xs">
+                <span className="font-bold text-[var(--text)]">{t(maint.type) || maint.type}</span>
+                <span className="text-[var(--text-muted)] bg-[var(--surface)] px-2 py-1 rounded-md">عند {maint.nextKm} KM</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 6. تنبيهات الوثائق */}
       {data.expiringDocs.length > 0 && (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
               <AlertCircle size={16} className="text-red-500"/> {t('expiringDocs') || 'وثائق تنتهي قريباً'}
             </h3>
-            <Link to="/documents" className="text-xs text-[var(--primary)]">{t('viewAll') || 'عرض الكل'}</Link>
+            <Link to="/documents" className="text-xs text-[var(--primary)] font-medium">{t('viewAll') || 'عرض الكل'}</Link>
           </div>
           <div className="space-y-2">
             {data.expiringDocs.map(doc => (
-              <div key={doc.id} className="flex justify-between items-center bg-[var(--surface-2)] p-2 rounded-lg text-xs">
-                <span className="font-medium text-[var(--text)]">{t(doc.type) || doc.type}</span>
-                <span className="text-red-400">{doc.endDate}</span>
+              <div key={doc.id} className="flex justify-between items-center bg-[var(--surface-2)] p-3 rounded-xl text-xs">
+                <span className="font-bold text-[var(--text)]">{t(doc.type) || doc.type}</span>
+                <span className="text-red-400 font-medium bg-red-400/10 px-2 py-1 rounded-md">{doc.endDate}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 7. آخر العمليات (Recent Activity) */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
         <h3 className="font-bold text-sm text-[var(--text)] mb-3 flex items-center gap-2">
           <Calendar size={16} className="text-[var(--primary)]"/> {t('recentActivity') || 'آخر العمليات'}
@@ -226,17 +231,17 @@ export default function Dashboard() {
         ) : (
           <div className="space-y-3">
             {data.recentActivity.map((act, idx) => (
-              <div key={idx} className="flex items-center justify-between border-b border-[var(--border)] last:border-0 pb-2 last:pb-0">
+              <div key={idx} className="flex items-center justify-between border-b border-[var(--border)] last:border-0 pb-3 last:pb-0">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-[var(--surface-2)] ${act.color}`}>
-                    <act.icon size={16} />
+                  <div className={`p-2.5 rounded-xl bg-[var(--surface-2)] ${act.color}`}>
+                    <act.icon size={18} />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-[var(--text)]">{t(act.type) || act.type}</p>
-                    <p className="text-[10px] text-[var(--text-muted)]">{act.date}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{act.date}</p>
                   </div>
                 </div>
-                <span className="font-bold text-xs text-[var(--text)]">{act.cost} {currency}</span>
+                <span className="font-extrabold text-sm text-[var(--text)]">{act.cost} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span></span>
               </div>
             ))}
           </div>
