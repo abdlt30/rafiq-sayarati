@@ -7,13 +7,13 @@ export default function Vehicles() {
   const { currentCar, setCurrentCar, t } = useContext(AppContext);
   const navigate = useNavigate();
   
-  // جلب السيارات من الذاكرة (مؤقتاً لحين ربطها بـ dbService)
+  // جلب السيارات من الذاكرة
   const vehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
 
   const selectCar = (car) => {
     localStorage.setItem('savedCar', JSON.stringify(car));
     setCurrentCar(car);
-    window.location.href = '/'; // العودة للرئيسية
+    navigate('/'); // العودة للرئيسية
   };
 
   return (
@@ -27,7 +27,7 @@ export default function Vehicles() {
 
       {vehicles.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-10">
-          {t('noVehicles')}
+          لا توجد سيارات مضافة. اضغط على زر (+) لإضافة سيارة.
         </div>
       ) : (
         <div className="space-y-3">
