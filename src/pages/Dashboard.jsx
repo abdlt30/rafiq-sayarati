@@ -86,7 +86,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-4">
       
-      {/* الشريط العلوي (Sticky) - يعمل الآن بفضل هيكل Layout */}
+      {/* الشريط العلوي (Sticky) */}
       <div className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
@@ -103,19 +103,35 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* بطاقة السيارة الحالية */}
+      {/* بطاقة السيارة الحالية - تم تحديثها لعرض الصورة */}
       <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10">
         <div className="flex justify-between items-start">
-          <div>
+          <div className="flex-1">
             <p className="text-xs font-medium text-blue-200/70 mb-1">{t('currentCar') || 'السيارة الحالية'}</p>
             <h3 className="text-2xl font-extrabold text-white tracking-wide">{currentCar?.make} {currentCar?.model}</h3>
-            <p className="text-sm font-medium text-blue-100/80 mt-1 bg-black/20 w-fit px-2 py-0.5 rounded-md">{currentCar?.plate}</p>
+            <p className="text-sm font-medium text-blue-100/80 mt-2 bg-black/20 w-fit px-2.5 py-1 rounded-md inline-block">
+              {currentCar?.plate || 'بدون لوحة'}
+            </p>
+            {(currentCar?.year || currentCar?.color) && (
+              <p className="text-xs text-blue-200/60 mt-1">
+                {currentCar.year && `${currentCar.year}`} {currentCar.year && currentCar.color && ' • '} {currentCar.color && `${currentCar.color}`}
+              </p>
+            )}
           </div>
-          <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-            <Car size={32} className="text-white/80" />
+          
+          {/* عرض صورة السيارة الحقيقية أو الأيقونة */}
+          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/10 shadow-lg flex-shrink-0 ml-4">
+            {currentCar?.image ? (
+              <img src={currentCar.image} alt="Car" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-white/5 backdrop-blur-sm flex items-center justify-center">
+                <Car size={36} className="text-white/60" />
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex gap-3 mt-5">
+        
+        <div className="flex gap-3 mt-6">
           <button onClick={() => navigate('/vehicles')} className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all">
             <ArrowLeftRight size={16} /> {t('switchCar') || 'تغيير'}
           </button>
@@ -220,7 +236,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* آخر العمليات - مع زر عرض الكل */}
+      {/* آخر العمليات */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
