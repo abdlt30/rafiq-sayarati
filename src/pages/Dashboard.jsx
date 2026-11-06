@@ -84,10 +84,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-4 pb-24 px-4">
+    <div className="space-y-4">
       
-      {/* الشريط العلوي الثابت - تم إصلاحه ليكون Sticky بشكل صحيح */}
-      <div className="sticky top-0 z-50 bg-[var(--bg)] pt-4 pb-3 -mx-4 px-4 flex justify-between items-center shadow-sm">
+      {/* الشريط العلوي (Sticky) - يعمل الآن بفضل هيكل Layout */}
+      <div className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
           <p className="text-xs text-[var(--text-muted)]">{getFormattedDate()}</p>
@@ -181,7 +181,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* التنبيهات وآخر العمليات */}
+      {/* التنبيهات */}
       {data.upcomingMaintenance.length > 0 && (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
           <div className="flex justify-between items-center mb-3">
@@ -220,14 +220,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* آخر العمليات - تمت إضافة زر عرض الكل */}
+      {/* آخر العمليات - مع زر عرض الكل */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
             <Calendar size={16} className="text-[var(--primary)]"/> {t('recentActivity') || 'آخر العمليات'}
           </h3>
-          {/* زر عرض الكل الجديد */}
-          <Link to="/expenses" className="text-xs text-[var(--primary)] font-medium flex items-center gap-1">
+          <Link to="/expenses" className="text-xs text-[var(--primary)] font-medium flex items-center gap-1 hover:underline">
             {t('viewAll') || 'عرض الكل'} <ChevronLeft size={14} className={lang === 'ar' ? '' : 'rotate-180'} />
           </Link>
         </div>
