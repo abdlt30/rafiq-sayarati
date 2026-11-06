@@ -90,17 +90,20 @@ export default function Maintenance() {
             
             <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark]" />
             
-            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]">
-              <option value="تغيير زيت">تغيير زيت</option>
-              <option value="إطارات">إطارات</option>
-              <option value="فرامل">فرامل</option>
-              <option value="فحص شامل">فحص شامل</option>
-            </select>
+            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] round
 
             <input type="number" placeholder="التكلفة (MAD)" required value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]" />
             <input type="number" placeholder="العداد للصيانة القادمة (KM)" value={formData.nextKm} onChange={e => setFormData({...formData, nextKm: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]" />
             
-            <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl">{t('save')}</button>
+            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]">
+            <option value="تغيير زيت">تغيير زيت</option>
+           <option value="إطارات">إطارات</option>
+           <option value="فرامل">فرامل</option>
+           <option value="بطارية">بطارية</option>
+           <option value="فلتر هواء">فلتر هواء</option>
+           <option value="فحص شامل">فحص شامل</option>
+           <option value="أخرى">أخرى</option>
+           </select>
           </form>
         </div>
       )}
