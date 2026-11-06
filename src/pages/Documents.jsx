@@ -1,16 +1,17 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { FileText, Plus, Shield, Trash2, X, AlertTriangle, CheckCircle } from 'lucide-react';
-import ConfirmModal from '../components/ui/ConfirmModal'; // استدعاء المكون
+import { FileText, Plus, Shield, Trash2, X } from 'lucide-react'; // تم حذف الأيقونات غير المستخدمة
+import ConfirmModal from '../components/ui/ConfirmModal';
 
 export default function Documents() {
   const { currentCar, t } = useContext(AppContext);
   const [documents, setDocuments] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ type: 'تأمين', endDate: '' });
   
-  // حالة نافذة الحذف
+  // تحديث القيمة الافتراضية لتكون مفتاح ترجمة بدلاً من نص ثابت
+  const [formData, setFormData] = useState({ type: 'insurance', endDate: '' });
+  
   const [deleteId, setDeleteId] = useState(null);
 
   const loadData = () => {
@@ -25,9 +26,10 @@ export default function Documents() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentCar) return;
-    dbService.addDocument({ carId: currentCar.id, ...formData });
+    // نقوم بحفظ النص المترجم في قاعدة البيانات لسهولة العرض لاحقاً
+    dbService.addDocument({ carId: currentCar.id, type: t(formData.type), endDate: formData.endDate });
     setShowForm(false);
-    setFormData({ type: 'تأمين', endDate: '' });
+    setFormData({ type: 'insurance', endDate: '' });
     loadData();
   };
 
@@ -42,6 +44,7 @@ export default function Documents() {
   const getStatus = (endDate) => {
     if(!endDate) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800' };
     const diffDays = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
+    
     if (diffDays < 0) return { label: t('expired'), color: 'text-red-500', bg: 'bg-red-500/10' };
     if (diffDays <= 30) return { label: `${t('expiringSoon')} (${diffDays})`, color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
     return { label: t('valid'), color: 'text-green-500', bg: 'bg-green-500/10' };
@@ -58,20 +61,28 @@ export default function Documents() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border)] space-y-4">
-          <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]">
-            <option value="تأمين">تأمين</option>
-            <option value="فحص تقني">فحص تقني</option>
-            <option value="رخصة">رخصة</option>
-          </select>
-          <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark]" />
-          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl">{t('save')}</button>
+          <div>
+            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentType') || 'نوع الوثيقة'}</label>
+            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none">
+              <option value="insurance">{t('insurance') || 'تأمين'}</option>
+              <option value="technicalInspection">{t('technicalInspection') || 'فحص تقني'}</option>
+              <option value="license">{t('license') || 'رخصة'}</option>
+            </select>
+          </div>
+          
+          <div>
+             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'تاريخ الانتهاء'}</label>
+             <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none" />
+          </div>
+
+          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl">{t('save') || 'حفظ'}</button>
         </form>
       )}
 
       {documents.length === 0 ? (
         <div className="text-center mt-20">
           <FileText size={48} className="mx-auto text-[var(--text-muted)] mb-4" />
-          <p className="text-[var(--text-muted)]">{t('noDocuments')}</p>
+          <p className="text-[var(--text-muted)]">{t('noDocuments') || 'لا توجد وثائق مسجلة.'}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -87,7 +98,7 @@ export default function Documents() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <p className="text-xs text-[var(--text-muted)]">{t('endsOn')}: <span className="font-mono text-[var(--text)]">{doc.endDate}</span></p>
+                  <p className="text-xs text-[var(--text-muted)]">{t('endsOn') || 'ينتهي في'}: <span className="font-mono text-[var(--text)]">{doc.endDate}</span></p>
                   <button onClick={() => setDeleteId(doc.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg">
                     <Trash2 size={16} />
                   </button>
@@ -98,12 +109,11 @@ export default function Documents() {
         </div>
       )}
 
-      {/* نافذة الحذف المخصصة */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
-        message={t('confirmDelete')}
+        message={t('confirmDelete') || 'هل أنت متأكد من الحذف؟'}
       />
     </div>
   );
