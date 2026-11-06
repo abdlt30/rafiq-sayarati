@@ -9,18 +9,17 @@ export default function AddVehicle() {
   const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
   
-  // التحقق مما إذا كان الرابط يحتوي على ID (وضع التعديل)
   const editId = searchParams.get('id');
   const isEditing = Boolean(editId);
 
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
 
-  // تعبئة البيانات فقط إذا كنا في وضع التعديل
   useEffect(() => {
     if (isEditing) {
       const carToEdit = vehicles.find(v => v.id === editId);
       if (carToEdit) setCar(carToEdit);
     }
+    // تم إزالة كود الطرد (Redirect) الذي كان يمنع الإضافة
   }, [isEditing, editId, vehicles]);
 
   const handleSubmit = (e) => {
@@ -30,15 +29,12 @@ export default function AddVehicle() {
     }
     
     if (isEditing) {
-      // حفظ التعديلات
       updateCar({ ...car, id: editId, currentOdometer: Number(car.currentOdometer) });
-      navigate('/vehicles'); // العودة لصفحة السيارات
+      navigate('/vehicles');
     } else {
-      // إضافة سيارة جديدة
       addNewCar({ ...car, currentOdometer: Number(car.currentOdometer) });
-      // إذا كانت هذه أول سيارة، اذهب للوحة التحكم، وإلا اذهب لصفحة السيارات
-      if (vehicles.length === 0) navigate('/');
-      else navigate('/vehicles');
+      // العودة للصفحة الرئيسية بعد الإضافة مباشرة
+      navigate('/');
     }
   };
 
