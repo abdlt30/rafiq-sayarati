@@ -14,11 +14,14 @@ import Settings from './pages/Settings';
 import Documents from './pages/Documents'; 
 import Reminders from './pages/Reminders'; 
 import Backup from './pages/Backup'; 
-import Vehicles from './pages/Vehicles'; // <-- استدعاء صفحة إدارة السيارات
+import Vehicles from './pages/Vehicles';
 
+// مكون حماية المسارات
 const ProtectedRoute = ({ children }) => {
   const { currentCar } = useContext(AppContext);
-  if (!currentCar) return <Navigate to="/welcome" replace />;
+  if (!currentCar) {
+    return <Navigate to="/welcome" replace />;
+  }
   return children;
 };
 
@@ -26,18 +29,23 @@ export default function App() {
   const { isLoading } = useContext(AppContext);
 
   if (isLoading) {
-    return <div className="min-h-screen bg-[var(--bg)] flex justify-center items-center text-[var(--primary)] font-bold text-xl">جاري التحميل...</div>;
+    return (
+      <div className="min-h-screen bg-[var(--bg)] flex justify-center items-center text-[var(--primary)] font-bold text-xl">
+        جاري التحميل...
+      </div>
+    );
   }
 
   return (
     <HashRouter>
       <Routes>
+        {/* مسارات عامة لا تحتاج تسجيل دخول أو سيارة */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
         {/* المسارات المحمية */}
         <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-        <Route path="/vehicles" element={<ProtectedRoute><Layout><Vehicles /></Layout></ProtectedRoute>} /> {/* <-- مسار السيارات */}
+        <Route path="/vehicles" element={<ProtectedRoute><Layout><Vehicles /></Layout></ProtectedRoute>} />
         <Route path="/fuel" element={<ProtectedRoute><Layout><Fuel /></Layout></ProtectedRoute>} />
         <Route path="/maintenance" element={<ProtectedRoute><Layout><Maintenance /></Layout></ProtectedRoute>} />
         <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
@@ -47,6 +55,7 @@ export default function App() {
         <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
         
+        {/* إعادة التوجيه لأي مسار غير معروف */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
