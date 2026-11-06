@@ -4,64 +4,136 @@ export const AppContext = createContext();
 
 const translations = {
   ar: { 
+    // عام
     home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', 
-    darkMode: 'الوضع الداكن', language: 'اللغة', currency: 'العملة', totalCost: 'إجمالي المصاريف', costPerKm: 'تكلفة الكيلومتر',
-    distributionByType: 'توزيع المصاريف', quickActions: 'إجراءات سريعة', addFuel: 'إضافة وقود',
-    addMaintenance: 'إضافة صيانة', addExpense: 'إضافة مصروف', addDocument: 'إضافة وثيقة', noVehicles: 'لا توجد سيارة مسجلة.',
-    noData: 'لا توجد بيانات كافية', save: 'حفظ', cancel: 'إلغاء', welcome: 'مرحباً،', 
-    month: 'هذا الشهر', distance: 'المسافة المقطوعة', nextMaintenance: 'الصيانة القادمة', 
-    expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات', viewAll: 'عرض الكل',
-    switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', vehicles: 'سياراتي', carInfo: 'معلومات السيارة',
-    // كلمات الوقود والمصاريف
-    fuel: 'سجل الوقود', date: 'التاريخ', expenseType: 'نوع المصروف', amount: 'المبلغ', 
-    insurance: 'تأمين', taxes: 'ضرائب', carWash: 'غسيل', fines: 'مخالفات مرورية', 
-    parking: 'رسوم مواقف', other: 'أخرى', enterAmount: 'أدخل المبلغ',
-    odometer: 'العداد', liters: 'اللترات', cost: 'التكلفة', noFuelRecords: 'لا توجد سجلات وقود.',
-    confirmDelete: 'هل أنت متأكد من الحذف؟', edit: 'تعديل',
-    // كلمات الوثائق الجديدة
-    documentType: 'نوع الوثيقة', endDate: 'تاريخ الانتهاء', technicalInspection: 'فحص تقني', 
-    license: 'رخصة', expired: 'منتهية', expiringSoon: 'تنتهي قريباً', valid: 'صالح', 
-    endsOn: 'ينتهي في', noDocuments: 'لا توجد وثائق مسجلة.'
+    save: 'حفظ', cancel: 'إلغاء', welcome: 'مرحباً،', edit: 'تعديل', confirmDelete: 'هل أنت متأكد من الحذف؟',
+    month: 'هذا الشهر', viewAll: 'عرض الكل', noData: 'لا توجد بيانات كافية',
+    
+    // الإعدادات والمظهر
+    darkMode: 'الوضع الداكن', lightMode: 'الوضع الفاتح', language: 'اللغة', currency: 'العملة',
+    
+    // لوحة التحكم (Dashboard)
+    totalCost: 'إجمالي المصاريف', costPerKm: 'تكلفة الكيلومتر', distributionByType: 'توزيع المصاريف', 
+    quickActions: 'إجراءات سريعة', distance: 'المسافة المقطوعة', nextMaintenance: 'الصيانة القادمة', 
+    expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات',
+    
+    // السيارات
+    vehicles: 'سياراتي', carInfo: 'معلومات السيارة', switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', 
+    noVehicles: 'لا توجد سيارة مسجلة.', fillRequiredFields: 'الرجاء تعبئة الحقول الأساسية', 
+    addYourCar: 'أضف سيارتك', addYourCarSubtitle: 'أدخل بيانات سيارتك الأولى لنبدأ التتبع.', 
+    carMake: 'الماركة (مثال: تويوتا)', carModel: 'الموديل (مثال: كورولا)', plateNumber: 'رقم اللوحة (اختياري)', 
+    currentOdometer: 'عداد السيارة الحالي (KM)', saveAndContinue: 'حفظ ومتابعة',
+    
+    // صفحة الترحيب
+    appName: 'رفيق سيارتي', welcomeMessagePart1: 'تحكم في مصاريف سيارتك، تابع صيانتها، ووفر', 
+    welcomeMessagePart2: 'من ميزانيتك بذكاء.', startNow: 'ابدأ الآن',
+
+    // المصاريف (Expenses)
+    expenseType: 'نوع المصروف', amount: 'المبلغ', enterAmount: 'أدخل المبلغ', addExpense: 'إضافة مصروف',
+    insurance: 'تأمين', taxes: 'ضرائب', carWash: 'غسيل', fines: 'مخالفات مرورية', parking: 'رسوم مواقف', other: 'أخرى',
+    
+    // الوقود (Fuel)
+    fuel: 'سجل الوقود', addFuel: 'إضافة وقود', odometer: 'العداد', liters: 'اللترات', 
+    cost: 'التكلفة', noFuelRecords: 'لا توجد سجلات وقود.', date: 'التاريخ',
+    
+    // الصيانة (Maintenance)
+    addMaintenance: 'إضافة صيانة', maintenanceType: 'نوع الصيانة', oilChange: 'تغيير زيت', tires: 'إطارات', 
+    brakes: 'فرامل', battery: 'بطارية', airFilter: 'فلتر هواء', fullInspection: 'فحص شامل',
+    nextOdometer: 'العداد للصيانة القادمة', enterCost: 'أدخل التكلفة', optional: 'اختياري',
+    noMaintenanceRecords: 'لا توجد سجلات صيانة.', nextChange: 'التغيير القادم', noNextMaintenance: 'لا توجد صيانة قادمة',
+    
+    // الوثائق (Documents)
+    addDocument: 'إضافة وثيقة', documentType: 'نوع الوثيقة', endDate: 'تاريخ الانتهاء', 
+    technicalInspection: 'فحص تقني', license: 'رخصة', expired: 'منتهية', 
+    expiringSoon: 'تنتهي قريباً', valid: 'صالح', endsOn: 'ينتهي في', noDocuments: 'لا توجد وثائق مسجلة.'
   },
   en: { 
+    // General
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
-    darkMode: 'Dark Mode', language: 'Language', currency: 'Currency', totalCost: 'Total Cost', costPerKm: 'Cost per KM',
-    distributionByType: 'Expense Distribution', quickActions: 'Quick Actions', addFuel: 'Add Fuel',
-    addMaintenance: 'Add Maintenance', addExpense: 'Add Expense', addDocument: 'Add Document', noVehicles: 'No vehicle registered.',
-    noData: 'Not enough data', save: 'Save', cancel: 'Cancel', welcome: 'Welcome,', 
-    month: 'This Month', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
-    expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity', viewAll: 'View All',
-    switchCar: 'Switch Car', addNewCar: 'Add Vehicle', vehicles: 'My Vehicles', carInfo: 'Car Information',
-    // Fuel & Expenses keys
-    fuel: 'Fuel Log', date: 'Date', expenseType: 'Expense Type', amount: 'Amount', 
-    insurance: 'Insurance', taxes: 'Taxes', carWash: 'Car Wash', fines: 'Traffic Fines', 
-    parking: 'Parking', other: 'Other', enterAmount: 'Enter amount',
-    odometer: 'Odometer', liters: 'Liters', cost: 'Cost', noFuelRecords: 'No fuel records found.',
-    confirmDelete: 'Are you sure you want to delete?', edit: 'Edit',
-    // Documents keys
-    documentType: 'Document Type', endDate: 'End Date', technicalInspection: 'Technical Inspection', 
-    license: 'License', expired: 'Expired', expiringSoon: 'Expiring Soon', valid: 'Valid', 
-    endsOn: 'Ends on', noDocuments: 'No documents registered.'
+    save: 'Save', cancel: 'Cancel', welcome: 'Welcome,', edit: 'Edit', confirmDelete: 'Are you sure you want to delete?',
+    month: 'This Month', viewAll: 'View All', noData: 'Not enough data',
+    
+    // Settings & Theme
+    darkMode: 'Dark Mode', lightMode: 'Light Mode', language: 'Language', currency: 'Currency',
+    
+    // Dashboard
+    totalCost: 'Total Cost', costPerKm: 'Cost per KM', distributionByType: 'Expense Distribution', 
+    quickActions: 'Quick Actions', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
+    expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity',
+    
+    // Vehicles
+    vehicles: 'My Vehicles', carInfo: 'Car Information', switchCar: 'Switch Car', addNewCar: 'Add Vehicle', 
+    noVehicles: 'No vehicle registered.', fillRequiredFields: 'Please fill in the required fields', 
+    addYourCar: 'Add Your Car', addYourCarSubtitle: 'Enter your first car details to start tracking.', 
+    carMake: 'Make (e.g., Toyota)', carModel: 'Model (e.g., Corolla)', plateNumber: 'Plate Number (Optional)', 
+    currentOdometer: 'Current Odometer (KM)', saveAndContinue: 'Save and Continue',
+    
+    // Welcome Page
+    appName: 'My Car Companion', welcomeMessagePart1: 'Control your car expenses, track maintenance, and save', 
+    welcomeMessagePart2: 'of your budget smartly.', startNow: 'Start Now',
+
+    // Expenses
+    expenseType: 'Expense Type', amount: 'Amount', enterAmount: 'Enter amount', addExpense: 'Add Expense',
+    insurance: 'Insurance', taxes: 'Taxes', carWash: 'Car Wash', fines: 'Traffic Fines', parking: 'Parking', other: 'Other',
+    
+    // Fuel
+    fuel: 'Fuel Log', addFuel: 'Add Fuel', odometer: 'Odometer', liters: 'Liters', 
+    cost: 'Cost', noFuelRecords: 'No fuel records found.', date: 'Date',
+    
+    // Maintenance
+    addMaintenance: 'Add Maintenance', maintenanceType: 'Maintenance Type', oilChange: 'Oil Change', tires: 'Tires', 
+    brakes: 'Brakes', battery: 'Battery', airFilter: 'Air Filter', fullInspection: 'Full Inspection',
+    nextOdometer: 'Next Maintenance Odometer', enterCost: 'Enter cost', optional: 'Optional',
+    noMaintenanceRecords: 'No maintenance records.', nextChange: 'Next change', noNextMaintenance: 'No next maintenance',
+    
+    // Documents
+    addDocument: 'Add Document', documentType: 'Document Type', endDate: 'End Date', 
+    technicalInspection: 'Technical Inspection', license: 'License', expired: 'Expired', 
+    expiringSoon: 'Expiring Soon', valid: 'Valid', endsOn: 'Ends on', noDocuments: 'No documents registered.'
   },
   fr: { 
+    // Général
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
-    darkMode: 'Mode Sombre', language: 'Langue', currency: 'Devise', totalCost: 'Coût Total', costPerKm: 'Coût par KM',
-    distributionByType: 'Répartition des Dépenses', quickActions: 'Actions Rapides', addFuel: 'Ajouter Carburant',
-    addMaintenance: 'Ajouter Entretien', addExpense: 'Ajouter Dépense', addDocument: 'Ajouter Document', noVehicles: 'Aucun véhicule enregistré.',
-    noData: 'Pas assez de données', save: 'Enregistrer', cancel: 'Annuler', welcome: 'Bienvenue,', 
-    month: 'Ce Mois', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
-    expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente', viewAll: 'Voir Tout',
-    switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule',
-    // Clés Carburant & Dépenses
-    fuel: 'Journal de Carburant', date: 'Date', expenseType: 'Type de dépense', amount: 'Montant', 
-    insurance: 'Assurance', taxes: 'Impôts', carWash: 'Lavage', fines: 'Amendes', 
-    parking: 'Stationnement', other: 'Autre', enterAmount: 'Entrer le montant',
-    odometer: 'Compteur Kilométrique', liters: 'Litres', cost: 'Coût', noFuelRecords: 'Aucun enregistrement de carburant.',
-    confirmDelete: 'Êtes-vous sûr de vouloir supprimer?', edit: 'Modifier',
-    // Clés Documents
-    documentType: 'Type de document', endDate: 'Date d\'expiration', technicalInspection: 'Contrôle technique', 
-    license: 'Permis', expired: 'Expiré', expiringSoon: 'Expire bientôt', valid: 'Valide', 
-    endsOn: 'Expire le', noDocuments: 'Aucun document enregistré.'
+    save: 'Enregistrer', cancel: 'Annuler', welcome: 'Bienvenue,', edit: 'Modifier', confirmDelete: 'Êtes-vous sûr de vouloir supprimer?',
+    month: 'Ce Mois', viewAll: 'Voir Tout', noData: 'Pas assez de données',
+    
+    // Paramètres & Thème
+    darkMode: 'Mode Sombre', lightMode: 'Mode Clair', language: 'Langue', currency: 'Devise',
+    
+    // Tableau de bord
+    totalCost: 'Coût Total', costPerKm: 'Coût par KM', distributionByType: 'Répartition des Dépenses', 
+    quickActions: 'Actions Rapides', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
+    expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente',
+    
+    // Véhicules
+    vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule', switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', 
+    noVehicles: 'Aucun véhicule enregistré.', fillRequiredFields: 'Veuillez remplir les champs obligatoires', 
+    addYourCar: 'Ajoutez votre voiture', addYourCarSubtitle: 'Entrez les détails de votre première voiture pour commencer le suivi.', 
+    carMake: 'Marque (ex: Toyota)', carModel: 'Modèle (ex: Corolla)', plateNumber: 'Numéro de plaque (Optionnel)', 
+    currentOdometer: 'Compteur actuel (KM)', saveAndContinue: 'Enregistrer et Continuer',
+    
+    // Page d'accueil
+    appName: 'Mon Compagnon Auto', welcomeMessagePart1: 'Contrôlez les dépenses de votre voiture, suivez son entretien et économisez', 
+    welcomeMessagePart2: 'de votre budget intelligemment.', startNow: 'Commencer',
+
+    // Dépenses
+    expenseType: 'Type de dépense', amount: 'Montant', enterAmount: 'Entrer le montant', addExpense: 'Ajouter Dépense',
+    insurance: 'Assurance', taxes: 'Impôts', carWash: 'Lavage', fines: 'Amendes', parking: 'Stationnement', other: 'Autre',
+    
+    // Carburant
+    fuel: 'Journal de Carburant', addFuel: 'Ajouter Carburant', odometer: 'Compteur Kilométrique', liters: 'Litres', 
+    cost: 'Coût', noFuelRecords: 'Aucun enregistrement de carburant.', date: 'Date',
+    
+    // Entretien
+    addMaintenance: 'Ajouter Entretien', maintenanceType: 'Type d\'entretien', oilChange: 'Vidange d\'huile', tires: 'Pneus', 
+    brakes: 'Freins', battery: 'Batterie', airFilter: 'Filtre à air', fullInspection: 'Inspection complète',
+    nextOdometer: 'Compteur pour le prochain entretien', enterCost: 'Entrer le coût', optional: 'Optionnel',
+    noMaintenanceRecords: 'Aucun enregistrement d\'entretien.', nextChange: 'Prochain changement', noNextMaintenance: 'Pas de prochain entretien',
+    
+    // Documents
+    addDocument: 'Ajouter Document', documentType: 'Type de document', endDate: 'Date d\'expiration', 
+    technicalInspection: 'Contrôle technique', license: 'Permis', expired: 'Expiré', 
+    expiringSoon: 'Expire bientôt', valid: 'Valide', endsOn: 'Expire le', noDocuments: 'Aucun document enregistré.'
   }
 };
 
