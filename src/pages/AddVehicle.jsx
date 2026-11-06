@@ -1,29 +1,27 @@
 import { useState, useContext, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom'; // أضفنا useSearchParams
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 export default function AddVehicle() {
-  const { currentCar, addNewCar, updateCar, vehicles, t } = useContext(AppContext); 
+  const { addNewCar, updateCar, vehicles, t } = useContext(AppContext); 
   const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
   
+  // التحقق مما إذا كان الرابط يحتوي على ID (وضع التعديل)
   const editId = searchParams.get('id');
   const isEditing = Boolean(editId);
 
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
 
+  // تعبئة البيانات فقط إذا كنا في وضع التعديل
   useEffect(() => {
     if (isEditing) {
-      // إذا كنا في وضع التعديل، اجلب بيانات السيارة واملأ الحقول
       const carToEdit = vehicles.find(v => v.id === editId);
       if (carToEdit) setCar(carToEdit);
-    } else if (vehicles.length === 0 && currentCar) {
-      // الطرد يحدث فقط إذا لم تكن هناك سيارات وكانت هناك سيارة محفوظة (حالة التهيئة الأولى)
-      navigate('/', { replace: true }); 
     }
-  }, [isEditing, editId, vehicles, currentCar, navigate]);
+  }, [isEditing, editId, vehicles]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
