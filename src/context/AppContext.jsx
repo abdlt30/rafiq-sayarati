@@ -5,33 +5,33 @@ export const AppContext = createContext();
 const translations = {
   ar: { 
     home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', 
-    darkMode: 'الوضع الداكن', language: 'اللغة', total: 'إجمالي المصاريف', costPerKm: 'تكلفة الكيلومتر',
+    darkMode: 'الوضع الداكن', language: 'اللغة', totalCost: 'إجمالي المصاريف', costPerKm: 'تكلفة الكيلومتر',
     distributionByType: 'توزيع المصاريف', quickActions: 'إجراءات سريعة', addFuel: 'إضافة وقود',
-    addMaintenance: 'إضافة صيانة', addExpense: 'إضافة مصروف', noVehicles: 'لا توجد سيارة مسجلة.',
-    noData: 'لا توجد بيانات كافية', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', edit: 'تعديل',
-    confirmDelete: 'هل أنت متأكد من الحذف؟', noDocuments: 'لا توجد وثائق', addDocument: 'إضافة وثيقة',
-    expired: 'منتهية', valid: 'صالحة', endsOn: 'ينتهي في', totalRecords: 'إجمالي السجلات', 
-    oilChanges: 'تغيير زيت', fuelLog: 'سجل الوقود', date: 'التاريخ', amount: 'المبلغ', type: 'النوع', notes: 'ملاحظات'
+    addMaintenance: 'إضافة صيانة', addExpense: 'إضافة مصروف', addDocument: 'إضافة وثيقة', noVehicles: 'لا توجد سيارة مسجلة.',
+    noData: 'لا توجد بيانات كافية', save: 'حفظ', cancel: 'إلغاء', welcome: 'مرحباً،', 
+    month: 'هذا الشهر', distance: 'المسافة المقطوعة', nextMaintenance: 'الصيانة القادمة', 
+    expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات', viewAll: 'عرض الكل',
+    switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', goodCondition: 'حالة جيدة'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
-    darkMode: 'Dark Mode', language: 'Language', total: 'Total Expenses', costPerKm: 'Cost per KM',
+    darkMode: 'Dark Mode', language: 'Language', totalCost: 'Total Cost', costPerKm: 'Cost per KM',
     distributionByType: 'Expense Distribution', quickActions: 'Quick Actions', addFuel: 'Add Fuel',
-    addMaintenance: 'Add Maintenance', addExpense: 'Add Expense', noVehicles: 'No vehicle registered.',
-    noData: 'Not enough data', save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit',
-    confirmDelete: 'Are you sure you want to delete?', noDocuments: 'No documents', addDocument: 'Add Document',
-    expired: 'Expired', valid: 'Valid', endsOn: 'Ends on', totalRecords: 'Total Records', 
-    oilChanges: 'Oil Changes', fuelLog: 'Fuel Log', date: 'Date', amount: 'Amount', type: 'Type', notes: 'Notes'
+    addMaintenance: 'Add Maintenance', addExpense: 'Add Expense', addDocument: 'Add Document', noVehicles: 'No vehicle registered.',
+    noData: 'Not enough data', save: 'Save', cancel: 'Cancel', welcome: 'Welcome,', 
+    month: 'This Month', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
+    expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity', viewAll: 'View All',
+    switchCar: 'Switch Car', addNewCar: 'Add Vehicle', goodCondition: 'Good Condition'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
-    darkMode: 'Mode Sombre', language: 'Langue', total: 'Dépenses Totales', costPerKm: 'Coût par KM',
+    darkMode: 'Mode Sombre', language: 'Langue', totalCost: 'Coût Total', costPerKm: 'Coût par KM',
     distributionByType: 'Répartition des Dépenses', quickActions: 'Actions Rapides', addFuel: 'Ajouter Carburant',
-    addMaintenance: 'Ajouter Entretien', addExpense: 'Ajouter Dépense', noVehicles: 'Aucun véhicule enregistré.',
-    noData: 'Pas assez de données', save: 'Enregistrer', cancel: 'Annuler', delete: 'Supprimer', edit: 'Modifier',
-    confirmDelete: 'Êtes-vous sûr de vouloir supprimer?', noDocuments: 'Aucun document', addDocument: 'Ajouter Document',
-    expired: 'Expiré', valid: 'Valide', endsOn: 'Se termine le', totalRecords: 'Total des Enregistrements', 
-    oilChanges: 'Vidanges', fuelLog: 'Journal de Carburant', date: 'Date', amount: 'Montant', type: 'Type', notes: 'Notes'
+    addMaintenance: 'Ajouter Entretien', addExpense: 'Ajouter Dépense', addDocument: 'Ajouter Document', noVehicles: 'Aucun véhicule enregistré.',
+    noData: 'Pas assez de données', save: 'Enregistrer', cancel: 'Annuler', welcome: 'Bienvenue,', 
+    month: 'Ce Mois', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
+    expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente', viewAll: 'Voir Tout',
+    switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', goodCondition: 'Bon État'
   }
 };
 
