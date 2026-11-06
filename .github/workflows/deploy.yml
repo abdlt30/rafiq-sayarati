@@ -10,9 +10,10 @@ permissions:
   pages: write
   id-token: write
 
+# ⚠️ هذا هو السطر السحري الذي سيحل المشكلة
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -25,10 +26,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # تم إزالة cache: 'npm' لأننا لا نملك package-lock.json
           
       - name: Install dependencies
-        run: npm install # تم تغيير npm ci إلى npm install
+        run: npm install
         
       - name: Build
         run: npm run build
