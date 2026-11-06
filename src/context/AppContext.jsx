@@ -35,7 +35,7 @@ const translations = {
 
     // === المصاريف (Expenses) ===
     expenseType: 'نوع المصروف', amount: 'المبلغ', enterAmount: 'أدخل المبلغ', addExpense: 'إضافة مصروف',
-    noExpenses: 'لا توجد مصاريف مسجلة.', // تمت إضافتها هنا
+    noExpenses: 'لا توجد مصاريف مسجلة.',
     insurance: 'تأمين', taxes: 'ضرائب', carWash: 'غسيل', fines: 'مخالفات مرورية', parking: 'رسوم مواقف', other: 'أخرى',
     
     // === الوقود (Fuel) ===
@@ -60,7 +60,12 @@ const translations = {
     // === صفحة المزيد (More) والنسخ الاحتياطي ===
     backup: 'النسخ الاحتياطي', aboutApp: 'حول التطبيق',
     dataProtection: 'حماية البيانات', backupDesc: 'بياناتك محفوظة على هاتفك فقط. قم بتصديرها كملف احتياطي لضمان عدم ضياعها إذا قمت بتغيير هاتفك أو مسح المتصفح.',
-    exportData: 'تصدير البيانات (JSON)', importDataSoon: 'استيراد البيانات (قريباً)'
+    exportData: 'تصدير البيانات (JSON)', 
+    importData: 'استيراد البيانات', // تم التحديث
+    exportSuccess: 'تم تصدير البيانات بنجاح!', // جديد
+    confirmImport: 'تحذير: سيتم استبدال جميع بياناتك الحالية. هل أنت متأكد؟', // جديد
+    importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.', // جديد
+    importError: 'خطأ: الملف غير صالح أو تالف.' // جديد
   },
   en: { 
     // === General ===
@@ -93,7 +98,7 @@ const translations = {
 
     // === Expenses ===
     expenseType: 'Expense Type', amount: 'Amount', enterAmount: 'Enter amount', addExpense: 'Add Expense',
-    noExpenses: 'No expenses recorded.', // Added here
+    noExpenses: 'No expenses recorded.',
     insurance: 'Insurance', taxes: 'Taxes', carWash: 'Car Wash', fines: 'Traffic Fines', parking: 'Parking', other: 'Other',
     
     // === Fuel ===
@@ -118,7 +123,12 @@ const translations = {
     // === More & Backup ===
     backup: 'Backup', aboutApp: 'About App',
     dataProtection: 'Data Protection', backupDesc: 'Your data is saved on your phone only. Export it as a backup file to ensure it is not lost if you change your phone or clear your browser.',
-    exportData: 'Export Data (JSON)', importDataSoon: 'Import Data (Soon)'
+    exportData: 'Export Data (JSON)', 
+    importData: 'Import Data', // Updated
+    exportSuccess: 'Data exported successfully!', // New
+    confirmImport: 'Warning: This will overwrite your current data. Are you sure?', // New
+    importSuccess: 'Data imported successfully! Reloading...', // New
+    importError: 'Error: Invalid or corrupted file.' // New
   },
   fr: { 
     // === Général ===
@@ -151,7 +161,7 @@ const translations = {
 
     // === Dépenses ===
     expenseType: 'Type de dépense', amount: 'Montant', enterAmount: 'Entrer le montant', addExpense: 'Ajouter Dépense',
-    noExpenses: 'Aucune dépense enregistrée.', // Added here
+    noExpenses: 'Aucune dépense enregistrée.',
     insurance: 'Assurance', taxes: 'Impôts', carWash: 'Lavage', fines: 'Amendes', parking: 'Stationnement', other: 'Autre',
     
     // === Carburant ===
@@ -176,7 +186,12 @@ const translations = {
     // === Plus & Sauvegarde ===
     backup: 'Sauvegarde', aboutApp: 'À propos',
     dataProtection: 'Protection des données', backupDesc: 'Vos données sont enregistrées sur votre téléphone uniquement. Exportez-les sous forme de fichier de sauvegarde pour éviter toute perte si vous changez de téléphone ou effacez votre navigateur.',
-    exportData: 'Exporter les données (JSON)', importDataSoon: 'Importer des données (Bientôt)'
+    exportData: 'Exporter les données (JSON)', 
+    importData: 'Importer des données', // Updated
+    exportSuccess: 'Données exportées avec succès!', // New
+    confirmImport: 'Attention : Cela écrasera vos données actuelles. Êtes-vous sûr ?', // New
+    importSuccess: 'Données importées avec succès ! Redémarrage...', // New
+    importError: 'Erreur : Fichier invalide ou corrompu.' // New
   }
 };
 
