@@ -1,11 +1,15 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Trash2, Edit2, Wrench } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Wrench } from 'lucide-react';
 
 export default function Maintenance() {
-  const { currentCar } = useContext(AppContext);
+  const { currentCar, t } = useContext(AppContext);
   const [records, setRecords] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  
+  const [formData, setFormData] = useState({ date: '', type: 'تغيير زيت', cost: '', nextKm: '', notes: '' });
 
   useEffect(() => {
     if (currentCar) {
@@ -13,52 +17,93 @@ export default function Maintenance() {
     }
   }, [currentCar]);
 
+  const handleSave = (e) => {
+    e.preventDefault();
+    const data = { carId: currentCar.id, ...formData, cost: Number(formData.cost), nextKm: Number(formData.nextKm) || null };
+    
+    if (editingId) {
+      setRecords(dbService.updateMaintenance(editingId, data));
+    } else {
+      setRecords([dbService.addMaintenance(data), ...records]);
+    }
+    closeModal();
+  };
+
+  const handleDelete = (id) => {
+    if(window.confirm(t('confirmDelete'))) {
+      setRecords(dbService.deleteMaintenance(id));
+    }
+  };
+
+  const openEdit = (record) => {
+    setEditingId(record.id);
+    setFormData({ date: record.date, type: record.type, cost: record.cost, nextKm: record.nextKm || '', notes: record.notes || '' });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ date: '', type: 'تغيير زيت', cost: '', nextKm: '', notes: '' });
+  };
+
   return (
-    <div style={{ paddingBottom: '80px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>الصيانة</h1>
-        <button style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '50%', width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="space-y-4 pb-24">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">{t('maintenance')}</h1>
+        <button onClick={() => setIsModalOpen(true)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg">
           <Plus size={24} />
         </button>
       </div>
 
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '20px', textAlign: 'center' }}>
-        <div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{records.length}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>إجمالي السجلات</div>
-        </div>
-        <div style={{ width: '1px', background: 'var(--border)' }}></div>
-        <div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--warning)' }}>{records.filter(r => r.type === 'تغيير زيت').length}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>تغيير زيت</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {records.map(record => (
-          <div key={record.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ background: 'var(--surface-2)', padding: '10px', borderRadius: '10px', color: 'var(--warning)' }}>
-                  <Wrench size={20} />
-                </div>
+      {records.length === 0 ? (
+        <div className="text-center text-[var(--text-muted)] mt-10">لا توجد سجلات صيانة.</div>
+      ) : (
+        records.map(record => (
+          <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-3">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-yellow-500/10 text-yellow-500"><Wrench size={20}/></div>
                 <div>
-                  <p style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>{record.type}</p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>{record.date}</p>
+                  <p className="font-bold text-[var(--text)]">{record.type}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{record.date}</p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', padding: '8px', borderRadius: '8px' }}><Edit2 size={16} /></button>
-                <button style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', padding: '8px', borderRadius: '8px' }}><Trash2 size={16} /></button>
+              <div className="flex gap-2">
+                <button onClick={() => openEdit(record)} className="text-blue-400 bg-blue-400/10 p-2 rounded-lg"><Edit2 size={16} /></button>
+                <button onClick={() => handleDelete(record.id)} className="text-red-400 bg-red-400/10 p-2 rounded-lg"><Trash2 size={16} /></button>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-              <span style={{ background: 'var(--surface-2)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>{record.notes || 'لا توجد ملاحظات'}</span>
-              <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--primary-2)' }}>{record.cost} MAD</span>
+            <div className="flex justify-between items-center bg-[var(--surface-2)] p-2 rounded-lg text-xs">
+              <span className="text-[var(--text-muted)]">{record.nextKm ? `التغيير القادم: ${record.nextKm} KM` : 'لا توجد صيانة قادمة'}</span>
+              <span className="font-bold text-[var(--primary)]">{record.cost} MAD</span>
             </div>
           </div>
-        ))}
-      </div>
+        ))
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md space-y-4 relative border border-[var(--border)]">
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 text-[var(--text-muted)]"><X size={20} /></button>
+            <h2 className="text-xl font-bold text-center mb-4">{editingId ? t('edit') : t('addMaintenance')}</h2>
+            
+            <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark]" />
+            
+            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]">
+              <option value="تغيير زيت">تغيير زيت</option>
+              <option value="إطارات">إطارات</option>
+              <option value="فرامل">فرامل</option>
+              <option value="فحص شامل">فحص شامل</option>
+            </select>
+
+            <input type="number" placeholder="التكلفة (MAD)" required value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]" />
+            <input type="number" placeholder="العداد للصيانة القادمة (KM)" value={formData.nextKm} onChange={e => setFormData({...formData, nextKm: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)]" />
+            
+            <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl">{t('save')}</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
