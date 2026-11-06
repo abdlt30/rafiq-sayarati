@@ -23,9 +23,7 @@
   --radius-lg: 26px;
   --shadow-sm: 0 4px 14px rgba(0,0,0,.3);
   
-  /* لون خلفية شريط التنقل السفلي */
   --nav-bg: rgba(14, 21, 38, .92);
-  /* لون الهيرو */
   --hero-bg: radial-gradient(120% 120% at 90% 0%, rgba(47,107,255,.35) 0%, transparent 55%), linear-gradient(135deg, #0f1a33 0%, #111c36 45%, #0b1225 100%);
   --hero-border: rgba(47,107,255,.28);
 }
@@ -60,16 +58,17 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* إصلاح مشكلة التمرير (منع التمرير الأفقي فقط، والسماح بالعمودي) */
+/* إصلاح مشكلة التمرير: السماح بالتمرير العمودي ومنع الأفقي فقط */
 html, body, #root {
-  min-height: 100%;
+  min-height: 100vh;
   margin: 0;
   overflow-x: hidden; 
+  scroll-behavior: smooth;
 }
 
 /* إجبار منتقي التاريخ على التكيف مع الثيم */
 input[type="date"] {
-  color-scheme: light; /* افتراضي للوضع الفاتح */
+  color-scheme: light;
   background-color: var(--surface-2);
   color: var(--text);
 }
@@ -111,7 +110,6 @@ input[type="date"] {
   padding: 20px !important;
   position: relative;
   overflow: hidden;
-  /* الحفاظ على النص أبيض في الوضع الداكن، وأسود في الفاتح */
   color: var(--text) !important; 
 }
 [data-theme="dark"] .hero-card {
