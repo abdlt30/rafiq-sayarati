@@ -7,6 +7,7 @@ const translations = {
     // === عام ===
     home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', 
     save: 'حفظ', cancel: 'إلغاء', welcome: 'مرحباً،', edit: 'تعديل', confirmDelete: 'هل أنت متأكد من الحذف؟',
+    confirmDeleteCar: 'هل أنت متأكد من حذف هذه السيارة؟', // تمت الإضافة
     month: 'هذا الشهر', viewAll: 'عرض الكل', noData: 'لا توجد بيانات كافية',
     
     // === الإعدادات والمظهر ===
@@ -61,16 +62,17 @@ const translations = {
     backup: 'النسخ الاحتياطي', aboutApp: 'حول التطبيق',
     dataProtection: 'حماية البيانات', backupDesc: 'بياناتك محفوظة على هاتفك فقط. قم بتصديرها كملف احتياطي لضمان عدم ضياعها إذا قمت بتغيير هاتفك أو مسح المتصفح.',
     exportData: 'تصدير البيانات (JSON)', 
-    importData: 'استيراد البيانات', // تم التحديث
-    exportSuccess: 'تم تصدير البيانات بنجاح!', // جديد
-    confirmImport: 'تحذير: سيتم استبدال جميع بياناتك الحالية. هل أنت متأكد؟', // جديد
-    importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.', // جديد
-    importError: 'خطأ: الملف غير صالح أو تالف.' // جديد
+    importData: 'استيراد البيانات',
+    exportSuccess: 'تم تصدير البيانات بنجاح!',
+    confirmImport: 'تحذير: سيتم استبدال جميع بياناتك الحالية. هل أنت متأكد؟',
+    importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.',
+    importError: 'خطأ: الملف غير صالح أو تالف.'
   },
   en: { 
     // === General ===
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
     save: 'Save', cancel: 'Cancel', welcome: 'Welcome,', edit: 'Edit', confirmDelete: 'Are you sure you want to delete?',
+    confirmDeleteCar: 'Are you sure you want to delete this car?', // Added
     month: 'This Month', viewAll: 'View All', noData: 'Not enough data',
     
     // === Settings & Theme ===
@@ -124,16 +126,17 @@ const translations = {
     backup: 'Backup', aboutApp: 'About App',
     dataProtection: 'Data Protection', backupDesc: 'Your data is saved on your phone only. Export it as a backup file to ensure it is not lost if you change your phone or clear your browser.',
     exportData: 'Export Data (JSON)', 
-    importData: 'Import Data', // Updated
-    exportSuccess: 'Data exported successfully!', // New
-    confirmImport: 'Warning: This will overwrite your current data. Are you sure?', // New
-    importSuccess: 'Data imported successfully! Reloading...', // New
-    importError: 'Error: Invalid or corrupted file.' // New
+    importData: 'Import Data',
+    exportSuccess: 'Data exported successfully!',
+    confirmImport: 'Warning: This will overwrite your current data. Are you sure?',
+    importSuccess: 'Data imported successfully! Reloading...',
+    importError: 'Error: Invalid or corrupted file.'
   },
   fr: { 
     // === Général ===
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
     save: 'Enregistrer', cancel: 'Annuler', welcome: 'Bienvenue,', edit: 'Modifier', confirmDelete: 'Êtes-vous sûr de vouloir supprimer?',
+    confirmDeleteCar: 'Êtes-vous sûr de vouloir supprimer cette voiture ?', // Ajouté
     month: 'Ce Mois', viewAll: 'Voir Tout', noData: 'Pas assez de données',
     
     // === Paramètres & Thème ===
@@ -187,11 +190,11 @@ const translations = {
     backup: 'Sauvegarde', aboutApp: 'À propos',
     dataProtection: 'Protection des données', backupDesc: 'Vos données sont enregistrées sur votre téléphone uniquement. Exportez-les sous forme de fichier de sauvegarde pour éviter toute perte si vous changez de téléphone ou effacez votre navigateur.',
     exportData: 'Exporter les données (JSON)', 
-    importData: 'Importer des données', // Updated
-    exportSuccess: 'Données exportées avec succès!', // New
-    confirmImport: 'Attention : Cela écrasera vos données actuelles. Êtes-vous sûr ?', // New
-    importSuccess: 'Données importées avec succès ! Redémarrage...', // New
-    importError: 'Erreur : Fichier invalide ou corrompu.' // New
+    importData: 'Importer des données',
+    exportSuccess: 'Données exportées avec succès!',
+    confirmImport: 'Attention : Cela écrasera vos données actuelles. Êtes-vous sûr ?',
+    importSuccess: 'Données importées avec succès ! Redémarrage...',
+    importError: 'Erreur : Fichier invalide ou corrompu.'
   }
 };
 
@@ -255,6 +258,29 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // 🚨 الدالة الجديدة لحذف السيارة
+  const deleteCar = (id) => {
+    try {
+      const updatedVehicles = vehicles.filter(v => v.id !== id);
+      localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
+      
+      // إذا كانت السيارة المحذوفة هي النشطة حالياً
+      if (currentCar?.id === id) {
+        const nextCar = updatedVehicles.length > 0 ? updatedVehicles[0] : null;
+        setCurrentCar(nextCar);
+        
+        if (nextCar) {
+          localStorage.setItem('savedCar', JSON.stringify(nextCar));
+        } else {
+          localStorage.removeItem('savedCar');
+        }
+      }
+      setVehicles(updatedVehicles);
+    } catch (error) {
+      console.error("Delete Error:", error);
+    }
+  };
+
   const selectCar = (car) => {
     localStorage.setItem('savedCar', JSON.stringify(car));
     setCurrentCar(car);
@@ -264,7 +290,7 @@ export const AppProvider = ({ children }) => {
 
   return (
     <AppContext.Provider value={{ 
-      currentCar, vehicles, addNewCar, updateCar, selectCar, 
+      currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, // تمت إضافة deleteCar هنا
       isLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t 
     }}>
       {children}
