@@ -15,11 +15,18 @@ export default function AddVehicle() {
   const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
 
   useEffect(() => {
-    if (isEditing) {
-      const carToEdit = vehicles.find(v => v.id === editId);
-      if (carToEdit) setCar(carToEdit);
+    if (isEditing && vehicles.length > 0) {
+      // تحويل الـ ID إلى نص لضمان التطابق التام
+      const carToEdit = vehicles.find(v => String(v.id) === String(editId));
+      if (carToEdit) {
+        setCar({
+          make: carToEdit.make || '',
+          model: carToEdit.model || '',
+          plate: carToEdit.plate || '',
+          currentOdometer: carToEdit.currentOdometer || ''
+        });
+      }
     }
-    // تم إزالة كود الطرد (Redirect) الذي كان يمنع الإضافة
   }, [isEditing, editId, vehicles]);
 
   const handleSubmit = (e) => {
@@ -33,14 +40,13 @@ export default function AddVehicle() {
       navigate('/vehicles');
     } else {
       addNewCar({ ...car, currentOdometer: Number(car.currentOdometer) });
-      // العودة للصفحة الرئيسية بعد الإضافة مباشرة
       navigate('/');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6 flex flex-col font-sans transition-colors duration-300">
-      <div className="mt-8 mb-8">
+    <div className="min-h-full bg-[var(--bg)] p-6 flex flex-col font-sans transition-colors duration-300">
+      <div className="mt-4 mb-8">
         <h2 className="text-2xl font-bold text-[var(--text)] mb-2">
           {isEditing ? (t('editCar') || 'تعديل السيارة') : (t('addYourCar') || 'أضف سيارتك')}
         </h2>
