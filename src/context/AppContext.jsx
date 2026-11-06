@@ -16,10 +16,8 @@ const translations = {
     totalCost: 'إجمالي المصاريف', costPerKm: 'تكلفة الكيلومتر', distributionByType: 'توزيع المصاريف', 
     quickActions: 'إجراءات سريعة', distance: 'المسافة المقطوعة', nextMaintenance: 'الصيانة القادمة', 
     expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات',
-    currentCar: 'السيارة الحالية', // جديد
-    monthlyCost: 'مصاريف الشهر', // جديد
-    upcomingMaintenance: 'الصيانة القادمة', // جديد
-    expense: 'مصروف', // جديد (مفرد لآخر العمليات)
+    currentCar: 'السيارة الحالية', monthlyCost: 'مصاريف الشهر', 
+    upcomingMaintenance: 'الصيانة القادمة', expense: 'مصروف',
     
     // السيارات
     vehicles: 'سياراتي', carInfo: 'معلومات السيارة', switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', 
@@ -28,7 +26,8 @@ const translations = {
     addYourCarSubtitle: 'أدخل بيانات سيارتك الأولى لنبدأ التتبع.', carMake: 'الماركة (مثال: تويوتا)', 
     carModel: 'الموديل (مثال: كورولا)', plateNumber: 'رقم اللوحة (اختياري)', 
     currentOdometer: 'عداد السيارة الحالي (KM)', saveAndContinue: 'حفظ ومتابعة',
-    
+    editCar: 'تعديل السيارة', editCarSubtitle: 'قم بتحديث بيانات سيارتك.', // ترجمة جديدة
+
     // صفحة الترحيب
     appName: 'رفيق سيارتي', welcomeMessagePart1: 'تحكم في مصاريف سيارتك، تابع صيانتها، ووفر', 
     welcomeMessagePart2: 'من ميزانيتك بذكاء.', startNow: 'ابدأ الآن',
@@ -76,10 +75,7 @@ const translations = {
     totalCost: 'Total Cost', costPerKm: 'Cost per KM', distributionByType: 'Expense Distribution', 
     quickActions: 'Quick Actions', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
     expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity',
-    currentCar: 'Current Car', // New
-    monthlyCost: 'Monthly Cost', // New
-    upcomingMaintenance: 'Upcoming Maintenance', // New
-    expense: 'Expense', // New
+    currentCar: 'Current Car', monthlyCost: 'Monthly Cost', upcomingMaintenance: 'Upcoming Maintenance', expense: 'Expense',
     
     // Vehicles
     vehicles: 'My Vehicles', carInfo: 'Car Information', switchCar: 'Switch Car', addNewCar: 'Add Vehicle', 
@@ -88,6 +84,7 @@ const translations = {
     addYourCarSubtitle: 'Enter your first car details to start tracking.', carMake: 'Make (e.g., Toyota)', 
     carModel: 'Model (e.g., Corolla)', plateNumber: 'Plate Number (Optional)', 
     currentOdometer: 'Current Odometer (KM)', saveAndContinue: 'Save and Continue',
+    editCar: 'Edit Car', editCarSubtitle: 'Update your car details.', // New
     
     // Welcome Page
     appName: 'My Car Companion', welcomeMessagePart1: 'Control your car expenses, track maintenance, and save', 
@@ -136,10 +133,7 @@ const translations = {
     totalCost: 'Coût Total', costPerKm: 'Coût par KM', distributionByType: 'Répartition des Dépenses', 
     quickActions: 'Actions Rapides', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
     expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente',
-    currentCar: 'Voiture Actuelle', // Nouveau
-    monthlyCost: 'Coût Mensuel', // Nouveau
-    upcomingMaintenance: 'Prochain Entretien', // Nouveau
-    expense: 'Dépense', // Nouveau
+    currentCar: 'Voiture Actuelle', monthlyCost: 'Coût Mensuel', upcomingMaintenance: 'Prochain Entretien', expense: 'Dépense',
     
     // Véhicules
     vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule', switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', 
@@ -148,6 +142,7 @@ const translations = {
     addYourCarSubtitle: 'Entrez les détails de votre première voiture pour commencer le suivi.', carMake: 'Marque (ex: Toyota)', 
     carModel: 'Modèle (ex: Corolla)', plateNumber: 'Numéro de plaque (Optionnel)', 
     currentOdometer: 'Compteur actuel (KM)', saveAndContinue: 'Enregistrer et Continuer',
+    editCar: 'Modifier la voiture', editCarSubtitle: 'Mettez à jour les détails de votre voiture.', // Nouveau
     
     // Page d'accueil
     appName: 'Mon Compagnon Auto', welcomeMessagePart1: 'Contrôlez les dépenses de votre voiture, suivez son entretien et économisez', 
@@ -224,6 +219,19 @@ export const AppProvider = ({ children }) => {
     setVehicles(updatedVehicles);
   };
 
+  // دالة جديدة تمت إضافتها لتحديث بيانات السيارة
+  const updateCar = (updatedCarData) => {
+    const updatedVehicles = vehicles.map(v => v.id === updatedCarData.id ? updatedCarData : v);
+    localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
+    
+    // إذا كانت هذه هي السيارة النشطة، قم بتحديثها أيضاً
+    if (currentCar?.id === updatedCarData.id) {
+      localStorage.setItem('savedCar', JSON.stringify(updatedCarData));
+      setCurrentCar(updatedCarData);
+    }
+    setVehicles(updatedVehicles);
+  };
+
   const selectCar = (car) => {
     localStorage.setItem('savedCar', JSON.stringify(car));
     setCurrentCar(car);
@@ -233,7 +241,7 @@ export const AppProvider = ({ children }) => {
 
   return (
     <AppContext.Provider value={{ 
-      currentCar, vehicles, addNewCar, selectCar, 
+      currentCar, vehicles, addNewCar, updateCar, selectCar, // تمت إضافة updateCar هنا
       isLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t 
     }}>
       {children}
