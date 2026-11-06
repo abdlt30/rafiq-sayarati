@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import { Camera, X } from 'lucide-react'; // أيقونات جديدة
 
 export default function AddVehicle() {
   const { addNewCar, updateCar, vehicles, t } = useContext(AppContext); 
@@ -12,22 +13,30 @@ export default function AddVehicle() {
   const editId = searchParams.get('id');
   const isEditing = Boolean(editId);
 
-  const [car, setCar] = useState({ make: '', model: '', plate: '', currentOdometer: '' });
+  // إضافة حقول جديدة (صورة، سنة، لون)
+  const [car, setCar] = useState({ 
+    make: '', model: '', plate: '', currentOdometer: '', 
+    year: '', color: '', image: '' 
+  });
 
   useEffect(() => {
     if (isEditing && vehicles.length > 0) {
-      // تحويل الـ ID إلى نص لضمان التطابق التام
       const carToEdit = vehicles.find(v => String(v.id) === String(editId));
-      if (carToEdit) {
-        setCar({
-          make: carToEdit.make || '',
-          model: carToEdit.model || '',
-          plate: carToEdit.plate || '',
-          currentOdometer: carToEdit.currentOdometer || ''
-        });
-      }
+      if (carToEdit) setCar(carToEdit);
     }
   }, [isEditing, editId, vehicles]);
+
+  // دالة تحويل الصورة إلى Base64 لتخزينها
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCar({ ...car, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -35,18 +44,20 @@ export default function AddVehicle() {
       return alert(t('fillRequiredFields') || 'الرجاء تعبئة الحقول الأساسية');
     }
     
+    const carData = { ...car, currentOdometer: Number(car.currentOdometer) };
+
     if (isEditing) {
-      updateCar({ ...car, id: editId, currentOdometer: Number(car.currentOdometer) });
+      updateCar({ ...carData, id: editId });
       navigate('/vehicles');
     } else {
-      addNewCar({ ...car, currentOdometer: Number(car.currentOdometer) });
+      addNewCar(carData);
       navigate('/');
     }
   };
 
   return (
-    <div className="min-h-full bg-[var(--bg)] p-6 flex flex-col font-sans transition-colors duration-300">
-      <div className="mt-4 mb-8">
+    <div className="min-h-full bg-[var(--bg)] p-6 flex flex-col font-sans transition-colors duration-300 pb-24">
+      <div className="mt-4 mb-6">
         <h2 className="text-2xl font-bold text-[var(--text)] mb-2">
           {isEditing ? (t('editCar') || 'تعديل السيارة') : (t('addYourCar') || 'أضف سيارتك')}
         </h2>
@@ -55,13 +66,43 @@ export default function AddVehicle() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1">
+      {/* رفع الصورة */}
+      <div className="flex justify-center mb-8">
+        <div className="relative w-32 h-32 rounded-3xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-[var(--primary)] transition-colors">
+          {car.image ? (
+            <>
+              <img src={car.image} alt="Car" className="w-full h-full object-cover" />
+              <button 
+                type="button" 
+                onClick={() => setCar({...car, image: ''})}
+                className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full backdrop-blur-sm"
+              >
+                <X size={14} />
+              </button>
+            </>
+          ) : (
+            <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
+              <Camera size={32} className="mb-2" />
+              <span className="text-[10px] font-bold">إضافة صورة</span>
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
+          )}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex-1 space-y-1">
         <Input label={t('carMake') || 'الماركة (مثال: تويوتا)'} value={car.make} onChange={(e) => setCar({...car, make: e.target.value})} required />
         <Input label={t('carModel') || 'الموديل (مثال: كورولا)'} value={car.model} onChange={(e) => setCar({...car, model: e.target.value})} required />
+        
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="سنة الصنع (اختياري)" type="number" value={car.year || ''} onChange={(e) => setCar({...car, year: e.target.value})} />
+          <Input label="اللون (اختياري)" value={car.color || ''} onChange={(e) => setCar({...car, color: e.target.value})} />
+        </div>
+
         <Input label={t('plateNumber') || 'رقم اللوحة (اختياري)'} value={car.plate} onChange={(e) => setCar({...car, plate: e.target.value})} />
         <Input label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} type="number" value={car.currentOdometer} onChange={(e) => setCar({...car, currentOdometer: e.target.value})} required />
         
-        <div className="mt-10">
+        <div className="mt-8">
           <Button type="submit">{isEditing ? (t('save') || 'حفظ التعديلات') : (t('saveAndContinue') || 'حفظ ومتابعة')}</Button>
         </div>
       </form>
