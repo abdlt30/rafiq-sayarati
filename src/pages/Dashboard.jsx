@@ -1,9 +1,14 @@
-// في أعلى الملف تأكد من استدعاء كل هذه الأيقونات
+// 1. إضافة استدعاء useContext من مكتبة react
+import { useContext } from 'react'; 
+// 2. إضافة استدعاء AppContext (تأكد من المسار الصحيح، غالباً سيكون هكذا)
+import { AppContext } from '../context/AppContext'; 
+
 import { Wallet, Gauge, Fuel, Wrench, Car, FileText, Bell, Settings, ChevronLeft, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { currentCar, currency, t } = useContext(AppContext); // أضفنا currency
+  // الآن useContext و AppContext معرّفين وسيعملان بدون أخطاء
+  const { currentCar, currency, t } = useContext(AppContext); 
   const navigate = useNavigate();
   // ... باقي الحالات (totals, recent, etc.)
 
