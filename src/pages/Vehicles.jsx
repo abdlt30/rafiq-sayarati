@@ -8,7 +8,7 @@ export default function Vehicles() {
   const navigate = useNavigate();
 
   const handleDelete = (e, id, make, model) => {
-    e.stopPropagation(); // منع فتح السيارة عند الضغط على الحذف
+    e.stopPropagation();
     if (window.confirm(`${t('confirmDeleteCar') || 'هل أنت متأكد من حذف'} ${make} ${model}؟`)) {
       deleteCar(id);
     }
@@ -17,7 +17,6 @@ export default function Vehicles() {
   return (
     <div className="space-y-4 pb-24 px-4 pt-6 relative min-h-screen">
       
-      {/* الشريط العلوي */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[var(--primary)]/10 rounded-2xl">
@@ -28,7 +27,6 @@ export default function Vehicles() {
             <p className="text-xs text-[var(--text-muted)]">إدارة أسطول سياراتك</p>
           </div>
         </div>
-        
         <button 
           onClick={() => navigate('/add-vehicle')} 
           className="flex items-center gap-1.5 bg-[var(--primary)] text-white px-3 py-2 rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-colors text-sm font-bold"
@@ -52,49 +50,54 @@ export default function Vehicles() {
                 onClick={() => { selectCar(car); navigate('/'); }}
                 className={`relative p-4 rounded-3xl border flex items-center gap-4 cursor-pointer transition-all duration-300 ${
                   isActive 
-                    ? 'border-[var(--primary)] bg-gradient-to-br from-[var(--primary)]/10 to-transparent shadow-lg shadow-blue-500/10' 
+                    ? 'border-[var(--primary)] bg-gradient-to-br from-[var(--primary)]/5 to-transparent shadow-lg shadow-blue-500/5' 
                     : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--text-muted)]'
                 }`}
               >
-                <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden ${isActive ? 'bg-[var(--primary)]/20 text-[var(--primary)]' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
+                {/* صورة السيارة */}
+                <div className={`w-24 h-24 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden ${isActive ? 'bg-[var(--primary)]/10 text-[var(--primary)]' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
                   {car.image ? (
                     <img src={car.image} alt="car" className="w-full h-full object-cover" />
                   ) : (
-                    <Car size={32} />
+                    <Car size={36} />
                   )}
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-lg text-[var(--text)] leading-tight">{car.make} {car.model}</h3>
-                      <p className="text-xs text-[var(--text-muted)] mt-1.5 flex items-center gap-1.5 flex-wrap">
-                        {car.year && <span className="bg-[var(--surface-2)] px-1.5 py-0.5 rounded">{car.year}</span>}
-                        {car.color && <span className="bg-[var(--surface-2)] px-1.5 py-0.5 rounded">{car.color}</span>}
-                        {car.plate && <span>{car.plate}</span>}
+                {/* معلومات السيارة */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="truncate pr-2">
+                      <h3 className="font-bold text-lg text-[var(--text)] leading-tight truncate">{car.make} {car.model}</h3>
+                      <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
+                        {car.year ? `${car.year} • ` : ''} {car.color ? `${car.color} • ` : ''} {car.plate || 'بدون لوحة'}
                       </p>
                     </div>
-                    {isActive && <CheckCircle className="text-[var(--primary)]" size={20} />}
+                    {isActive && (
+                      <span className="bg-[var(--primary)]/10 text-[var(--primary)] text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 flex-shrink-0">
+                        <CheckCircle size={12} /> نشطة
+                      </span>
+                    )}
                   </div>
                   
-                  <div className="flex justify-between items-end mt-3">
-                    <span className="text-sm font-bold bg-[var(--surface-2)] px-2.5 py-1 rounded-lg text-[var(--text)]">{car.currentOdometer} KM</span>
-                    
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} 
-                        className="p-2 text-blue-400 bg-blue-400/10 rounded-xl hover:bg-blue-400/20 transition-colors"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button 
-                        onClick={(e) => handleDelete(e, car.id, car.make, car.model)} 
-                        className="p-2 text-red-400 bg-red-400/10 rounded-xl hover:bg-red-400/20 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                  <div className="flex justify-between items-center mt-3">
+                    <span className="text-sm font-bold bg-[var(--surface-2)] px-2.5 py-1 rounded-lg text-[var(--text)]">{Number(car.currentOdometer).toLocaleString()} KM</span>
                   </div>
+                </div>
+
+                {/* أزرار التحكم */}
+                <div className="flex flex-col gap-2 absolute top-4 left-4">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} 
+                    className="p-2 text-blue-400 bg-blue-400/10 rounded-xl hover:bg-blue-400/20 transition-colors"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    onClick={(e) => handleDelete(e, car.id, car.make, car.model)} 
+                    className="p-2 text-red-400 bg-red-400/10 rounded-xl hover:bg-red-400/20 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             );
