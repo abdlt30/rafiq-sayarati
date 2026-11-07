@@ -5,6 +5,7 @@ const KEYS = {
   MAINTENANCE: 'maintenance_records',
   DOCUMENTS: 'documents_records',
   REMINDERS: 'reminders_records',
+  CUSTOM_MAINTENANCE: 'custom_maintenance_types', // ✅ مفتاح جديد للأنواع المخصصة
 };
 
 // دالة مساعدة لإنشاء معرف فريد (متوافق مع Supabase UUID)
@@ -100,9 +101,43 @@ export const dbService = {
   updateReminder: reminderStore.update,
   deleteReminder: reminderStore.delete,
 
-  // --- الإحصائيات العامة (تم تحسينها لتعمل بكفاءة) ---
+  // ==========================================
+  // ✅ الأنواع المخصصة للصيانة (Custom Maintenance)
+  // ==========================================
+  getCustomTypes: () => {
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.CUSTOM_MAINTENANCE)) || [];
+    } catch (e) {
+      return [];
+    }
+  },
+  addCustomType: (typeName) => {
+    try {
+      const types = dbService.getCustomTypes();
+      if (!types.includes(typeName)) {
+        const updated = [...types, typeName];
+        localStorage.setItem(KEYS.CUSTOM_MAINTENANCE, JSON.stringify(updated));
+        return updated;
+      }
+      return types;
+    } catch (e) {
+      console.error("Error adding custom type:", e);
+      return [];
+    }
+  },
+  deleteCustomType: (typeName) => {
+    try {
+      const types = dbService.getCustomTypes();
+      const updated = types.filter(t => t !== typeName);
+      localStorage.setItem(KEYS.CUSTOM_MAINTENANCE, JSON.stringify(updated));
+      return updated;
+    } catch (e) {
+      return [];
+    }
+  },
+
+  // --- الإحصائيات العامة ---
   getTotals: (carId) => {
-    // دالة مساعدة لفلترة السجلات حسب السيارة
     const filterByCar = (records) => records.filter(r => !r.carId || String(r.carId) === String(carId));
     
     const fuel = filterByCar(dbService.getFuel());
