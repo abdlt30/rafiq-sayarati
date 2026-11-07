@@ -1,6 +1,5 @@
 import { useContext } from 'react';
-// ✅ تصحيح المسار هنا: الصعود مستويين للأعلى للوصول إلى مجلد context
-import { AppContext } from '../../context/AppContext.jsx'; 
+import { AppContext } from '../../context/AppContext';
 import { NavLink } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
@@ -8,7 +7,8 @@ export default function BottomNav() {
   const { t } = useContext(AppContext);
 
   const navItems = [
-    { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
+    // ✅ تمت إضافة كلمة end هنا لحل المشكلة
+    { path: '/', icon: Home, label: t('home') || 'الرئيسية', end: true },
     { path: '/expenses', icon: Wallet, label: t('expenses') || 'المصاريف' },
     { path: '/maintenance', icon: Wrench, label: t('maintenance') || 'الصيانة' },
     { path: '/documents', icon: FileText, label: t('documents') || 'الوثائق' },
@@ -21,6 +21,7 @@ export default function BottomNav() {
         <NavLink
           key={item.path}
           to={item.path}
+          end={item.end} // ✅ تمرير الخاصية هنا
           className={({ isActive }) =>
             `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
               isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
