@@ -1,7 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, Gauge, AlertTriangle } from 'lucide-react';
+// تمت إضافة أيقونة Settings2
+import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, Gauge, AlertTriangle, Settings2 } from 'lucide-react';
 
 export default function Reminders() {
   const { currentCar, t } = useContext(AppContext); 
@@ -9,15 +10,28 @@ export default function Reminders() {
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // حالة لتخزين الأنواع المخصصة
+  const [customTypes, setCustomTypes] = useState([]);
+  
   // النموذج يدعم التاريخ والعداد في نفس الوقت
-  const [formData, setFormData] = useState({ type: 'oil', date: '', odometer: '' });
+  const [formData, setFormData] = useState({ type: 'oilChange', date: '', odometer: '' });
 
   useEffect(() => {
     if (currentCar) {
       const carReminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
       setRecords(carReminders);
+      setCustomTypes(dbService.getCustomTypes()); // جلب الأنواع المخصصة
     }
   }, [currentCar]);
+
+  const handleAddCustomType = () => {
+    const newType = window.prompt(t('enterCustomTypeName') || 'أدخل اسم التذكير الجديد:');
+    if (newType && newType.trim() !== '') {
+      const updatedTypes = dbService.addCustomType(newType.trim());
+      setCustomTypes(updatedTypes);
+      setFormData({ ...formData, type: newType.trim() }); // اختياره تلقائياً
+    }
+  };
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -38,7 +52,7 @@ export default function Reminders() {
     }
     
     setIsModalOpen(false);
-    setFormData({ type: 'oil', date: '', odometer: '' }); 
+    setFormData({ type: 'oilChange', date: '', odometer: '' }); 
   };
 
   const handleDelete = (id) => {
@@ -62,31 +76,25 @@ export default function Reminders() {
       kmLeft = Number(record.odometer) - Number(currentCar.currentOdometer);
     }
 
-    // إذا لم يكن هناك تاريخ ولا عداد
     if (daysLeft === null && kmLeft === null) {
       return { label: t('active') || 'نشط', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Bell };
     }
 
-    // تحديد ما إذا كان متأخراً
     const isOverdue = (daysLeft !== null && daysLeft < 0) || (kmLeft !== null && kmLeft < 0);
     if (isOverdue) {
       return { label: t('overdue') || 'متأخر', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
     }
 
-    // تحديد أي منهما أقرب
     let message = '';
     let isSoon = false;
 
     if (daysLeft !== null && kmLeft !== null) {
-      // كلاهما موجود
       if (daysLeft <= 7 || kmLeft <= 500) isSoon = true;
       message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'} / ${kmLeft} ${t('km') || 'كم'}`;
     } else if (daysLeft !== null) {
-      // تاريخ فقط
       if (daysLeft <= 7) isSoon = true;
       message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'}`;
     } else if (kmLeft !== null) {
-      // عداد فقط
       if (kmLeft <= 500) isSoon = true;
       message = `${t('after') || 'بعد'} ${kmLeft} ${t('km') || 'كم'}`;
     }
@@ -99,10 +107,12 @@ export default function Reminders() {
     };
   };
 
+  // تحديث دالة الأيقونات لدعم الأنواع المخصصة
   const getRecordIcon = (type) => {
-    if (type === 'oil') return <Wrench size={20} />;
+    if (type === 'oil' || type === 'oilChange') return <Wrench size={20} />;
     if (type === 'insurance') return <Shield size={20} />;
-    return <Calendar size={20} />;
+    if (type === 'inspection' || type === 'technicalInspection') return <Calendar size={20} />;
+    return <Bell size={20} />; // أيقونة افتراضية لأي نوع مخصص
   };
 
   return (
@@ -137,7 +147,8 @@ export default function Reminders() {
                   </div>
                   <div>
                     <p className="font-bold text-[var(--text)] text-lg">
-                      {t(record.type) || record.type}
+                      {/* ترجمة النوع إذا كان افتراضياً، أو عرضه كما هو إذا كان مخصصاً */}
+                      {t(record.type) !== record.type ? t(record.type) : record.type}
                     </p>
                     <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${status.color}`}>
                       <StatusIcon size={14} />
@@ -168,13 +179,35 @@ export default function Reminders() {
               </button>
             </div>
             
-            <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => setFormData({...formData, type: 'oil'})} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'oil' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('oil') || 'زيت'}</button>
-              <button type="button" onClick={() => setFormData({...formData, type: 'insurance'})} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'insurance' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('insurance') || 'تأمين'}</button>
-              <button type="button" onClick={() => setFormData({...formData, type: 'inspection'})} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'inspection' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('inspection') || 'فحص'}</button>
+            {/* القائمة المنسدلة الجديدة بدلاً من الأزرار الثلاثة */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs text-[var(--text-muted)] block">{t('reminderType') || 'نوع التذكير'}</label>
+                <button type="button" onClick={handleAddCustomType} className="text-xs text-[var(--primary)] flex items-center gap-1 hover:underline">
+                  <Settings2 size={12} /> {t('addType') || 'إضافة نوع'}
+                </button>
+              </div>
+              <select 
+                value={formData.type} 
+                onChange={e => setFormData({...formData, type: e.target.value})} 
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]"
+              >
+                <optgroup label={t('defaultTypes') || 'أنواع افتراضية'}>
+                  <option value="oilChange">{t('oilChange') || 'تغيير زيت'}</option>
+                  <option value="insurance">{t('insurance') || 'تأمين'}</option>
+                  <option value="inspection">{t('technicalInspection') || 'فحص تقني'}</option>
+                </optgroup>
+                {customTypes.length > 0 && (
+                  <optgroup label={t('customTypes') || 'أنواع مخصصة'}>
+                    {customTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
             </div>
             
-            {/* الحقول الجديدة: التاريخ والعداد معاً */}
+            {/* الحقول: التاريخ والعداد معاً */}
             <div className="space-y-3 pt-2">
               <div>
                 <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'التاريخ (اختياري)'}</label>
