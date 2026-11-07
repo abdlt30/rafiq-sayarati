@@ -16,7 +16,6 @@ import Reminders from './pages/Reminders';
 import Backup from './pages/Backup'; 
 import Vehicles from './pages/Vehicles';
 
-// مكون حماية المسارات
 const ProtectedRoute = ({ children }) => {
   const { currentCar } = useContext(AppContext);
   if (!currentCar) {
@@ -39,11 +38,9 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
-        {/* مسارات عامة لا تحتاج تسجيل دخول أو سيارة */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
-        {/* المسارات المحمية */}
         <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
         <Route path="/vehicles" element={<ProtectedRoute><Layout><Vehicles /></Layout></ProtectedRoute>} />
         <Route path="/fuel" element={<ProtectedRoute><Layout><Fuel /></Layout></ProtectedRoute>} />
@@ -55,7 +52,6 @@ export default function App() {
         <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
         
-        {/* إعادة التوجيه لأي مسار غير معروف */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
