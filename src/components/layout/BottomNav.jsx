@@ -4,9 +4,11 @@ import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
-  // قراءة الرابط الحالي
+  
+  // قراءة الرابط الحالي مباشرة من شريط العنوان
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#/');
 
+  // مراقبة أي تغيير في الرابط وتحديث الحالة
   useEffect(() => {
     const handleHashChange = () => {
       setCurrentHash(window.location.hash || '#/');
@@ -26,7 +28,7 @@ export default function BottomNav() {
   return (
     <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] pb-safe">
       {navItems.map((item) => {
-        // التحقق القسري: هل الرابط الحالي يطابق الزر؟
+        // فحص قسري: هل الرابط الحالي يطابق الزر؟
         const isActive = currentHash === item.path;
         
         return (
