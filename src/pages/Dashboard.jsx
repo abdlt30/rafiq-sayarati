@@ -1,230 +1,161 @@
-import { useContext, useState, useEffect } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { 
-  Wallet, Gauge, Fuel, Wrench, Car, FileText, 
-  Bell, Settings, Plus, ArrowLeftRight, AlertCircle, Calendar, ChevronLeft, Sparkles, AlertTriangle
-} from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge } from 'lucide-react';
 
-export default function Dashboard() {
-  const { currentCar, currency, t, lang } = useContext(AppContext); 
-  const navigate = useNavigate();
-
-  const [data, setData] = useState({
-    totalCost: 0, monthlyCost: 0, costPerKm: 0, distance: 0,
-    upcomingReminders: [], recentActivity: []
-  });
+export default function Fuel() {
+  const { currentCar, t, currency } = useContext(AppContext); 
+  
+  const [records, setRecords] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({ date: '', odometer: '', liters: '', cost: '' });
 
   useEffect(() => {
-    if (!currentCar) return;
-
-    const fuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
-    const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
-    const maintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
-    const docs = dbService.getDocuments().filter(r => r.carId === currentCar.id);
-    const reminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
-
-    const totalFuel = fuel.reduce((sum, r) => sum + Number(r.cost || 0), 0);
-    const totalExp = expenses.reduce((sum, r) => sum + Number(r.cost || 0), 0);
-    const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost || 0), 0);
-    const grandTotal = totalFuel + totalExp + totalMaint;
-
-    const now = new Date();
-    const isThisMonth = (dateStr) => {
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    };
-
-    const monthTotal = 
-      fuel.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0) +
-      expenses.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0) +
-      maintenance.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0);
-
-    const odometers = fuel.map(r => Number(r.odometer)).filter(o => o > 0).sort((a, b) => a - b);
-    let distance = 0;
-    if (odometers.length > 1) distance = odometers[odometers.length - 1] - odometers[0];
-    else if (odometers.length === 1 && currentCar.currentOdometer) distance = Math.max(0, currentCar.currentOdometer - odometers[0]);
-    
-    const costPerKm = distance > 0 ? (grandTotal / distance).toFixed(2) : 0;
-
-    // دمج التنبيهات من الصيانة والتذكيرات
-    const allAlerts = [
-      ...maintenance.filter(m => m.nextKm && Number(m.nextKm) > (currentCar.currentOdometer || 0)).map(m => ({ ...m, alertText: m.type, value: Number(m.nextKm), isKm: true, link: '/maintenance' })),
-      ...reminders.map(r => ({ ...r, alertText: r.type, value: r.odometer || new Date(r.date), isKm: !!r.odometer, link: '/reminders' }))
-    ];
-    
-    // فلترة وترتيب التنبيهات
-    const upcoming = allAlerts.filter(r => {
-        if (r.isKm) return r.value > (currentCar.currentOdometer || 0);
-        return r.value > new Date();
-    }).slice(0, 2);
-
-    const allActivities = [
-      ...fuel.map(r => ({ ...r, type: 'fuel', icon: Fuel, color: 'text-blue-500' })),
-      ...expenses.map(r => ({ ...r, type: 'expense', icon: Wallet, color: 'text-purple-500' })),
-      ...maintenance.map(r => ({ ...r, type: 'maintenance', icon: Wrench, color: 'text-yellow-500' }))
-    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
-
-    setData({
-      totalCost: grandTotal, monthlyCost: monthTotal, costPerKm, distance,
-      upcomingReminders: upcoming, recentActivity: allActivities
-    });
-
+    if (currentCar) {
+      const allFuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
+      setRecords(allFuel.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    }
   }, [currentCar]);
 
-  const getFormattedDate = () => {
-    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
-    return new Date().toLocaleDateString(localeMap[lang] || 'ar-MA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const recordsWithConsumption = useMemo(() => {
+    if (records.length === 0) return [];
+    const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
+    const calculated = sortedByOdometer.map((record, index) => {
+      let consumption = null;
+      if (index > 0) {
+        const prevRecord = sortedByOdometer[index - 1];
+        const distance = Number(record.odometer) - Number(prevRecord.odometer);
+        if (distance > 0 && Number(record.liters) > 0) {
+          consumption = ((Number(record.liters) / distance) * 100).toFixed(1);
+        }
+      }
+      return { ...record, consumption };
+    });
+    return calculated.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [records]);
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    const data = { carId: currentCar.id, ...formData, odometer: Number(formData.odometer), liters: Number(formData.liters), cost: Number(formData.cost) };
+    
+    if (editingId) {
+      const updated = dbService.updateFuel(editingId, data);
+      setRecords(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    } else {
+      const newRecord = dbService.addFuel(data);
+      if (newRecord) setRecords([newRecord, ...records].sort((a, b) => new Date(b.date) - new Date(a.date)));
+    }
+    closeModal();
   };
 
-  const isEmptyState = data.totalCost === 0 && data.distance === 0 && data.recentActivity.length === 0;
+  const handleDelete = (id) => {
+    if(window.confirm(t('confirmDelete'))) {
+      const updated = dbService.deleteFuel(id);
+      setRecords(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    }
+  };
+
+  const openEdit = (record) => {
+    setEditingId(record.id);
+    setFormData({ date: record.date, odometer: record.odometer, liters: record.liters, cost: record.cost });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ date: '', odometer: '', liters: '', cost: '' });
+  };
 
   return (
     <div className="space-y-4 pb-24 px-4">
-      
-      {/* الشريط العلوي */}
-      <div className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 transition-all">
-        <div>
-          <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
-          <p className="text-xs text-[var(--text-muted)]">{getFormattedDate()}</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => navigate('/reminders')} className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] relative hover:text-[var(--primary)] transition-colors">
-            <Bell size={18} />
-            <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[var(--bg)]"></span>
-          </button>
-          <button onClick={() => navigate('/settings')} className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
-            <Settings size={18} />
-          </button>
-        </div>
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('fuel') || 'سجل الوقود'}</h1>
+        <button onClick={() => setIsModalOpen(true)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform">
+          <Plus size={24} />
+        </button>
       </div>
 
-      {/* بطاقة السيارة (تم إصلاح الألوان لتتناسب مع الوضع الفاتح والداكن) */}
-      <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10 border border-[var(--hero-border)]">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-xs font-medium text-[var(--text-muted)] mb-1">{t('currentCar') || 'السيارة الحالية'}</p>
-            <h3 className="text-2xl font-extrabold text-[var(--text)] tracking-wide">{currentCar?.make} {currentCar?.model}</h3>
-            <p className="text-sm font-medium text-[var(--text)] mt-1 bg-[var(--surface-2)] w-fit px-2 py-0.5 rounded-md border border-[var(--border)]">{currentCar?.plate}</p>
+      {records.length === 0 ? (
+        <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
+          <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
+            <FuelIcon size={48} className="opacity-40" />
           </div>
-          <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[var(--surface-2)] shadow-lg flex-shrink-0 ml-4">
-            {currentCar?.image ? (
-              <img src={currentCar.image} alt="Car" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-[var(--surface-2)] flex items-center justify-center">
-                <Car size={32} className="text-[var(--text-muted)]" />
+          <p>{t('noFuelRecords') || 'لا توجد سجلات وقود.'}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {recordsWithConsumption.map(record => (
+            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-3 transition-colors hover:border-blue-500/30">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500"><FuelIcon size={20}/></div>
+                  <div>
+                    <p className="font-extrabold text-lg text-[var(--text)]">
+                      {Number(record.cost).toLocaleString()} <span className="text-sm font-normal text-[var(--text-muted)]">{currency}</span>
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)] font-medium mt-0.5">{record.date}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => openEdit(record)} className="text-blue-400 bg-blue-400/10 p-2 rounded-lg hover:bg-blue-400/20 transition-colors"><Edit2 size={16} /></button>
+                  <button onClick={() => handleDelete(record.id)} className="text-red-400 bg-red-400/10 p-2 rounded-lg hover:bg-red-400/20 transition-colors"><Trash2 size={16} /></button>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-3 mt-5">
-          {/* الأزرار أصبحت متوافقة مع الثيم */}
-          <button onClick={() => navigate('/vehicles')} className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 hover:bg-[var(--border)] transition-all">
-            <ArrowLeftRight size={16} /> {t('switchCar') || 'تغيير'}
-          </button>
-          <button onClick={() => navigate('/add-vehicle')} className="flex-1 bg-[var(--primary)] text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg shadow-blue-500/30">
-            <Plus size={16} /> {t('addNewCar') || 'إضافة'}
-          </button>
-        </div>
-      </div>
-
-      {/* إجراءات سريعة */}
-      <div className="grid grid-cols-4 gap-2.5">
-        <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl mb-2"><Fuel size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('fuel') || 'وقود'}</span></Link>
-        <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-xl mb-2"><Wallet size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('expenses') || 'مصاريف'}</span></Link>
-        <Link to="/maintenance" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-yellow-500/10 text-yellow-500 rounded-xl mb-2"><Wrench size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('maintenance') || 'صيانة'}</span></Link>
-        <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-green-500/10 text-green-500 rounded-xl mb-2"><FileText size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('documents') || 'وثائق'}</span></Link>
-      </div>
-
-      {/* لوحة البيانات (KPIs) */}
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalCost') || 'إجمالي المصاريف'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.totalCost}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
-        </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('monthlyCost') || 'مصاريف الشهر'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.monthlyCost}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
-        </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('costPerKm') || 'تكلفة الكيلومتر'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.costPerKm}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
-        </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('distance') || 'المسافة المقطوعة'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.distance}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">KM</span></div>
-        </div>
-      </div>
-
-      {/* التنبيهات (تم إصلاح رابط عرض الكل) */}
-      {data.upcomingReminders.length > 0 && (
-        <div className="bg-[var(--surface)] border border-red-500/30 rounded-2xl p-4 mt-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-              <AlertTriangle size={16} className="text-red-500"/> {t('upcomingAlerts') || 'تنبيهات هامة'}
-            </h3>
-            {/* تم توجيه الرابط للصيانة لأن البيانات منها */}
-            <Link to="/maintenance" className="text-xs text-[var(--primary)] font-medium">{t('viewAll') || 'عرض الكل'}</Link>
-          </div>
-          <div className="space-y-2">
-            {data.upcomingReminders.map((rem, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-[var(--surface-2)] p-3 rounded-xl text-xs">
-                <span className="font-bold text-[var(--text)]">{t(rem.alertText) || rem.alertText}</span>
-                <span className="text-red-400 font-medium bg-red-400/10 px-2 py-1 rounded-md">
-                  {rem.isKm ? `${rem.value} KM` : new Date(rem.value).toLocaleDateString()}
-                </span>
+              
+              <div className="flex justify-between items-center bg-[var(--surface-2)] p-2.5 rounded-xl text-xs font-medium">
+                <span className="text-[var(--text)] flex items-center gap-1"><Gauge size={14} className="text-[var(--text-muted)]"/> {Number(record.odometer).toLocaleString()} KM</span>
+                <span className="text-[var(--text)]">{record.liters} L</span>
+                {record.consumption && (
+                  <span className="text-green-500 bg-green-500/10 px-2 py-1 rounded-md font-bold" title="استهلاك الوقود لكل 100 كم">
+                    {record.consumption} L/100km
+                  </span>
+                )}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* الحالة الصفرية / آخر العمليات */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-            <Calendar size={16} className="text-[var(--primary)]"/> {t('recentActivity') || 'آخر العمليات'}
-          </h3>
-          {!isEmptyState && (
-             <Link to="/expenses" className="text-xs text-[var(--primary)] font-medium flex items-center gap-1 hover:underline">
-               {t('viewAll') || 'عرض الكل'} <ChevronLeft size={14} className={lang === 'ar' ? '' : 'rotate-180'} />
-             </Link>
-          )}
-        </div>
-        
-        {isEmptyState ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <div className="p-3 bg-[var(--primary)]/10 text-[var(--primary)] rounded-full mb-3">
-              <Sparkles size={28} />
-            </div>
-            <p className="text-sm font-bold text-[var(--text)] mb-1">ابدأ رحلتك!</p>
-            <p className="text-xs text-[var(--text-muted)] max-w-[250px]">قم بإضافة أول تعبئة وقود أو مصروف لترى إحصائياتك هنا.</p>
-            <Link to="/fuel" className="mt-4 bg-[var(--primary)] text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition-colors">
-              إضافة وقود
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {data.recentActivity.map((act, idx) => (
-              <div key={idx} className="flex items-center justify-between border-b border-[var(--border)] last:border-0 pb-3 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl bg-[var(--surface-2)] ${act.color}`}>
-                    <act.icon size={18} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-[var(--text)]">{t(act.type) || act.type}</p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{act.date}</p>
-                  </div>
-                </div>
-                <span className="font-extrabold text-sm text-[var(--text)]">{act.cost} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span></span>
+      {/* نافذة الإضافة - تم إصلاح التمرير هنا */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md border border-[var(--border)] relative max-h-[85vh] flex flex-col">
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
+              <X size={20} />
+            </button>
+            <h2 className="text-xl font-bold text-center mb-4 text-[var(--text)] mt-2">
+              {editingId ? (t('edit') || 'تعديل') : (t('addFuel') || 'إضافة تعبئة')}
+            </h2>
+            
+            {/* حاوية التمرير للحقول */}
+            <div className="space-y-4 overflow-y-auto pr-1 pb-2">
+              <div>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
+                <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <div>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد'} (KM)</label>
+                <input type="number" required value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('liters') || 'اللترات'}</label>
+                <input type="number" step="0.01" required value={formData.liters} onChange={e => setFormData({...formData, liters: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
+                <input type="number" step="0.01" required value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+              </div>
+            </div>
+            
+            {/* زر الحفظ ثابت في الأسفل */}
+            <button type="submit" className="w-full mt-4 bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex-shrink-0">
+              {t('save') || 'حفظ'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
