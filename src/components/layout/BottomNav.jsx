@@ -1,11 +1,13 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
-import { Link, useLocation } from 'react-router-dom'; // ✅ استبدلنا NavLink بـ Link و useLocation
+import { Link } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
-  const location = useLocation(); // ✅ معرفة المسار الحالي
+
+  // 🔍 قراءة الرابط الحقيقي من المتصفح (يدعم HashRouter)
+  const currentHash = window.location.hash || '#/';
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
@@ -15,34 +17,40 @@ export default function BottomNav() {
     { path: '/more', icon: Menu, label: t('more') || 'المزيد' },
   ];
 
-  // ✅ دالة قسرية لتحديد ما إذا كان الزر نشطاً
+  // ✅ دالة القبول والرفض القسرية
   const isActive = (path) => {
-    // إذا كان المسار هو الرئيسية، يجب أن يكون المسار الحالي '/' بالضبط
+    // إذا كان المسار هو الرئيسية، يجب أن يكون الرابط '#/' بالضبط ولا شيء غيره
     if (path === '/') {
-      return location.pathname === '/';
+      return currentHash === '#/' || currentHash === '#' || currentHash === '';
     }
-    // إذا كان مساراً آخر، يكفي أن يبدأ المسار الحالي به
-    return location.pathname.startsWith(path);
+    // للروابط الأخرى، نتحقق مما إذا كان الرابط يحتوي عليها
+    return currentHash.includes(path);
   };
 
   return (
-    <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)]">
-      {navItems.map((item) => {
-        const active = isActive(item.path); // حساب الحالة
-        
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-              active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-            }`}
-          >
-            <item.icon size={22} />
-            <span className="text-[10px] font-medium">{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      {/* 🚨 شريط التشخيص: إذا لم ترى هذا الشريط الأحمر في أعلى شاشتك، فأنت لم تقم بتحديث الكود! */}
+      <div className="fixed top-0 left-0 bg-red-600 text-white text-xs px-2 py-1 z-[9999] font-mono">
+        DEBUG Hash: {currentHash}
+      </div>
+
+      <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)]">
+        {navItems.map((item) => {
+          const active = isActive(item.path);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+                active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+              }`}
+            >
+              <item.icon size={22} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }
