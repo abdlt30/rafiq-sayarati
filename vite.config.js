@@ -3,8 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // ✅ المسار الصحيح المطابق للرابط abdlt30.github.io/raf
-  base: '/raf/', 
+  base: '/raf/', // ✅ المسار الصحيح
   resolve: {
     dedupe: ['react', 'react-dom'], 
   }
