@@ -4,13 +4,12 @@ import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
-  // قراءة الرابط الحالي من المتصفح مباشرة
-  const [currentPath, setCurrentPath] = useState(window.location.hash || '#/');
+  // قراءة الرابط الحالي
+  const [currentHash, setCurrentHash] = useState(window.location.hash || '#/');
 
-  // الاستماع لأي تغيير في الرابط وتحديث الحالة فوراً
   useEffect(() => {
     const handleHashChange = () => {
-      setCurrentPath(window.location.hash || '#/');
+      setCurrentHash(window.location.hash || '#/');
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -27,9 +26,8 @@ export default function BottomNav() {
   return (
     <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] pb-safe">
       {navItems.map((item) => {
-        // فحص قسري: هل المسار الحالي يطابق الزر؟
-        // نتحقق من '/' و '' لأن بعض المتصفحات تحذف الـ #
-        const isActive = currentPath === item.path || (item.path === '#/' && (currentPath === '' || currentPath === '#'));
+        // التحقق القسري: هل الرابط الحالي يطابق الزر؟
+        const isActive = currentHash === item.path;
         
         return (
           <a
