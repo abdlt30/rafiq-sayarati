@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // ✅ التصحيح: يجب أن يطابق اسم الرابط في المتصفح بالضبط
+  // ✅ التصحيح الجذري: يجب أن يتطابق هذا المسار مع اسم مجلدك في GitHub
   base: '/raf/', 
   resolve: {
     dedupe: ['react', 'react-dom'], 
