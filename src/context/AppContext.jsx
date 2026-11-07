@@ -7,7 +7,7 @@ const translations = {
     // === عام ===
     home: 'الرئيسية', expenses: 'المصاريف', maintenance: 'الصيانة', documents: 'الوثائق', more: 'المزيد', settings: 'الإعدادات', 
     save: 'حفظ', cancel: 'إلغاء', welcome: 'مرحباً،', edit: 'تعديل', confirmDelete: 'هل أنت متأكد من الحذف؟',
-    confirmDeleteCar: 'هل أنت متأكد من حذف هذه السيارة؟',
+    confirmDeleteCar: 'هل أنت متأكد من حذف هذه السيارة؟', // تمت الإضافة
     month: 'هذا الشهر', viewAll: 'عرض الكل', noData: 'لا توجد بيانات كافية',
     
     // === الإعدادات والمظهر ===
@@ -19,7 +19,6 @@ const translations = {
     expiringDocs: 'وثائق تنتهي قريباً', recentActivity: 'آخر العمليات',
     currentCar: 'السيارة الحالية', monthlyCost: 'مصاريف الشهر', 
     upcomingMaintenance: 'الصيانة القادمة', expense: 'مصروف',
-    upcomingAlerts: 'تنبيهات هامة', // ✅ تمت الإضافة
     
     // === السيارات ===
     vehicles: 'سياراتي', carInfo: 'معلومات السيارة', switchCar: 'تغيير السيارة', addNewCar: 'إضافة سيارة', 
@@ -73,7 +72,7 @@ const translations = {
     // === General ===
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
     save: 'Save', cancel: 'Cancel', welcome: 'Welcome,', edit: 'Edit', confirmDelete: 'Are you sure you want to delete?',
-    confirmDeleteCar: 'Are you sure you want to delete this car?',
+    confirmDeleteCar: 'Are you sure you want to delete this car?', // Added
     month: 'This Month', viewAll: 'View All', noData: 'Not enough data',
     
     // === Settings & Theme ===
@@ -84,7 +83,6 @@ const translations = {
     quickActions: 'Quick Actions', distance: 'Total Distance', nextMaintenance: 'Next Maintenance', 
     expiringDocs: 'Expiring Documents', recentActivity: 'Recent Activity',
     currentCar: 'Current Car', monthlyCost: 'Monthly Cost', upcomingMaintenance: 'Upcoming Maintenance', expense: 'Expense',
-    upcomingAlerts: 'Important Alerts', // ✅ Added
     
     // === Vehicles ===
     vehicles: 'My Vehicles', carInfo: 'Car Information', switchCar: 'Switch Car', addNewCar: 'Add Vehicle', 
@@ -138,7 +136,7 @@ const translations = {
     // === Général ===
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
     save: 'Enregistrer', cancel: 'Annuler', welcome: 'Bienvenue,', edit: 'Modifier', confirmDelete: 'Êtes-vous sûr de vouloir supprimer?',
-    confirmDeleteCar: 'Êtes-vous sûr de vouloir supprimer cette voiture ?',
+    confirmDeleteCar: 'Êtes-vous sûr de vouloir supprimer cette voiture ?', // Ajouté
     month: 'Ce Mois', viewAll: 'Voir Tout', noData: 'Pas assez de données',
     
     // === Paramètres & Thème ===
@@ -149,7 +147,6 @@ const translations = {
     quickActions: 'Actions Rapides', distance: 'Distance Totale', nextMaintenance: 'Prochain Entretien', 
     expiringDocs: 'Documents Expirants', recentActivity: 'Activité Récente',
     currentCar: 'Voiture Actuelle', monthlyCost: 'Coût Mensuel', upcomingMaintenance: 'Prochain Entretien', expense: 'Dépense',
-    upcomingAlerts: 'Alertes Importantes', // ✅ Ajouté
     
     // === Véhicules ===
     vehicles: 'Mes Véhicules', carInfo: 'Informations du Véhicule', switchCar: 'Changer de Voiture', addNewCar: 'Ajouter Véhicule', 
@@ -261,11 +258,13 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // 🚨 الدالة الجديدة لحذف السيارة
   const deleteCar = (id) => {
     try {
       const updatedVehicles = vehicles.filter(v => v.id !== id);
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
       
+      // إذا كانت السيارة المحذوفة هي النشطة حالياً
       if (currentCar?.id === id) {
         const nextCar = updatedVehicles.length > 0 ? updatedVehicles[0] : null;
         setCurrentCar(nextCar);
@@ -291,7 +290,7 @@ export const AppProvider = ({ children }) => {
 
   return (
     <AppContext.Provider value={{ 
-      currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, 
+      currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, // تمت إضافة deleteCar هنا
       isLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t 
     }}>
       {children}
