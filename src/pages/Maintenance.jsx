@@ -10,6 +10,8 @@ export default function Maintenance() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ date: '', type: 'oilChange', cost: '', nextKm: '' });
+  
+  // حالة لتخزين الأنواع المخصصة
   const [customTypes, setCustomTypes] = useState([]);
 
   const sortRecords = (data) => [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -18,7 +20,7 @@ export default function Maintenance() {
     if (currentCar) {
       const carMaintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
       setRecords(sortRecords(carMaintenance));
-      setCustomTypes(dbService.getCustomTypes());
+      setCustomTypes(dbService.getCustomTypes()); // جلب الأنواع المخصصة
     }
   }, [currentCar]);
 
@@ -27,7 +29,7 @@ export default function Maintenance() {
     if (newType && newType.trim() !== '') {
       const updatedTypes = dbService.addCustomType(newType.trim());
       setCustomTypes(updatedTypes);
-      setFormData({ ...formData, type: newType.trim() });
+      setFormData({ ...formData, type: newType.trim() }); // اختياره تلقائياً
     }
   };
 
@@ -127,28 +129,29 @@ export default function Maintenance() {
         </div>
       )}
 
-      {/* نافذة الإضافة - تم إصلاح التصميم والتمرير */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md border border-[var(--border)] relative max-h-[85vh] flex flex-col shadow-2xl">
-            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
+          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] overflow-y-auto">
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors">
               <X size={20} />
             </button>
-            <h2 className="text-xl font-bold text-center mb-4 text-[var(--text)] mt-2">
+            
+            <h2 className="text-xl font-bold text-center mb-6 text-[var(--text)] mt-2">
               {editingId ? (t('edit') || 'تعديل') : (t('addMaintenance') || 'إضافة صيانة')}
             </h2>
             
-            <div className="space-y-4 overflow-y-auto pr-1 pb-2">
+            <div className="space-y-4">
               <div>
                 <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
 
+              {/* قائمة الأنواع مع زر الإضافة المخصص */}
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-xs text-[var(--text-muted)] block">{t('maintenanceType') || 'نوع الصيانة'}</label>
                   <button type="button" onClick={handleAddCustomType} className="text-xs text-[var(--primary)] flex items-center gap-1 hover:underline">
-                    <Settings2 size={12} /> {t('addType') || 'إضافة نوع'}
+                    <Settings2 size={12} /> إضافة نوع
                   </button>
                 </div>
                 <select 
@@ -186,7 +189,7 @@ export default function Maintenance() {
               </div>
             </div>
 
-            <button type="submit" className="w-full mt-4 bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex-shrink-0">
+            <button type="submit" className="w-full mt-8 bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition-colors">
               {t('save') || 'حفظ'}
             </button>
           </form>
