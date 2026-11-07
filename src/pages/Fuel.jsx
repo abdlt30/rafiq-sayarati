@@ -11,63 +11,46 @@ export default function Fuel() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ date: '', odometer: '', liters: '', cost: '' });
 
-  // جلب البيانات عند تغيير السيارة
   useEffect(() => {
     if (currentCar) {
       const allFuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
-      // ترتيب السجلات من الأحدث إلى الأقدم للعرض
       setRecords(allFuel.sort((a, b) => new Date(b.date) - new Date(a.date)));
     }
   }, [currentCar]);
 
-  // دالة لحساب استهلاك الوقود (L/100km) لكل سجل بناءً على السجل السابق
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
-    
-    // ترتيب تصاعدي حسب العداد لحساب الفروقات
     const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
-    
     const calculated = sortedByOdometer.map((record, index) => {
       let consumption = null;
       if (index > 0) {
         const prevRecord = sortedByOdometer[index - 1];
         const distance = Number(record.odometer) - Number(prevRecord.odometer);
         if (distance > 0 && Number(record.liters) > 0) {
-          // المعادلة: (اللترات / المسافة) * 100
           consumption = ((Number(record.liters) / distance) * 100).toFixed(1);
         }
       }
       return { ...record, consumption };
     });
-
-    // إعادة ترتيبها للعرض (الأحدث أولاً)
     return calculated.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [records]);
 
   const handleSave = (e) => {
     e.preventDefault();
-    const data = { 
-      carId: currentCar.id, 
-      ...formData, 
-      odometer: Number(formData.odometer), 
-      liters: Number(formData.liters), 
-      cost: Number(formData.cost) 
-    };
+    const data = { carId: currentCar.id, ...formData, odometer: Number(formData.odometer), liters: Number(formData.liters), cost: Number(formData.cost) };
     
     if (editingId) {
       const updated = dbService.updateFuel(editingId, data);
       setRecords(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } else {
       const newRecord = dbService.addFuel(data);
-      if (newRecord) { // التحقق من نجاح الإضافة
-        setRecords([newRecord, ...records].sort((a, b) => new Date(b.date) - new Date(a.date)));
-      }
+      if (newRecord) setRecords([newRecord, ...records].sort((a, b) => new Date(b.date) - new Date(a.date)));
     }
     closeModal();
   };
 
   const handleDelete = (id) => {
-    if(window.confirm(t('confirmDelete') || 'هل أنت متأكد من الحذف؟')) {
+    if(window.confirm(t('confirmDelete'))) {
       const updated = dbService.deleteFuel(id);
       setRecords(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
     }
@@ -87,7 +70,6 @@ export default function Fuel() {
 
   return (
     <div className="space-y-4 pb-24 px-4">
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('fuel') || 'سجل الوقود'}</h1>
         <button onClick={() => setIsModalOpen(true)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform">
@@ -125,10 +107,8 @@ export default function Fuel() {
               <div className="flex justify-between items-center bg-[var(--surface-2)] p-2.5 rounded-xl text-xs font-medium">
                 <span className="text-[var(--text)] flex items-center gap-1"><Gauge size={14} className="text-[var(--text-muted)]"/> {Number(record.odometer).toLocaleString()} KM</span>
                 <span className="text-[var(--text)]">{record.liters} L</span>
-                
-                {/* عرض استهلاك الوقود إذا توفر */}
                 {record.consumption && (
-                  <span className="text-green-400 bg-green-400/10 px-2 py-1 rounded-md font-bold" title="استهلاك الوقود لكل 100 كم">
+                  <span className="text-green-500 bg-green-500/10 px-2 py-1 rounded-md font-bold" title="استهلاك الوقود لكل 100 كم">
                     {record.consumption} L/100km
                   </span>
                 )}
@@ -138,18 +118,19 @@ export default function Fuel() {
         </div>
       )}
 
-      {/* نافذة الإضافة/التعديل */}
+      {/* نافذة الإضافة - تم إصلاح التمرير هنا */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] overflow-y-auto">
-            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors">
+          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md border border-[var(--border)] relative max-h-[85vh] flex flex-col">
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
               <X size={20} />
             </button>
-            <h2 className="text-xl font-bold text-center mb-6 text-[var(--text)] mt-2">
+            <h2 className="text-xl font-bold text-center mb-4 text-[var(--text)] mt-2">
               {editingId ? (t('edit') || 'تعديل') : (t('addFuel') || 'إضافة تعبئة')}
             </h2>
             
-            <div className="space-y-4">
+            {/* حاوية التمرير للحقول */}
+            <div className="space-y-4 overflow-y-auto pr-1 pb-2">
               <div>
                 <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
@@ -168,7 +149,8 @@ export default function Fuel() {
               </div>
             </div>
             
-            <button type="submit" className="w-full mt-8 bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition-colors">
+            {/* زر الحفظ ثابت في الأسفل */}
+            <button type="submit" className="w-full mt-4 bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex-shrink-0">
               {t('save') || 'حفظ'}
             </button>
           </form>
