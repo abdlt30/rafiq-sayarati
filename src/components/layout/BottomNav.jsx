@@ -1,11 +1,35 @@
-import { useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
-  const location = useLocation(); // 👈 هذا هو المنقذ
+  const [currentPath, setCurrentPath] = useState('/');
+
+  // دالة استخراج المسار من رابط المتصفح مباشرة
+  const getBrowserPath = () => {
+    const hash = window.location.hash;
+    if (!hash || hash === '#' || hash === '#/') return '/';
+    return hash.replace('#', '');
+  };
+
+  useEffect(() => {
+    // 1. ضبط المسار عند أول تحميل
+    setCurrentPath(getBrowserPath());
+
+    // 2. الاستماع لأي تغيير في رابط المتصفح (عند الضغط على أي زر)
+    const handleLocationChange = () => {
+      setCurrentPath(getBrowserPath());
+    };
+
+    // نستخدم الحدث الأصلي للمتصفح، ولا نعتمد على React Router إطلاقاً
+    window.addEventListener('hashchange', handleLocationChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
@@ -15,11 +39,12 @@ export default function BottomNav() {
     { path: '/more', icon: Menu, label: t('more') || 'المزيد' },
   ];
 
+  // دالة التحديد القسرية
   const isActive = (path) => {
     if (path === '/') {
-      return location.pathname === '/';
+      return currentPath === '/';
     }
-    return location.pathname.startsWith(path);
+    return currentPath.startsWith(path);
   };
 
   return (
