@@ -5,9 +5,7 @@ import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
-  
-  // هذا هو الخطاف السحري الوحيد الذي يحدث المكون عند تغير المسار
-  const location = useLocation(); 
+  const location = useLocation(); // 👈 هذا هو المنقذ
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
@@ -17,13 +15,10 @@ export default function BottomNav() {
     { path: '/more', icon: Menu, label: t('more') || 'المزيد' },
   ];
 
-  // دالة قسرية تعتمد على مسار المتصفح الحقيقي
   const isActive = (path) => {
     if (path === '/') {
-      // إذا كنا في الرئيسية، يجب أن يكون المسار '/' بالضبط
       return location.pathname === '/';
     }
-    // إذا كنا في صفحة أخرى، نتحقق مما إذا كان المسار يبدأ بها
     return location.pathname.startsWith(path);
   };
 
