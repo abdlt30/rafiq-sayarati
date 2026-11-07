@@ -25,7 +25,6 @@ export default function Dashboard() {
     const docs = dbService.getDocuments().filter(r => r.carId === currentCar.id);
     const reminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
 
-    // حساب التكاليف
     const totalFuel = fuel.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const totalExp = expenses.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost || 0), 0);
@@ -43,7 +42,6 @@ export default function Dashboard() {
       expenses.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0) +
       maintenance.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0);
 
-    // حساب المسافة
     const odometers = fuel.map(r => Number(r.odometer)).filter(o => o > 0).sort((a, b) => a - b);
     let distance = 0;
     if (odometers.length > 1) distance = odometers[odometers.length - 1] - odometers[0];
@@ -51,19 +49,18 @@ export default function Dashboard() {
     
     const costPerKm = distance > 0 ? (grandTotal / distance).toFixed(2) : 0;
 
-    // جمع التذكيرات (صيانة + وثائق + تذكيرات مخصصة) وترتيبها حسب الأقرب
-    const allReminders = [
-      ...maintenance.filter(m => m.nextKm).map(m => ({ ...m, alertType: 'maintenance', alertText: m.type, value: Number(m.nextKm), isKm: true })),
-      ...docs.filter(d => d.endDate).map(d => ({ ...d, alertType: 'document', alertText: d.type, value: new Date(d.endDate), isKm: false })),
-      ...reminders.map(r => ({ ...r, alertType: 'reminder', alertText: r.type, value: r.odometer || new Date(r.date), isKm: !!r.odometer }))
+    // دمج التنبيهات من الصيانة والتذكيرات
+    const allAlerts = [
+      ...maintenance.filter(m => m.nextKm && Number(m.nextKm) > (currentCar.currentOdometer || 0)).map(m => ({ ...m, alertText: m.type, value: Number(m.nextKm), isKm: true, link: '/maintenance' })),
+      ...reminders.map(r => ({ ...r, alertText: r.type, value: r.odometer || new Date(r.date), isKm: !!r.odometer, link: '/reminders' }))
     ];
-    // فلترة التذكيرات المستقبلية فقط وترتيبها (هذا مجرد ترتيب تقريبي للعرض)
-    const upcoming = allReminders.filter(r => {
+    
+    // فلترة وترتيب التنبيهات
+    const upcoming = allAlerts.filter(r => {
         if (r.isKm) return r.value > (currentCar.currentOdometer || 0);
         return r.value > new Date();
-    }).slice(0, 2); // جلب أقرب تذكيرين
+    }).slice(0, 2);
 
-    // آخر العمليات
     const allActivities = [
       ...fuel.map(r => ({ ...r, type: 'fuel', icon: Fuel, color: 'text-blue-500' })),
       ...expenses.map(r => ({ ...r, type: 'expense', icon: Wallet, color: 'text-purple-500' })),
@@ -104,29 +101,30 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* بطاقة السيارة */}
-      <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10">
+      {/* بطاقة السيارة (تم إصلاح الألوان لتتناسب مع الوضع الفاتح والداكن) */}
+      <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10 border border-[var(--hero-border)]">
         <div className="flex justify-between items-start">
           <div>
-            <p className="text-xs font-medium text-blue-200/70 mb-1">{t('currentCar') || 'السيارة الحالية'}</p>
-            <h3 className="text-2xl font-extrabold text-white tracking-wide">{currentCar?.make} {currentCar?.model}</h3>
-            <p className="text-sm font-medium text-blue-100/80 mt-1 bg-black/20 w-fit px-2 py-0.5 rounded-md">{currentCar?.plate}</p>
+            <p className="text-xs font-medium text-[var(--text-muted)] mb-1">{t('currentCar') || 'السيارة الحالية'}</p>
+            <h3 className="text-2xl font-extrabold text-[var(--text)] tracking-wide">{currentCar?.make} {currentCar?.model}</h3>
+            <p className="text-sm font-medium text-[var(--text)] mt-1 bg-[var(--surface-2)] w-fit px-2 py-0.5 rounded-md border border-[var(--border)]">{currentCar?.plate}</p>
           </div>
-          <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/10 shadow-lg flex-shrink-0 ml-4">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[var(--surface-2)] shadow-lg flex-shrink-0 ml-4">
             {currentCar?.image ? (
               <img src={currentCar.image} alt="Car" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-white/5 backdrop-blur-sm flex items-center justify-center">
-                <Car size={32} className="text-white/60" />
+              <div className="w-full h-full bg-[var(--surface-2)] flex items-center justify-center">
+                <Car size={32} className="text-[var(--text-muted)]" />
               </div>
             )}
           </div>
         </div>
         <div className="flex gap-3 mt-5">
-          <button onClick={() => navigate('/vehicles')} className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all">
+          {/* الأزرار أصبحت متوافقة مع الثيم */}
+          <button onClick={() => navigate('/vehicles')} className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 hover:bg-[var(--border)] transition-all">
             <ArrowLeftRight size={16} /> {t('switchCar') || 'تغيير'}
           </button>
-          <button onClick={() => navigate('/add-vehicle')} className="flex-1 bg-[var(--primary)] hover:bg-blue-600 text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg shadow-blue-500/30">
+          <button onClick={() => navigate('/add-vehicle')} className="flex-1 bg-[var(--primary)] text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg shadow-blue-500/30">
             <Plus size={16} /> {t('addNewCar') || 'إضافة'}
           </button>
         </div>
@@ -134,7 +132,6 @@ export default function Dashboard() {
 
       {/* إجراءات سريعة */}
       <div className="grid grid-cols-4 gap-2.5">
-        {/* نفس الأزرار السابقة */}
         <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl mb-2"><Fuel size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('fuel') || 'وقود'}</span></Link>
         <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-xl mb-2"><Wallet size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('expenses') || 'مصاريف'}</span></Link>
         <Link to="/maintenance" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-yellow-500/10 text-yellow-500 rounded-xl mb-2"><Wrench size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('maintenance') || 'صيانة'}</span></Link>
@@ -143,25 +140,25 @@ export default function Dashboard() {
 
       {/* لوحة البيانات (KPIs) */}
       <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
           <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalCost') || 'إجمالي المصاريف'}</span>
           <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.totalCost}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
         </div>
-        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
           <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('monthlyCost') || 'مصاريف الشهر'}</span>
           <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.monthlyCost}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
         </div>
-        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
           <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('costPerKm') || 'تكلفة الكيلومتر'}</span>
           <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.costPerKm}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
         </div>
-        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
           <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('distance') || 'المسافة المقطوعة'}</span>
           <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.distance}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">KM</span></div>
         </div>
       </div>
 
-      {/* التذكيرات الذكية (جديد) */}
+      {/* التنبيهات (تم إصلاح رابط عرض الكل) */}
       {data.upcomingReminders.length > 0 && (
         <div className="bg-[var(--surface)] border border-red-500/30 rounded-2xl p-4 mt-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
@@ -169,7 +166,8 @@ export default function Dashboard() {
             <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
               <AlertTriangle size={16} className="text-red-500"/> {t('upcomingAlerts') || 'تنبيهات هامة'}
             </h3>
-            <Link to="/reminders" className="text-xs text-[var(--primary)] font-medium">{t('viewAll') || 'عرض الكل'}</Link>
+            {/* تم توجيه الرابط للصيانة لأن البيانات منها */}
+            <Link to="/maintenance" className="text-xs text-[var(--primary)] font-medium">{t('viewAll') || 'عرض الكل'}</Link>
           </div>
           <div className="space-y-2">
             {data.upcomingReminders.map((rem, idx) => (
