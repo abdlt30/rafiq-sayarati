@@ -1,11 +1,13 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
-import { Link, useLocation } from 'react-router-dom'; // ✅ استخدام useLocation
+import { Link, useLocation } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
-  const location = useLocation(); // ✅ الخطاف السحري الذي يحدث المكون عند تغير الرابط
+  
+  // هذا هو الخطاف السحري الوحيد الذي يحدث المكون عند تغير المسار
+  const location = useLocation(); 
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
@@ -15,18 +17,20 @@ export default function BottomNav() {
     { path: '/more', icon: Menu, label: t('more') || 'المزيد' },
   ];
 
-  // ✅ دالة قسرية تعتمد على location.pathname
+  // دالة قسرية تعتمد على مسار المتصفح الحقيقي
   const isActive = (path) => {
     if (path === '/') {
+      // إذا كنا في الرئيسية، يجب أن يكون المسار '/' بالضبط
       return location.pathname === '/';
     }
+    // إذا كنا في صفحة أخرى، نتحقق مما إذا كان المسار يبدأ بها
     return location.pathname.startsWith(path);
   };
 
   return (
     <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)]">
       {navItems.map((item) => {
-        const active = isActive(item.path); // حساب الحالة
+        const active = isActive(item.path);
         
         return (
           <Link
