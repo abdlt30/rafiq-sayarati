@@ -7,7 +7,7 @@ export default function BottomNav() {
   const { t } = useContext(AppContext);
 
   const navItems = [
-    // ✅ تمت إضافة كلمة end هنا لحل المشكلة
+    // ✅ السر يكمن في كلمة end: true
     { path: '/', icon: Home, label: t('home') || 'الرئيسية', end: true },
     { path: '/expenses', icon: Wallet, label: t('expenses') || 'المصاريف' },
     { path: '/maintenance', icon: Wrench, label: t('maintenance') || 'الصيانة' },
@@ -21,7 +21,7 @@ export default function BottomNav() {
         <NavLink
           key={item.path}
           to={item.path}
-          end={item.end} // ✅ تمرير الخاصية هنا
+          end={item.end} // ✅ هذا هو السطر السحري الذي يحل المشكلة
           className={({ isActive }) =>
             `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
               isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
