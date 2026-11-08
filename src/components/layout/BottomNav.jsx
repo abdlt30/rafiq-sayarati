@@ -20,7 +20,7 @@ export default function BottomNav() {
         <NavLink
           key={item.path}
           to={item.path}
-          // ✅ السر هنا: نجبر مكتبة React على استخدام end فقط للرئيسية
+          // ✅ السر السحري: خاصية end للرئيسية فقط
           end={item.path === '/'}
           className={({ isActive }) =>
             `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
