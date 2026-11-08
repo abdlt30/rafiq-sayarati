@@ -20,8 +20,7 @@ export default function BottomNav() {
         <NavLink
           key={item.path}
           to={item.path}
-          // 👈 السطر السحري: خاصية end تمنع الرئيسية من التوهج في الصفحات الفرعية
-          end={item.path === '/'}
+          end={item.path === '/'} // 👈 هذا السطر يمنع توهج الرئيسية
           className={({ isActive }) =>
             `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
               isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
@@ -30,7 +29,7 @@ export default function BottomNav() {
         >
           <item.icon size={22} />
           <span className="text-[10px] font-medium">{item.label}</span>
-        </Link>
+        </NavLink> // 👈 تم تصحيح وسم الإغلاق هنا
       ))}
     </nav>
   );
