@@ -2,9 +2,8 @@ import { Outlet } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import Sidebar from './Sidebar';
 
-export default function Layout({ children }) {
+export default function Layout() {
   return (
-    // h-screen و overflow-hidden تضمنان أن التمرير يحدث داخل المحتوى فقط
     <div className="flex h-screen w-full bg-[var(--bg)] text-[var(--text)] font-sans overflow-hidden">
       
       {/* الشريط الجانبي (للكمبيوتر) */}
@@ -12,10 +11,11 @@ export default function Layout({ children }) {
         <Sidebar />
       </div>
 
-      {/* حاوية المحتوى الرئيسي - هنا يحدث التمرير */}
+      {/* حاوية المحتوى الرئيسي */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         <main className="flex-1 overflow-y-auto w-full max-w-4xl mx-auto px-4 pb-24 md:pb-8 scroll-smooth">
-          {children || <Outlet />}
+          {/* ✅ هنا سيتم عرض الصفحة المطلوبة */}
+          <Outlet /> 
         </main>
       </div>
 
