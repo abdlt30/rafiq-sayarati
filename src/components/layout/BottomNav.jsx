@@ -1,10 +1,11 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
+  const location = useLocation(); // قراءة المسار الحالي
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
@@ -14,23 +15,34 @@ export default function BottomNav() {
     { path: '/more', icon: Menu, label: t('more') || 'المزيد' },
   ];
 
+  // دالة الفحص الدقيق
+  const isActive = (path) => {
+    // إذا كان الزر هو الرئيسية، يجب أن يكون المسار '/' بالضبط
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    // للصفحات الأخرى، نتأكد أن المسار يبدأ بها
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] pb-safe fixed bottom-0 w-full z-50">
-      {navItems.map((item) => (
-        <NavLink
-          key={item.path}
-          to={item.path}
-          end={item.path === '/'} // 👈 السر هنا لعدم توهج الرئيسية
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-              isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-            }`
-          }
-        >
-          <item.icon size={22} />
-          <span className="text-[10px] font-medium">{item.label}</span>
-        </NavLink>
-      ))}
+      {navItems.map((item) => {
+        const active = isActive(item.path);
+        
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+              active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+            }`}
+          >
+            <item.icon size={22} />
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }
