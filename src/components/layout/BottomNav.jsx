@@ -20,7 +20,7 @@ export default function BottomNav() {
         <NavLink
           key={item.path}
           to={item.path}
-          end={item.path === '/'} // 👈 السطر السحري (يمنع الرئيسية من التوهج في الصفحات الأخرى)
+          end={item.path === '/'} // 👈 يضمن أن الرئيسية تضيء فقط في الرئيسية
           className={({ isActive }) =>
             `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
               isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
