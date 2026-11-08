@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // ✅ المسار يطابق اسم المستودع الحقيقي
+  // ✅ المسار يجب أن يطابق اسم المستودع الحقيقي في GitHub
   base: '/rafiq-sayarati/', 
   resolve: {
     dedupe: ['react', 'react-dom'], 
