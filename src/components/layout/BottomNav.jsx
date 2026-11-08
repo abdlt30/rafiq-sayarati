@@ -1,14 +1,13 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
-import { NavLink } from 'react-router-dom'; // ✅ العودة للمعيار القياسي
+import { NavLink } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
 
   const navItems = [
-    // ✅ خاصية end تمنع الرئيسية من التوهج في الصفحات الأخرى
-    { path: '/', icon: Home, label: t('home') || 'الرئيسية', end: true },
+    { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
     { path: '/expenses', icon: Wallet, label: t('expenses') || 'المصاريف' },
     { path: '/maintenance', icon: Wrench, label: t('maintenance') || 'الصيانة' },
     { path: '/documents', icon: FileText, label: t('documents') || 'الوثائق' },
@@ -21,7 +20,8 @@ export default function BottomNav() {
         <NavLink
           key={item.path}
           to={item.path}
-          end={item.end} // 👈 السر هنا
+          // ✅ السر هنا: نجبر مكتبة React على استخدام end فقط للرئيسية
+          end={item.path === '/'}
           className={({ isActive }) =>
             `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
               isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
