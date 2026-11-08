@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useContext } from 'react';
 import { AppContext } from './context/AppContext';
 import Layout from './components/layout/Layout';
@@ -16,12 +16,10 @@ import Reminders from './pages/Reminders';
 import Backup from './pages/Backup'; 
 import Vehicles from './pages/Vehicles';
 
-const ProtectedRoute = ({ children }) => {
+// مكون حماية المسارات (تم تعديله ليعمل مع المسارات المتداخلة)
+const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
-  if (!currentCar) {
-    return <Navigate to="/welcome" replace />;
-  }
-  return children;
+  return currentCar ? <Outlet /> : <Navigate to="/welcome" replace />;
 };
 
 export default function App() {
@@ -38,20 +36,27 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
+        {/* مسارات عامة لا تحتاج سيارة */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
-        <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-        <Route path="/vehicles" element={<ProtectedRoute><Layout><Vehicles /></Layout></ProtectedRoute>} />
-        <Route path="/fuel" element={<ProtectedRoute><Layout><Fuel /></Layout></ProtectedRoute>} />
-        <Route path="/maintenance" element={<ProtectedRoute><Layout><Maintenance /></Layout></ProtectedRoute>} />
-        <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
-        <Route path="/documents" element={<ProtectedRoute><Layout><Documents /></Layout></ProtectedRoute>} />
-        <Route path="/reminders" element={<ProtectedRoute><Layout><Reminders /></Layout></ProtectedRoute>} />
-        <Route path="/backup" element={<ProtectedRoute><Layout><Backup /></Layout></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-        <Route path="/more" element={<ProtectedRoute><Layout><More /></Layout></ProtectedRoute>} />
+        {/* 🚨 المسارات المحمية والمتداخلة (السر يكمن هنا) */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/vehicles" element={<Vehicles />} />
+            <Route path="/fuel" element={<Fuel />} />
+            <Route path="/maintenance" element={<Maintenance />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/reminders" element={<Reminders />} />
+            <Route path="/backup" element={<Backup />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/more" element={<More />} />
+          </Route>
+        </Route>
         
+        {/* إعادة التوجيه لأي مسار غير معروف */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
