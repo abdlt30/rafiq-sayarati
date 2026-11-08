@@ -1,14 +1,17 @@
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Wallet, Wrench, FileText, Menu } from 'lucide-react';
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
-  
-  // ✅ هذا الخطاف يقرأ المسار من داخل React Router (وليس من شريط العنوان)
-  const location = useLocation(); 
-  const currentPath = location.pathname;
+  const location = useLocation();
+  const [currentPath, setCurrentPath] = useState(location.pathname);
+
+  // ✅ إجبار المكون على تحديث المسار عند أي تغيير
+  useEffect(() => {
+    setCurrentPath(location.pathname);
+  }, [location.pathname]);
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
