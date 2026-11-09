@@ -1,23 +1,30 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, Gauge, AlertTriangle } from 'lucide-react';
+import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, AlertTriangle } from 'lucide-react';
+import ConfirmModal from '../components/ui/ConfirmModal'; // ✅ استدعاء نافذة التأكيد
 
 export default function Reminders() {
   const { currentCar, t } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null); // ✅ حالة الحذف المخصصة
   
-  // النموذج يدعم التاريخ والعداد في نفس الوقت
   const [formData, setFormData] = useState({ type: 'oil', date: '', odometer: '' });
 
-  useEffect(() => {
+  const loadData = () => {
     if (currentCar) {
-      const carReminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
+      // ✅ إصلاح حرج: منع انهيار التطبيق إذا كانت قاعدة البيانات فارغة
+      const allReminders = dbService.getReminders() || [];
+      const carReminders = allReminders.filter(r => r.carId === currentCar.id);
       setRecords(carReminders);
+    } else {
+      setRecords([]);
     }
-  }, [currentCar]);
+  };
+
+  useEffect(() => { loadData(); }, [currentCar]);
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -25,30 +32,35 @@ export default function Reminders() {
       return alert(t('fillRequiredFields') || 'الرجاء إدخال التاريخ أو العداد على الأقل.');
     }
 
-    const data = { 
-      carId: currentCar.id, 
-      type: formData.type, 
-      date: formData.date || null, 
-      odometer: formData.odometer ? Number(formData.odometer) : null 
-    };
+    try {
+      const data = { 
+        carId: currentCar.id, 
+        type: formData.type, 
+        date: formData.date || null, 
+        odometer: formData.odometer ? Number(formData.odometer) : null 
+      };
 
-    const newRecord = dbService.addReminder(data);
-    if (newRecord) {
-      setRecords([...records, newRecord]);
-    }
-    
-    setIsModalOpen(false);
-    setFormData({ type: 'oil', date: '', odometer: '' }); 
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm(t('confirmDelete') || 'هل أنت متأكد من الحذف؟')) {
-      dbService.deleteReminder(id);
-      setRecords(records.filter(r => r.id !== id));
+      dbService.addReminder(data);
+      
+      // ✅ إعادة جلب البيانات لضمان التحديث الفوري
+      loadData(); 
+      
+      setIsModalOpen(false);
+      setFormData({ type: 'oil', date: '', odometer: '' }); 
+    } catch (error) {
+      console.error("خطأ في حفظ التذكير:", error);
     }
   };
 
-  // 🧠 الخوارزمية الذكية: تحسب أيهما أقرب (التاريخ أم المسافة)
+  const handleDelete = () => {
+    if (deleteId) {
+      dbService.deleteReminder(deleteId);
+      loadData(); // إعادة جلب البيانات بعد الحذف
+      setDeleteId(null);
+    }
+  };
+
+  // 🧠 الخوارزمية الذكية (ممتازة كما هي)
   const getSmartStatus = (record) => {
     const now = new Date();
     let daysLeft = null;
@@ -62,31 +74,25 @@ export default function Reminders() {
       kmLeft = Number(record.odometer) - Number(currentCar.currentOdometer);
     }
 
-    // إذا لم يكن هناك تاريخ ولا عداد
     if (daysLeft === null && kmLeft === null) {
       return { label: t('active') || 'نشط', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Bell };
     }
 
-    // تحديد ما إذا كان متأخراً
     const isOverdue = (daysLeft !== null && daysLeft < 0) || (kmLeft !== null && kmLeft < 0);
     if (isOverdue) {
       return { label: t('overdue') || 'متأخر', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
     }
 
-    // تحديد أي منهما أقرب
     let message = '';
     let isSoon = false;
 
     if (daysLeft !== null && kmLeft !== null) {
-      // كلاهما موجود
       if (daysLeft <= 7 || kmLeft <= 500) isSoon = true;
       message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'} / ${kmLeft} ${t('km') || 'كم'}`;
     } else if (daysLeft !== null) {
-      // تاريخ فقط
       if (daysLeft <= 7) isSoon = true;
       message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'}`;
     } else if (kmLeft !== null) {
-      // عداد فقط
       if (kmLeft <= 500) isSoon = true;
       message = `${t('after') || 'بعد'} ${kmLeft} ${t('km') || 'كم'}`;
     }
@@ -107,7 +113,7 @@ export default function Reminders() {
 
   return (
     <div className="space-y-4 pb-24 px-4">
-      {/* الشريط العلوي المحسن */}
+      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('reminders') || 'التذكيرات'}</h1>
         <button onClick={() => setIsModalOpen(true)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform">
@@ -146,7 +152,7 @@ export default function Reminders() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => handleDelete(record.id)} 
+                  onClick={() => setDeleteId(record.id)} // ✅ استخدام حالة الحذف المخصصة
                   className="text-red-500 p-2 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
                 >
                   <Trash2 size={18} />
@@ -156,6 +162,15 @@ export default function Reminders() {
           })}
         </div>
       )}
+
+      {/* ✅ نافذة تأكيد الحذف الاحترافية */}
+      <ConfirmModal 
+        isOpen={!!deleteId} 
+        onClose={() => setDeleteId(null)} 
+        onConfirm={handleDelete} 
+        title={t('confirmDelete') || 'تأكيد الحذف'}
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذا التذكير؟'}
+      />
 
       {/* نافذة الإضافة */}
       {isModalOpen && (
@@ -174,7 +189,6 @@ export default function Reminders() {
               <button type="button" onClick={() => setFormData({...formData, type: 'inspection'})} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'inspection' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('inspection') || 'فحص'}</button>
             </div>
             
-            {/* الحقول الجديدة: التاريخ والعداد معاً */}
             <div className="space-y-3 pt-2">
               <div>
                 <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'التاريخ (اختياري)'}</label>
