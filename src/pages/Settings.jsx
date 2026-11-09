@@ -1,18 +1,47 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { 
   Moon, Sun, Globe, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, 
-  Bell, ShieldCheck, Database 
+  Bell, ShieldCheck, Database, BellRing, CheckCircle, XCircle
 } from 'lucide-react';
 import CurrencySelector from '../components/ui/CustomSelect'; 
+import { pushService } from '../services/pushService'; // ✅ استدعاء خدمة الإشعارات
 
 export default function Settings() {
   const { theme, toggleTheme, lang, changeLang, currency, setCurrency, t } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  
+  // حالة الإشعارات الداخلية (حفظ في الذاكرة)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    const saved = localStorage.getItem('notificationsEnabled');
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  // حالة إذن الإشعارات من المتصفح
+  const [pushPermission, setPushPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
+
+  useEffect(() => {
+    // حفظ إعدادات الإشعارات الداخلية
+    localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
+  }, [notificationsEnabled]);
+
+  // دالة طلب إذن الإشعارات الخارجية
+  const handleEnablePush = async () => {
+    const granted = await pushService.requestPermission();
+    setPushPermission(Notification.permission);
+    
+    if (granted) {
+      setNotificationsEnabled(true);
+      alert(lang === 'ar' ? 'تم تفعيل الإشعارات الخارجية بنجاح! ✅' : 'External notifications enabled! ✅');
+    } else {
+      alert(lang === 'ar' ? 'تم رفض الإشعارات. يرجى تفعيلها من إعدادات المتصفح.' : 'Notifications denied. Please enable from browser settings.');
+    }
+  };
 
   return (
     <div className="space-y-3 pb-24 px-4 pt-2">
@@ -35,7 +64,6 @@ export default function Settings() {
             {theme === 'dark' ? (t('darkMode') || 'الوضع الداكن') : (t('lightMode') || 'الوضع الفاتح')}
           </span>
         </div>
-        {/* تم تصغير مفتاح التبديل ليكون أنيقاً */}
         <button 
           onClick={toggleTheme} 
           className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
@@ -88,27 +116,64 @@ export default function Settings() {
         )}
       </div>
 
-      {/* 3. الإشعارات */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-3.5 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><Bell size={18} /></div>
-          <span className="font-bold text-sm text-[var(--text)]">{t('notifications') || 'مركز التنبيهات'}</span>
+      {/* 3. الإشعارات الخارجية (الميزة الجديدة) */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><BellRing size={18} /></div>
+            <div>
+              <span className="font-bold text-sm text-[var(--text)] block">{t('externalNotifications') || 'الإشعارات الخارجية'}</span>
+              <span className="text-[10px] text-[var(--text-muted)]">
+                {lang === 'ar' ? 'تنبيهات تظهر على شاشة هاتفك' : 'Notifications on your phone screen'}
+              </span>
+            </div>
+          </div>
+          {/* مفتاح التفعيل الداخلي */}
+          <button 
+            onClick={() => setNotificationsEnabled(!notificationsEnabled)} 
+            className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${notificationsEnabled ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white absolute shadow-sm transition-transform duration-300 ${notificationsEnabled ? (lang === 'ar' ? 'right-1' : 'left-1') : (lang === 'ar' ? 'left-1' : 'right-1')}`}></div>
+          </button>
         </div>
-        <button 
-          onClick={() => setNotificationsEnabled(!notificationsEnabled)} 
-          className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${notificationsEnabled ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
-        >
-          <div className={`w-4 h-4 rounded-full bg-white absolute shadow-sm transition-transform duration-300 ${notificationsEnabled ? (lang === 'ar' ? 'right-1' : 'left-1') : (lang === 'ar' ? 'left-1' : 'right-1')}`}></div>
-        </button>
+
+        {/* حالة إذن المتصفح */}
+        <div className="pt-3 border-t border-[var(--border)] flex justify-between items-center text-xs">
+          <span className="text-[var(--text-muted)]">
+            {lang === 'ar' ? 'حالة الإذن من المتصفح:' : 'Browser Permission:'}
+          </span>
+          
+          {pushPermission === 'granted' && (
+            <span className="flex items-center gap-1 text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded-md">
+              <CheckCircle size={14} /> {lang === 'ar' ? 'مفعّل' : 'Granted'}
+            </span>
+          )}
+
+          {pushPermission === 'default' && (
+            <button onClick={handleEnablePush} className="bg-[var(--primary)] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-600 transition-colors">
+              {lang === 'ar' ? 'طلب الإذن' : 'Request Permission'}
+            </button>
+          )}
+
+          {pushPermission === 'denied' && (
+            <span className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded-md">
+              <XCircle size={14} /> {lang === 'ar' ? 'مرفوض' : 'Denied'}
+            </span>
+          )}
+        </div>
+        {pushPermission === 'denied' && (
+          <p className="text-[10px] text-red-400 mt-1">
+            {lang === 'ar' ? 'يرجى تفعيل الإشعارات من إعدادات الموقع في المتصفح.' : 'Please enable notifications in browser site settings.'}
+          </p>
+        )}
       </div>
 
       {/* 4. الخصوصية والأمان */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-5 shadow-sm">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-2.5">
           <ShieldCheck size={18} className="text-green-500" />
           <h2 className="font-bold text-sm text-[var(--text)]">{t('privacyAndSecurity') || 'الخصوصية والأمان'}</h2>
         </div>
-        {/* ✅ تم استخدام الترجمة هنا بدلاً من النص الثابت */}
         <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
           {t('privacyText') || 'جميع بياناتك محفوظة على هاتفك فقط. نحن لا نجمع أي بيانات شخصية. عند تفعيل المزامنة السحابية، ستكون بياناتك مشفرة وآمنة.'}
         </p>
