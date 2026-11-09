@@ -51,8 +51,11 @@ const translations = {
     // مفاتيح صفحة الإعدادات الجديدة
     preferences: 'التفضيلات الإقليمية', privacyAndSecurity: 'الخصوصية والأمان', version: 'الإصدار',
     selectCurrency: 'اختر العملة', searchCurrency: 'ابحث عن عملة...',
-    privacyText: 'جميع بياناتك محفوظة على هاتفك فقط. نحن لا نجمع أي بيانات شخصية. عند تفعيل المزامنة السحابية، ستكون بياناتك مشفرة وآمنة.', // ✅ مضاف حديثاً
-    noResults: 'لا توجد نتائج', // ✅ مضاف حديثاً
+    privacyText: 'جميع بياناتك محفوظة على هاتفك فقط. نحن لا نجمع أي بيانات شخصية. عند تفعيل المزامنة السحابية، ستكون بياناتك مشفرة وآمنة.',
+    noResults: 'لا توجد نتائج',
+    
+    // ✅ مفاتيح صفحة المزيد (المضافة حديثاً)
+    management: 'الإدارة', insights: 'التحليلات', system: 'النظام',
 
     // مفاتيح أسماء العملات
     currency_MAD: 'درهم مغربي', currency_SAR: 'ريال سعودي', currency_AED: 'درهم إماراتي', 
@@ -108,8 +111,11 @@ const translations = {
     // New settings keys
     preferences: 'Regional Preferences', privacyAndSecurity: 'Privacy & Security', version: 'Version',
     selectCurrency: 'Select Currency', searchCurrency: 'Search for a currency...',
-    privacyText: 'All your data is stored locally on your phone. We do not collect any personal data. When cloud sync is enabled, your data will be encrypted and secure.', // ✅ Added
-    noResults: 'No results found', // ✅ Added
+    privacyText: 'All your data is stored locally on your phone. We do not collect any personal data. When cloud sync is enabled, your data will be encrypted and secure.',
+    noResults: 'No results found',
+    
+    // ✅ New More page keys
+    management: 'Management', insights: 'Insights', system: 'System',
 
     // Currency keys
     currency_MAD: 'Moroccan Dirham', currency_SAR: 'Saudi Riyal', currency_AED: 'UAE Dirham', 
@@ -165,8 +171,11 @@ const translations = {
     // Nouvelles clés de paramètres
     preferences: 'Préférences Régionales', privacyAndSecurity: 'Confidentialité & Sécurité', version: 'Version',
     selectCurrency: 'Choisir la devise', searchCurrency: 'Rechercher une devise...',
-    privacyText: 'Toutes vos données sont stockées localement sur votre téléphone. Nous ne collectons aucune donnée personnelle. Lorsque la synchronisation cloud est activée, vos données seront cryptées et sécurisées.', // ✅ Ajouté
-    noResults: 'Aucun résultat trouvé', // ✅ Ajouté
+    privacyText: 'Toutes vos données sont stockées localement sur votre téléphone. Nous ne collectons aucune donnée personnelle. Lorsque la synchronisation cloud est activée, vos données seront cryptées et sécurisées.',
+    noResults: 'Aucun résultat trouvé',
+    
+    // ✅ Nouvelles clés de la page Plus
+    management: 'Gestion', insights: 'Analyses', system: 'Système',
 
     // Clés de devises
     currency_MAD: 'Dirham Marocain', currency_SAR: 'Riyal Saoudien', currency_AED: 'Dirham des Émirats', 
