@@ -41,7 +41,12 @@ const translations = {
     dataProtection: 'حماية البيانات', backupDesc: 'بياناتك محفوظة على هاتفك فقط. قم بتصديرها كملف احتياطي لضمان عدم ضياعها.',
     exportData: 'تصدير البيانات (JSON)', importData: 'استيراد البيانات',
     exportSuccess: 'تم تصدير البيانات بنجاح!', confirmImport: 'تحذير: سيتم استبدال جميع بياناتك الحالية. هل أنت متأكد؟',
-    importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.', importError: 'خطأ: الملف غير صالح أو تالف.'
+    importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.', importError: 'خطأ: الملف غير صالح أو تالف.',
+
+    // ✅ مفاتيح الصفحات الجديدة (Notifications, Reports, Resale, Timeline)
+    notifications: 'مركز التنبيهات', inbox: 'التنبيهات', reports: 'التقارير', resale: 'تقييم السيارة', timeline: 'سجل السيارة',
+    unread: 'جديد', markAllRead: 'تحديد الكل كمقروء', clearAll: 'مسح الكل', noNotifications: 'لا توجد تنبيهات حالياً.',
+    monthlyExpenses: 'المصاريف الشهرية', estimatedValue: 'القيمة التقديرية', printReport: 'طباعة التقرير', shareReport: 'مشاركة التقرير'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -80,7 +85,12 @@ const translations = {
     dataProtection: 'Data Protection', backupDesc: 'Your data is saved on your phone only. Export it as a backup file.',
     exportData: 'Export Data (JSON)', importData: 'Import Data',
     exportSuccess: 'Data exported successfully!', confirmImport: 'Warning: This will overwrite your current data. Are you sure?',
-    importSuccess: 'Data imported successfully! Reloading...', importError: 'Error: Invalid or corrupted file.'
+    importSuccess: 'Data imported successfully! Reloading...', importError: 'Error: Invalid or corrupted file.',
+
+    // ✅ New pages keys
+    notifications: 'Notifications', inbox: 'Inbox', reports: 'Reports', resale: 'Resale Value', timeline: 'Timeline',
+    unread: 'New', markAllRead: 'Mark all read', clearAll: 'Clear all', noNotifications: 'No notifications yet.',
+    monthlyExpenses: 'Monthly Expenses', estimatedValue: 'Estimated Value', printReport: 'Print Report', shareReport: 'Share Report'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -119,19 +129,21 @@ const translations = {
     dataProtection: 'Protection des données', backupDesc: 'Vos données sont enregistrées sur votre téléphone uniquement. Exportez-les sous forme de fichier de sauvegarde.',
     exportData: 'Exporter les données (JSON)', importData: 'Importer des données',
     exportSuccess: 'Données exportées avec succès!', confirmImport: 'Attention : Cela écrasera vos données actuelles. Êtes-vous sûr ?',
-    importSuccess: 'Données importées avec succès ! Redémarrage...', importError: 'Erreur : Fichier invalide ou corrompu.'
+    importSuccess: 'Données importées avec succès ! Redémarrage...', importError: 'Erreur : Fichier invalide ou corrompu.',
+
+    // ✅ Nouvelles pages
+    notifications: 'Notifications', inbox: 'Boîte', reports: 'Rapports', resale: 'Revente', timeline: 'Historique',
+    unread: 'Nouveau', markAllRead: 'Tout lire', clearAll: 'Effacer', noNotifications: 'Aucune notification.',
+    monthlyExpenses: 'Dépenses mensuelles', estimatedValue: 'Valeur estimée', printReport: 'Imprimer', shareReport: 'Partager'
   }
 };
 
 export const AppProvider = ({ children }) => {
-  // 🚀 السر هنا: القراءة المتزامنة من الذاكرة مباشرة لمنع الطرد المفاجئ
   const [currentCar, setCurrentCar] = useState(() => {
     try {
       const saved = localStorage.getItem('savedCar');
       return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   });
 
   const [vehicles, setVehicles] = useState(() => {
@@ -142,12 +154,10 @@ export const AppProvider = ({ children }) => {
         return savedCar ? [savedCar] : [];
       }
       return saved;
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   });
 
-  const [isLoading, setIsLoading] = useState(false); // لم نعد بحاجة لانتظار useEffect
+  const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'ar');
   const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'MAD');
@@ -168,10 +178,8 @@ export const AppProvider = ({ children }) => {
     try {
       const newCar = { ...carData, id: Date.now().toString() };
       const updatedVehicles = [...vehicles, newCar];
-      
       localStorage.setItem('savedCar', JSON.stringify(newCar));
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      
       setCurrentCar(newCar);
       setVehicles(updatedVehicles);
     } catch (error) {
@@ -184,7 +192,6 @@ export const AppProvider = ({ children }) => {
     try {
       const updatedVehicles = vehicles.map(v => v.id === updatedCarData.id ? updatedCarData : v);
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      
       if (currentCar?.id === updatedCarData.id) {
         localStorage.setItem('savedCar', JSON.stringify(updatedCarData));
         setCurrentCar(updatedCarData);
@@ -200,11 +207,9 @@ export const AppProvider = ({ children }) => {
     try {
       const updatedVehicles = vehicles.filter(v => v.id !== id);
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      
       if (currentCar?.id === id) {
         const nextCar = updatedVehicles.length > 0 ? updatedVehicles[0] : null;
         setCurrentCar(nextCar);
-        
         if (nextCar) {
           localStorage.setItem('savedCar', JSON.stringify(nextCar));
         } else {
