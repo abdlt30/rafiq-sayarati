@@ -3,20 +3,12 @@ import { useContext } from 'react';
 import { AppContext } from './context/AppContext';
 import Layout from './components/layout/Layout';
 
-import Dashboard from './pages/Dashboard';
-import Fuel from './pages/Fuel';
-import Maintenance from './pages/Maintenance';
-import Expenses from './pages/Expenses';
-import More from './pages/More';
-import Welcome from './pages/Welcome';
-import AddVehicle from './pages/AddVehicle';
-import Settings from './pages/Settings';
-import Documents from './pages/Documents'; 
-import Reminders from './pages/Reminders'; 
-import Backup from './pages/Backup'; 
-import Vehicles from './pages/Vehicles';
+// ... الاستيرادات السابقة
+import Notifications from './pages/Notifications';
+import Reports from './pages/Reports';
+import Resale from './pages/Resale';
+import Timeline from './pages/Timeline';
 
-// مكون حماية المسارات (تم تعديله ليعمل مع المسارات المتداخلة)
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
   return currentCar ? <Outlet /> : <Navigate to="/welcome" replace />;
@@ -36,11 +28,9 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
-        {/* مسارات عامة لا تحتاج سيارة */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
-        {/* 🚨 المسارات المحمية والمتداخلة (السر يكمن هنا) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
@@ -53,10 +43,15 @@ export default function App() {
             <Route path="/backup" element={<Backup />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/more" element={<More />} />
+            
+            {/* ✅ المسارات الجديدة */}
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/resale" element={<Resale />} />
+            <Route path="/timeline" element={<Timeline />} />
           </Route>
         </Route>
         
-        {/* إعادة التوجيه لأي مسار غير معروف */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
