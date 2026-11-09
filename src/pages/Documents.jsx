@@ -15,10 +15,14 @@ export default function Documents() {
 
   const loadData = () => {
     if (currentCar) {
-      const carDocs = dbService.getDocuments()
+      // ✅ إصلاح حرج: إضافة ?. و || [] لمنع انهيار التطبيق إذا كانت قاعدة البيانات فارغة
+      const allDocs = dbService.getDocuments() || [];
+      const carDocs = allDocs
         .filter(d => d.carId === currentCar.id)
         .sort((a, b) => new Date(a.endDate) - new Date(b.endDate)); // الأقرب انتهاءً أولاً
       setDocuments(carDocs);
+    } else {
+      setDocuments([]); // تصفير القائمة إذا لم تكن هناك سيارة
     }
   };
 
@@ -28,17 +32,21 @@ export default function Documents() {
     e.preventDefault();
     if (!currentCar) return;
     
-    // إصلاح الخطأ: حفظ المفتاح (insurance) وليس النص المترجم
-    const newRecord = dbService.addDocument({ 
-      carId: currentCar.id, 
-      type: formData.type, 
-      endDate: formData.endDate 
-    });
+    try {
+      const newRecord = dbService.addDocument({ 
+        carId: currentCar.id, 
+        type: formData.type, 
+        endDate: formData.endDate 
+      });
 
-    if (newRecord) {
-      setShowForm(false);
-      setFormData({ type: 'insurance', endDate: '' });
-      loadData();
+      if (newRecord) {
+        setShowForm(false);
+        setFormData({ type: 'insurance', endDate: '' });
+        loadData(); // إعادة تحميل البيانات لتظهر فوراً
+      }
+    } catch (error) {
+      console.error("خطأ في حفظ الوثيقة:", error);
+      alert("حدث خطأ أثناء محاولة الحفظ.");
     }
   };
 
@@ -53,6 +61,7 @@ export default function Documents() {
   const getStatus = (endDate) => {
     if(!endDate) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800', icon: FileText };
     
+    // حساب الفرق بالأيام
     const diffDays = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
@@ -64,7 +73,6 @@ export default function Documents() {
     return { label: t('valid') || 'صالح', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle };
   };
 
-  // دالة مساعدة لتنسيق التاريخ
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
@@ -73,20 +81,28 @@ export default function Documents() {
 
   return (
     <div className="space-y-4 pb-24 px-4">
-      {/* الشريط العلوي المحسن */}
+      
+      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform">
+        <button 
+          onClick={() => setShowForm(!showForm)} 
+          className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform flex items-center justify-center"
+        >
           {showForm ? <X size={24} /> : <Plus size={24} />}
         </button>
       </div>
 
       {/* نموذج الإضافة */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in">
+        <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
           <div>
             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentType') || 'نوع الوثيقة'}</label>
-            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]">
+            <select 
+              value={formData.type} 
+              onChange={e => setFormData({...formData, type: e.target.value})} 
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]"
+            >
               <option value="insurance">{t('insurance') || 'تأمين'}</option>
               <option value="technicalInspection">{t('technicalInspection') || 'فحص تقني'}</option>
               <option value="license">{t('license') || 'رخصة'}</option>
@@ -95,10 +111,18 @@ export default function Documents() {
           
           <div>
              <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'تاريخ الانتهاء'}</label>
-             <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
+             <input 
+                type="date" 
+                required 
+                value={formData.endDate} 
+                onChange={e => setFormData({...formData, endDate: e.target.value})} 
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" 
+              />
           </div>
 
-          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">{t('save') || 'حفظ'}</button>
+          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">
+            {t('save') || 'حفظ الوثيقة'}
+          </button>
         </form>
       )}
 
@@ -123,7 +147,6 @@ export default function Documents() {
                     <StatusIcon size={20} />
                   </div>
                   <div>
-                    {/* ترجمة النوع عند العرض */}
                     <p className="font-bold text-[var(--text)] text-lg">{t(doc.type) || doc.type}</p>
                     <p className={`text-xs font-bold mt-0.5 ${status.color}`}>{status.label}</p>
                   </div>
@@ -147,7 +170,8 @@ export default function Documents() {
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
-        message={t('confirmDelete') || 'هل أنت متأكد من الحذف؟'}
+        title={t('confirmDelete') || 'تأكيد الحذف'}
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟'}
       />
     </div>
   );
