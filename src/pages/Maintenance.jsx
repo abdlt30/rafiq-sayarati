@@ -4,14 +4,12 @@ import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2 } from 'lucide-react';
 
 export default function Maintenance() {
-  const { currentCar, t, currency } = useContext(AppContext);
+  const { currentCar, t, currency, lang } = useContext(AppContext);
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ date: '', type: 'oilChange', cost: '', nextKm: '' });
-  
-  // حالة لتخزين الأنواع المخصصة
   const [customTypes, setCustomTypes] = useState([]);
 
   const sortRecords = (data) => [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -20,7 +18,7 @@ export default function Maintenance() {
     if (currentCar) {
       const carMaintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
       setRecords(sortRecords(carMaintenance));
-      setCustomTypes(dbService.getCustomTypes()); // جلب الأنواع المخصصة
+      setCustomTypes(dbService.getCustomTypes());
     }
   }, [currentCar]);
 
@@ -29,18 +27,13 @@ export default function Maintenance() {
     if (newType && newType.trim() !== '') {
       const updatedTypes = dbService.addCustomType(newType.trim());
       setCustomTypes(updatedTypes);
-      setFormData({ ...formData, type: newType.trim() }); // اختياره تلقائياً
+      setFormData({ ...formData, type: newType.trim() });
     }
   };
 
   const handleSave = (e) => {
     e.preventDefault();
-    const data = { 
-      carId: currentCar.id, 
-      ...formData, 
-      cost: Number(formData.cost), 
-      nextKm: Number(formData.nextKm) || null 
-    };
+    const data = { carId: currentCar.id, ...formData, cost: Number(formData.cost), nextKm: Number(formData.nextKm) || null };
     
     if (editingId) {
       const updated = dbService.updateMaintenance(editingId, data);
@@ -53,7 +46,7 @@ export default function Maintenance() {
   };
 
   const handleDelete = (id) => {
-    if(window.confirm(t('confirmDelete'))) {
+    if(window.confirm(t('confirmDelete') || 'هل أنت متأكد؟')) {
       const updated = dbService.deleteMaintenance(id);
       setRecords(sortRecords(updated));
     }
@@ -61,12 +54,8 @@ export default function Maintenance() {
 
   const openEdit = (record) => {
     setEditingId(record.id);
-    const typeKeyMap = {
-      'تغيير زيت': 'oilChange', 'إطارات': 'tires', 'فرامل': 'brakes', 
-      'بطارية': 'battery', 'فلتر هواء': 'airFilter', 'فحص شامل': 'fullInspection', 'أخرى': 'other'
-    };
+    const typeKeyMap = { 'تغيير زيت': 'oilChange', 'إطارات': 'tires', 'فرامل': 'brakes', 'بطارية': 'battery', 'فلتر هواء': 'airFilter', 'فحص شامل': 'fullInspection', 'أخرى': 'other' };
     const typeKey = typeKeyMap[record.type] || record.type;
-
     setFormData({ date: record.date, type: typeKey, cost: record.cost, nextKm: record.nextKm || '' });
     setIsModalOpen(true);
   };
@@ -78,12 +67,9 @@ export default function Maintenance() {
   };
 
   return (
-    <div className="space-y-4 pb-24 px-4">
+    <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('maintenance') || 'الصيانة'}</h1>
-        <button onClick={() => setIsModalOpen(true)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform">
-          <Plus size={24} />
-        </button>
       </div>
 
       {records.length === 0 ? (
@@ -96,7 +82,7 @@ export default function Maintenance() {
       ) : (
         <div className="space-y-3">
           {records.map(record => (
-            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-3 transition-colors hover:border-yellow-500/30">
+            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-3 transition-colors hover:border-yellow-500/30 shadow-sm">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
                   <div className="p-3 rounded-xl bg-yellow-500/10 text-yellow-500"><Wrench size={20}/></div>
@@ -106,8 +92,8 @@ export default function Maintenance() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => openEdit(record)} className="text-blue-400 bg-blue-400/10 p-2 rounded-lg hover:bg-blue-400/20 transition-colors"><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(record.id)} className="text-red-400 bg-red-400/10 p-2 rounded-lg hover:bg-red-400/20 transition-colors"><Trash2 size={16} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); openEdit(record); }} className="text-blue-400 bg-blue-400/10 p-2 rounded-lg hover:bg-blue-400/20 transition-colors"><Edit2 size={16} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(record.id); }} className="text-red-400 bg-red-400/10 p-2 rounded-lg hover:bg-red-400/20 transition-colors"><Trash2 size={16} /></button>
                 </div>
               </div>
               
@@ -129,36 +115,39 @@ export default function Maintenance() {
         </div>
       )}
 
+      {/* ✅ الزر العائم (FAB) */}
+      <button 
+        onClick={() => setIsModalOpen(true)} 
+        className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 transition-transform z-40"
+      >
+        <Plus size={28} />
+      </button>
+
+      {/* النافذة المنبثقة */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-2xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] overflow-y-auto">
-            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors">
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <form onSubmit={handleSave} className="bg-[var(--surface)] p-6 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[85vh] flex flex-col shadow-2xl">
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
               <X size={20} />
             </button>
-            
-            <h2 className="text-xl font-bold text-center mb-6 text-[var(--text)] mt-2">
+            <h2 className="text-xl font-bold text-center mb-4 text-[var(--text)] mt-2">
               {editingId ? (t('edit') || 'تعديل') : (t('addMaintenance') || 'إضافة صيانة')}
             </h2>
             
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-1 pb-2">
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
+                <label className="text-xs font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
 
-              {/* قائمة الأنواع مع زر الإضافة المخصص */}
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs text-[var(--text-muted)] block">{t('maintenanceType') || 'نوع الصيانة'}</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)] block">{t('maintenanceType') || 'نوع الصيانة'}</label>
                   <button type="button" onClick={handleAddCustomType} className="text-xs text-[var(--primary)] flex items-center gap-1 hover:underline">
-                    <Settings2 size={12} /> إضافة نوع
+                    <Settings2 size={12} /> {t('addType') || 'إضافة نوع'}
                   </button>
                 </div>
-                <select 
-                  value={formData.type} 
-                  onChange={e => setFormData({...formData, type: e.target.value})} 
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]"
-                >
+                <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]">
                   <optgroup label={t('defaultTypes') || 'أنواع افتراضية'}>
                     <option value="oilChange">{t('oilChange') || 'تغيير زيت'}</option>
                     <option value="tires">{t('tires') || 'إطارات'}</option>
@@ -170,26 +159,24 @@ export default function Maintenance() {
                   </optgroup>
                   {customTypes.length > 0 && (
                     <optgroup label={t('customTypes') || 'أنواع مخصصة'}>
-                      {customTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
+                      {customTypes.map(type => <option key={type} value={type}>{type}</option>)}
                     </optgroup>
                   )}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
+                <label className="text-xs font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
                 <input type="number" step="0.01" required placeholder={t('enterCost') || 'أدخل التكلفة'} value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
 
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('nextOdometer') || 'العداد للصيانة القادمة'} (KM)</label>
+                <label className="text-xs font-bold text-[var(--text-muted)] mb-1 block">{t('nextOdometer') || 'العداد للصيانة القادمة'} (KM)</label>
                 <input type="number" placeholder={t('optional') || 'اختياري'} value={formData.nextKm} onChange={e => setFormData({...formData, nextKm: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
 
-            <button type="submit" className="w-full mt-8 bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition-colors">
+            <button type="submit" className="w-full mt-4 bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex-shrink-0">
               {t('save') || 'حفظ'}
             </button>
           </form>
