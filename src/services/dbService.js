@@ -5,7 +5,7 @@ const KEYS = {
   MAINTENANCE: 'maintenance_records',
   DOCUMENTS: 'documents_records',
   REMINDERS: 'reminders_records',
-  CUSTOM_MAINTENANCE: 'custom_maintenance_types', // ✅ مفتاح جديد للأنواع المخصصة
+  CUSTOM_MAINTENANCE: 'custom_maintenance_types',
 };
 
 // دالة مساعدة لإنشاء معرف فريد (متوافق مع Supabase UUID)
@@ -34,7 +34,12 @@ const createLocalStore = (storageKey) => ({
       return newRecord;
     } catch (e) {
       console.error(`Error adding to ${storageKey}:`, e);
-      alert('حدث خطأ أثناء الحفظ، قد تكون مساحة التخزين ممتلئة.');
+      // ✅ تحسين: التعامل مع خطأ امتلاء المساحة
+      if (e.name === 'QuotaExceededError') {
+        alert('مساحة التخزين ممتلئة! يرجى حذف بعض السجلات القديمة أو أخذ نسخة احتياطية.');
+      } else {
+        alert('حدث خطأ أثناء الحفظ.');
+      }
       return null;
     }
   },
@@ -46,7 +51,6 @@ const createLocalStore = (storageKey) => ({
       return updated;
     } catch (e) {
       console.error(`Error updating ${storageKey}:`, e);
-      alert('حدث خطأ أثناء التعديل، قد تكون مساحة التخزين ممتلئة.');
       return [];
     }
   },
@@ -136,9 +140,12 @@ export const dbService = {
     }
   },
 
-  // --- الإحصائيات العامة ---
+  // ==========================================
+  // ✅ الإحصائيات العامة (تم إصلاح الثغرة)
+  // ==========================================
   getTotals: (carId) => {
-    const filterByCar = (records) => records.filter(r => !r.carId || String(r.carId) === String(carId));
+    // إصلاح: التحقق الصارم من معرف السيارة لمنع تداخل الإحصائيات
+    const filterByCar = (records) => records.filter(r => r.carId && String(r.carId) === String(carId));
     
     const fuel = filterByCar(dbService.getFuel());
     const maintenance = filterByCar(dbService.getMaintenance());
@@ -156,6 +163,27 @@ export const dbService = {
       total: totalFuel + totalMaint + totalExp, 
       totalLiters 
     };
+  },
+
+  // ==========================================
+  // ✅ ميزة جديدة: حذف جميع بيانات سيارة معينة
+  // ==========================================
+  // تستخدم عند حذف السيارة من صفحة "سياراتي" لمنع تراكم البيانات المعلقة
+  deleteCarData: (carId) => {
+    try {
+      const filterOutCar = (records) => records.filter(r => String(r.carId) !== String(carId));
+      
+      localStorage.setItem(KEYS.FUEL, JSON.stringify(filterOutCar(dbService.getFuel())));
+      localStorage.setItem(KEYS.EXPENSES, JSON.stringify(filterOutCar(dbService.getExpenses())));
+      localStorage.setItem(KEYS.MAINTENANCE, JSON.stringify(filterOutCar(dbService.getMaintenance())));
+      localStorage.setItem(KEYS.DOCUMENTS, JSON.stringify(filterOutCar(dbService.getDocuments())));
+      localStorage.setItem(KEYS.REMINDERS, JSON.stringify(filterOutCar(dbService.getReminders())));
+      
+      return true;
+    } catch (e) {
+      console.error("Error deleting car data:", e);
+      return false;
+    }
   }
 };
 
