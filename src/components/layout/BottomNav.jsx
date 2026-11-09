@@ -20,15 +20,23 @@ export default function BottomNav() {
         <NavLink
           key={item.path}
           to={item.path}
-          end={item.path === '/'} // 👈 السطر السحري
+          end={item.path === '/'}
           className={({ isActive }) =>
-            `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+            `relative flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
               isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
             }`
           }
         >
-          <item.icon size={20} strokeWidth={2} />
-          <span className="text-[9px] font-medium">{item.label}</span>
+          {({ isActive }) => (
+            <>
+              {/* ✅ إضافة الخط العلوي (Active Indicator) */}
+              {isActive && (
+                <span className="absolute top-0 w-6 h-[3px] rounded-b-md bg-[var(--primary)]"></span>
+              )}
+              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[9px] font-medium">{item.label}</span>
+            </>
+          )}
         </NavLink>
       ))}
     </nav>
