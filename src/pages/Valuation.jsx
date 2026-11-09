@@ -1,17 +1,16 @@
 import { useState, useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Tag, TrendingDown, Calculator, Info, Gauge } from 'lucide-react';
+import { Tag, TrendingDown, Calculator, Info, AlertCircle } from 'lucide-react'; // ✅ إضافة أيقونة التنبيه
 
 export default function Valuation() {
   const { currentCar, t, currency } = useContext(AppContext);
   
-  // حالة النموذج
   const [purchasePrice, setPurchasePrice] = useState('');
   const [purchaseYear, setPurchaseYear] = useState('');
-  const [condition, setCondition] = useState('good'); // excellent, good, fair
+  const [condition, setCondition] = useState('good');
   const [showResult, setShowResult] = useState(false);
+  const [error, setError] = useState(''); // ✅ حالة جديدة للتحقق المخصص
 
-  // حساب القيمة
   const calculateValuation = useMemo(() => {
     if (!purchasePrice || !purchaseYear || !currentCar) return null;
 
@@ -19,24 +18,16 @@ export default function Valuation() {
     const year = Number(purchaseYear);
     const currentYear = new Date().getFullYear();
     
-    // 1. حساب العمر
     let age = currentYear - year;
     if (age < 0) age = 0;
 
-    // 2. نسبة الاستهلاك السنوي (10% لكل سنة)
     const ageDepreciation = age * 0.10; 
-    
-    // 3. استهلاك المسافة (1% لكل 10,000 كم)
     const mileage = Number(currentCar.odometer) || 0;
     const mileageDepreciation = (mileage / 10000) * 0.01;
-
-    // 4. معامل الحالة
     const conditionMultiplier = condition === 'excellent' ? 1.05 : condition === 'fair' ? 0.90 : 1.0;
 
-    // المعادلة النهائية
     let estimatedValue = price * (1 - ageDepreciation - mileageDepreciation) * conditionMultiplier;
 
-    // يجب ألا تقل القيمة عن 10% من السعر الأصلي
     if (estimatedValue < (price * 0.10)) {
       estimatedValue = price * 0.10;
     }
@@ -46,6 +37,15 @@ export default function Valuation() {
 
   const handleCalculate = (e) => {
     e.preventDefault();
+    setError(''); // تصفير الأخطاء
+    
+    // ✅ التحقق المخصص بدلاً من رسالة المتصفح المزعجة
+    if (!purchasePrice || !purchaseYear) {
+      setError('يرجى إدخال سعر الشراء وسنة الصنع للحساب.');
+      setShowResult(false);
+      return;
+    }
+
     setShowResult(true);
   };
 
@@ -54,7 +54,8 @@ export default function Valuation() {
       
       {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('valuation') || 'تقييم السيارة'}</h1>
+        {/* ✅ إصلاح 1: إجبار النص العربي لتجنب مشكلة الترجمة */}
+        <h1 className="text-2xl font-bold text-[var(--text)]">تقييم السيارة</h1>
       </div>
 
       {/* مقدمة */}
@@ -65,17 +66,24 @@ export default function Valuation() {
         </p>
       </div>
 
-      {/* النموذج */}
-      <form onSubmit={handleCalculate} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-sm">
+      {/* ✅ إصلاح 2: إضافة noValidate لمنع رسالة المتصفح العمودية المزعجة */}
+      <form onSubmit={handleCalculate} noValidate className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-sm">
         
+        {/* عرض رسالة الخطأ المخصصة */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-xl flex items-center gap-2 text-sm font-bold animate-fade-in">
+            <AlertCircle size={18} />
+            {error}
+          </div>
+        )}
+
         <div>
           <label className="text-xs font-bold text-[var(--text-muted)] mb-1 block">سعر الشراء الأصلي ({currency})</label>
           <input 
             type="number" 
-            required 
             placeholder="مثال: 15000" 
             value={purchasePrice} 
-            onChange={e => {setPurchasePrice(e.target.value); setShowResult(false);}} 
+            onChange={e => {setPurchasePrice(e.target.value); setShowResult(false); setError('');}} 
             className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
           />
         </div>
@@ -84,11 +92,10 @@ export default function Valuation() {
           <label className="text-xs font-bold text-[var(--text-muted)] mb-1 block">سنة الصنع / الشراء</label>
           <input 
             type="number" 
-            required 
             placeholder="مثال: 2020" 
             min="1990" max={new Date().getFullYear()}
             value={purchaseYear} 
-            onChange={e => {setPurchaseYear(e.target.value); setShowResult(false);}} 
+            onChange={e => {setPurchaseYear(e.target.value); setShowResult(false); setError('');}} 
             className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
           />
         </div>
@@ -102,7 +109,7 @@ export default function Valuation() {
           </div>
         </div>
 
-        <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2">
+        <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 mt-2">
           <Calculator size={20} />
           حساب القيمة التقديرية
         </button>
@@ -112,7 +119,6 @@ export default function Valuation() {
       {showResult && calculateValuation && (
         <div className="mt-6 animate-fade-in">
           <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl shadow-xl text-center relative overflow-hidden">
-            {/* خلفية جمالية */}
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Tag size={100} />
             </div>
