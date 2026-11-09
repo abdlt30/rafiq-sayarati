@@ -5,14 +5,15 @@ import {
   Moon, Sun, Globe, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, 
   Bell, ShieldCheck, Database 
 } from 'lucide-react';
-import CurrencySelector from '../components/ui/CurrencySelector'; // ✅ استدعاء المكون الجديد
+// ✅ تم تصحيح مسار الاستيراد هنا ليطابق ملف CustomSelect.jsx
+import CurrencySelector from '../components/ui/CustomSelect'; 
 
 export default function Settings() {
   const { theme, toggleTheme, lang, changeLang, currency, setCurrency, t } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true); // حالة التنبيهات
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-2">
@@ -76,7 +77,7 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* اختيار العملة (باستخدام المكون الجديد) */}
+            {/* اختيار العملة */}
             <div>
               <label className="text-xs font-bold text-[var(--text-muted)] mb-3 block flex items-center gap-2">
                 <span className="text-base font-bold">$</span> {t('currency') || 'عملة التطبيق'}
@@ -87,7 +88,7 @@ export default function Settings() {
         )}
       </div>
 
-      {/* 3. الإشعارات (تم إصلاح المفتاح) */}
+      {/* 3. الإشعارات */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><Bell size={20} /></div>
