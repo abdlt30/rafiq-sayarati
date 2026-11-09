@@ -21,15 +21,17 @@ import Reminders from './pages/Reminders';
 import Backup from './pages/Backup'; 
 import Vehicles from './pages/Vehicles';
 
-// ✅ استيراد الصفحات المتقدمة (التي أضفناها حديثاً)
+// ✅ استيراد الصفحات المتقدمة
 import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 import Resale from './pages/Resale';
 import Timeline from './pages/Timeline';
-import About from './pages/About'; // ✅ صفحة جديدة
+import About from './pages/About'; 
+import Valuation from './pages/Valuation'; // ✅ إضافة: استيراد صفحة تقييم السيارة
 
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
+  // حماية المسارات: إذا لم تكن هناك سيارة، يتم التوجيه لصفحة الترحيب
   return currentCar ? <Outlet /> : <Navigate to="/welcome" replace />;
 };
 
@@ -53,7 +55,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
-        {/* 2. المسارات المحمية */}
+        {/* 2. المسارات المحمية (تتطلب وجود سيارة) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
@@ -67,16 +69,17 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/more" element={<More />} />
             
-            {/* ✅ المسارات الجديدة المربوطة */}
+            {/* ✅ المسارات المتقدمة */}
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/resale" element={<Resale />} />
             <Route path="/timeline" element={<Timeline />} />
             <Route path="/about" element={<About />} />
+            <Route path="/valuation" element={<Valuation />} /> {/* ✅ إضافة: مسار صفحة التقييم */}
           </Route>
         </Route>
         
-        {/* 3. إعادة التوجيه */}
+        {/* 3. إعادة التوجيه لأي مسار غير معروف */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
