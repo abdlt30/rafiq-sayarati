@@ -2,20 +2,19 @@ import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2 } from 'lucide-react';
-import ConfirmModal from '../components/ui/ConfirmModal'; // ✅ استدعاء نافذة الحذف
-import OptionPicker from '../components/ui/OptionPicker'; // ✅ استدعاء القائمة المخصصة
+import ConfirmModal from '../components/ui/ConfirmModal'; // تأكد من وجوده
+import OptionPicker from '../components/ui/OptionPicker'; // تأكد من وجوده
 
 export default function Maintenance() {
-  const { currentCar, t, currency } = useContext(AppContext);
+  const { currentCar, t, currency, lang } = useContext(AppContext);
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [deleteId, setDeleteId] = useState(null); // حالة الحذف المخصص
+  const [deleteId, setDeleteId] = useState(null);
   const [formData, setFormData] = useState({ date: '', type: 'oilChange', cost: '', nextKm: '' });
   const [customTypes, setCustomTypes] = useState([]);
 
-  // قائمة الأنواع الافتراضية
   const defaultTypes = [
     { value: 'oilChange', label: t('oilChange') || 'تغيير زيت' },
     { value: 'tires', label: t('tires') || 'إطارات' },
@@ -26,7 +25,6 @@ export default function Maintenance() {
     { value: 'other', label: t('other') || 'أخرى' }
   ];
 
-  // دمج الأنواع الافتراضية مع المخصصة
   const allTypes = [
     ...defaultTypes,
     ...customTypes.map(ct => ({ value: ct, label: ct }))
@@ -75,7 +73,6 @@ export default function Maintenance() {
 
   const openEdit = (record) => {
     setEditingId(record.id);
-    // خريطة تحويل السجلات القديمة
     const typeKeyMap = { 'تغيير زيت': 'oilChange', 'إطارات': 'tires', 'فرامل': 'brakes', 'بطارية': 'battery', 'فلتر هواء': 'airFilter', 'فحص شامل': 'fullInspection', 'أخرى': 'other' };
     const typeKey = typeKeyMap[record.type] || record.type;
     setFormData({ date: record.date, type: typeKey, cost: record.cost, nextKm: record.nextKm || '' });
@@ -106,7 +103,6 @@ export default function Maintenance() {
           {records.map(record => (
             <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-xl flex items-center justify-between shadow-sm hover:border-yellow-500/30 transition-colors">
               
-              {/* الجزء الأيسر: الأيقونة والبيانات */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-yellow-500/10 text-yellow-500 flex items-center justify-center flex-shrink-0">
                   <Wrench size={18} />
@@ -119,7 +115,6 @@ export default function Maintenance() {
                 </div>
               </div>
 
-              {/* الجزء الأيمن: التكلفة والعداد والأزرار */}
               <div className="flex items-center gap-3">
                 <div className="text-end">
                   <p className="font-extrabold text-[var(--primary)] text-sm">
@@ -145,15 +140,14 @@ export default function Maintenance() {
         </div>
       )}
 
-      {/* ✅ الزر العائم (FAB) */}
+      {/* ✅ الزر العائم (تم تصحيح كلاس rtl) */}
       <button 
         onClick={() => setIsModalOpen(true)} 
-        className="fixed bottom-24 right-6 rtl:left-6 rtl:auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 transition-transform z-40"
+        className={`fixed bottom-24 ${lang === 'ar' ? 'left-6' : 'right-6'} w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 transition-transform z-40`}
       >
         <Plus size={28} />
       </button>
 
-      {/* ✅ نافذة الحذف المخصصة */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
@@ -162,11 +156,10 @@ export default function Maintenance() {
         message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف سجل الصيانة هذا؟ لا يمكن التراجع عن هذا الإجراء.'}
       />
 
-      {/* نافذة الإضافة/التعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
-            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
+            <button type="button" onClick={closeModal} className={`absolute top-4 ${lang === 'ar' ? 'left-4' : 'right-4'} p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10`}>
               <X size={20} />
             </button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
@@ -187,7 +180,6 @@ export default function Maintenance() {
                   </button>
                 </div>
                 
-                {/* ✅ استخدام القائمة المخصصة */}
                 <OptionPicker 
                   options={allTypes} 
                   value={formData.type} 
