@@ -3,7 +3,7 @@ import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { 
   Wallet, Gauge, Fuel, Wrench, Car, FileText, 
-  Bell, Settings, Plus, ArrowLeftRight, AlertCircle, Calendar, ChevronLeft, Sparkles, AlertTriangle
+  Bell, Settings, Plus, ArrowLeftRight, Calendar, ChevronLeft, Sparkles, AlertTriangle, Activity
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -12,8 +12,14 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [data, setData] = useState({
-    totalCost: 0, monthlyCost: 0, costPerKm: 0, distance: 0,
-    upcomingReminders: [], recentActivity: []
+    totalCost: 0, 
+    monthlyCost: 0, 
+    costPerKm: 0, 
+    distance: 0,
+    avgConsumption: 0, // ✅ جديد: متوسط الاستهلاك
+    totalLiters: 0,    // ✅ جديد: إجمالي اللترات
+    upcomingReminders: [], 
+    recentActivity: []
   });
 
   useEffect(() => {
@@ -22,9 +28,9 @@ export default function Dashboard() {
     const fuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
     const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
     const maintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
-    const docs = dbService.getDocuments().filter(r => r.carId === currentCar.id);
     const reminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
 
+    // --- 1. حساب التكاليف ---
     const totalFuel = fuel.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const totalExp = expenses.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost || 0), 0);
@@ -42,22 +48,35 @@ export default function Dashboard() {
       expenses.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0) +
       maintenance.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0);
 
-    const odometers = fuel.map(r => Number(r.odometer)).filter(o => o > 0).sort((a, b) => a - b);
+    // --- 2. حساب المسافة (بأمان) ---
+    // نستخدم filter للتأكد من أن العداد رقم صحيح وأكبر من صفر
+    const validOdometers = fuel.map(r => Number(r.odometer)).filter(o => !isNaN(o) && o > 0).sort((a, b) => a - b);
     let distance = 0;
-    if (odometers.length > 1) distance = odometers[odometers.length - 1] - odometers[0];
-    else if (odometers.length === 1 && currentCar.currentOdometer) distance = Math.max(0, currentCar.currentOdometer - odometers[0]);
+    if (validOdometers.length > 1) {
+      distance = validOdometers[validOdometers.length - 1] - validOdometers[0];
+    } else if (validOdometers.length === 1 && currentCar.currentOdometer) {
+      distance = Math.max(0, Number(currentCar.currentOdometer) - validOdometers[0]);
+    }
     
     const costPerKm = distance > 0 ? (grandTotal / distance).toFixed(2) : 0;
 
+    // --- 3. حساب استهلاك الوقود (L/100km) ---
+    const totalLiters = fuel.reduce((sum, r) => sum + Number(r.liters || 0), 0);
+    // المعادلة: (إجمالي اللترات / المسافة) * 100
+    const avgConsumption = distance > 0 ? ((totalLiters / distance) * 100).toFixed(1) : 0;
+
+    // --- 4. التنبيهات الذكية ---
     const allAlerts = [
-      ...maintenance.filter(m => m.nextKm && Number(m.nextKm) > (currentCar.currentOdometer || 0)).map(m => ({ ...m, alertText: m.type, value: Number(m.nextKm), isKm: true })),
+      ...maintenance.filter(m => m.nextKm && Number(m.nextKm) > (Number(currentCar.currentOdometer) || 0)).map(m => ({ ...m, alertText: m.type, value: Number(m.nextKm), isKm: true })),
       ...reminders.map(r => ({ ...r, alertText: r.type, value: r.odometer || new Date(r.date), isKm: !!r.odometer }))
     ];
+    
     const upcoming = allAlerts.filter(r => {
-        if (r.isKm) return r.value > (currentCar.currentOdometer || 0);
+        if (r.isKm) return r.value > (Number(currentCar.currentOdometer) || 0);
         return r.value > new Date();
     }).slice(0, 2);
 
+    // --- 5. آخر العمليات ---
     const allActivities = [
       ...fuel.map(r => ({ ...r, type: 'fuel', icon: Fuel, color: 'text-blue-500' })),
       ...expenses.map(r => ({ ...r, type: 'expense', icon: Wallet, color: 'text-purple-500' })),
@@ -65,8 +84,14 @@ export default function Dashboard() {
     ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
 
     setData({
-      totalCost: grandTotal, monthlyCost: monthTotal, costPerKm, distance,
-      upcomingReminders: upcoming, recentActivity: allActivities
+      totalCost: grandTotal, 
+      monthlyCost: monthTotal, 
+      costPerKm, 
+      distance,
+      avgConsumption, // ✅ حفظ القيمة الجديدة
+      totalLiters,    // ✅ حفظ القيمة الجديدة
+      upcomingReminders: upcoming, 
+      recentActivity: allActivities
     });
 
   }, [currentCar]);
@@ -80,6 +105,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 pb-24 px-4">
+      {/* الشريط العلوي */}
       <div className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 transition-all">
         <div>
           <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
@@ -96,6 +122,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* بطاقة السيارة */}
       <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10 border border-[var(--hero-border)]">
         <div className="flex justify-between items-start">
           <div>
@@ -123,6 +150,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* إجراءات سريعة */}
       <div className="grid grid-cols-4 gap-2.5">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl mb-2"><Fuel size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('fuel') || 'وقود'}</span></Link>
         <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-xl mb-2"><Wallet size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('expenses') || 'مصاريف'}</span></Link>
@@ -130,6 +158,7 @@ export default function Dashboard() {
         <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-green-500/10 text-green-500 rounded-xl mb-2"><FileText size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('documents') || 'وثائق'}</span></Link>
       </div>
 
+      {/* لوحة البيانات (KPIs) */}
       <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
           <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalCost') || 'إجمالي المصاريف'}</span>
@@ -147,8 +176,29 @@ export default function Dashboard() {
           <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('distance') || 'المسافة المقطوعة'}</span>
           <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.distance}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">KM</span></div>
         </div>
+
+        {/* ✅ بطاقة متوسط الاستهلاك */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1 flex items-center gap-1">
+            <Activity size={12} className="text-green-500" /> {t('avgConsumption') || 'متوسط الاستهلاك'}
+          </span>
+          <div className="flex items-end gap-1">
+            <span className="text-xl font-extrabold text-[var(--text)]">{data.avgConsumption}</span>
+            <span className="text-[10px] font-medium text-[var(--text-muted)] mb-1">L/100km</span>
+          </div>
+        </div>
+
+        {/* ✅ بطاقة إجمالي اللترات */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
+          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalLiters') || 'إجمالي اللترات'}</span>
+          <div className="flex items-end gap-1">
+            <span className="text-xl font-extrabold text-[var(--text)]">{data.totalLiters.toFixed(1)}</span>
+            <span className="text-[10px] font-medium text-[var(--text-muted)] mb-1">L</span>
+          </div>
+        </div>
       </div>
 
+      {/* التنبيهات */}
       {data.upcomingReminders.length > 0 && (
         <div className="bg-[var(--surface)] border border-red-500/30 rounded-2xl p-4 mt-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
@@ -171,6 +221,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* آخر العمليات */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
