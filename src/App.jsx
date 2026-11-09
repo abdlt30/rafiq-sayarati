@@ -3,13 +3,13 @@ import { useContext } from 'react';
 import { AppContext } from './context/AppContext';
 import Layout from './components/layout/Layout';
 
-// ✅ استيراد صفحات التسويق والدخول (Marketing Funnel)
+// ✅ استيراد صفحات التسويق
 import Welcome from './pages/Welcome';
 import Onboarding from './pages/Onboarding';
 import Login from './pages/Login';
 import AddVehicle from './pages/AddVehicle';
 
-// ✅ استيراد الصفحات المحمية (Core App)
+// ✅ استيراد الصفحات الأساسية
 import Dashboard from './pages/Dashboard';
 import Fuel from './pages/Fuel';
 import Maintenance from './pages/Maintenance';
@@ -21,13 +21,13 @@ import Reminders from './pages/Reminders';
 import Backup from './pages/Backup'; 
 import Vehicles from './pages/Vehicles';
 
-// ✅ استيراد الصفحات الجديدة (Advanced Features)
+// ✅ استيراد الصفحات المتقدمة (التي أضفناها حديثاً)
 import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 import Resale from './pages/Resale';
 import Timeline from './pages/Timeline';
+import About from './pages/About'; // ✅ صفحة جديدة
 
-// مكون حماية المسارات: لا يسمح بالدخول إلا إذا كانت هناك سيارة مضافة
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
   return currentCar ? <Outlet /> : <Navigate to="/welcome" replace />;
@@ -47,42 +47,36 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
-        {/* 🌟 1. المسارات العامة (رحلة المستخدم قبل إضافة السيارة) */}
+        {/* 1. المسارات العامة */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
-        {/* 🌟 2. المسارات المحمية (التطبيق الفعلي بعد إضافة السيارة) */}
+        {/* 2. المسارات المحمية */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            {/* الرئيسية */}
             <Route path="/" element={<Dashboard />} />
-            
-            {/* إدارة السيارات */}
             <Route path="/vehicles" element={<Vehicles />} />
-            
-            {/* السجلات الأساسية */}
             <Route path="/fuel" element={<Fuel />} />
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/expenses" element={<Expenses />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/reminders" element={<Reminders />} />
+            <Route path="/backup" element={<Backup />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/more" element={<More />} />
             
-            {/* الميزات المتقدمة (Micro-SaaS Features) */}
+            {/* ✅ المسارات الجديدة المربوطة */}
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/resale" element={<Resale />} />
             <Route path="/timeline" element={<Timeline />} />
-            
-            {/* الإعدادات والمزيد */}
-            <Route path="/more" element={<More />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/backup" element={<Backup />} />
+            <Route path="/about" element={<About />} />
           </Route>
         </Route>
         
-        {/* إعادة التوجيه الافتراضية */}
+        {/* 3. إعادة التوجيه */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
