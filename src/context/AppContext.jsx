@@ -43,13 +43,21 @@ const translations = {
     exportSuccess: 'تم تصدير البيانات بنجاح!', confirmImport: 'تحذير: سيتم استبدال جميع بياناتك الحالية. هل أنت متأكد؟',
     importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.', importError: 'خطأ: الملف غير صالح أو تالف.',
 
-    // ✅ مفاتيح الصفحات الجديدة
+    // مفاتيح الصفحات الجديدة
     notifications: 'مركز التنبيهات', inbox: 'التنبيهات', reports: 'التقارير', resale: 'تقييم السيارة', timeline: 'سجل السيارة',
     unread: 'جديد', markAllRead: 'تحديد الكل كمقروء', clearAll: 'مسح الكل', noNotifications: 'لا توجد تنبيهات حالياً.',
     monthlyExpenses: 'المصاريف الشهرية', estimatedValue: 'القيمة التقديرية', printReport: 'طباعة التقرير', shareReport: 'مشاركة التقرير',
     
-    // ✅ مفاتيح صفحة الإعدادات الجديدة
-    preferences: 'التفضيلات الإقليمية', privacyAndSecurity: 'الخصوصية والأمان', version: 'الإصدار'
+    // مفاتيح صفحة الإعدادات الجديدة
+    preferences: 'التفضيلات الإقليمية', privacyAndSecurity: 'الخصوصية والأمان', version: 'الإصدار',
+    selectCurrency: 'اختر العملة', searchCurrency: 'ابحث عن عملة...',
+
+    // ✅ مفاتيح أسماء العملات (تمت إضافتها حديثاً)
+    currency_MAD: 'درهم مغربي', currency_SAR: 'ريال سعودي', currency_AED: 'درهم إماراتي', 
+    currency_EGP: 'جنيه مصري', currency_QAR: 'ريال قطري', currency_KWD: 'دينار كويتي', 
+    currency_BHD: 'دينار بحريني', currency_OMR: 'ريال عماني', currency_JOD: 'دينار أردني', 
+    currency_DZD: 'دينار جزائري', currency_TND: 'دينار تونسي', currency_LYD: 'دينار ليبي', 
+    currency_USD: 'دولار أمريكي', currency_EUR: 'يورو'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -90,13 +98,21 @@ const translations = {
     exportSuccess: 'Data exported successfully!', confirmImport: 'Warning: This will overwrite your current data. Are you sure?',
     importSuccess: 'Data imported successfully! Reloading...', importError: 'Error: Invalid or corrupted file.',
 
-    // ✅ New pages keys
+    // New pages keys
     notifications: 'Notifications', inbox: 'Inbox', reports: 'Reports', resale: 'Resale Value', timeline: 'Timeline',
     unread: 'New', markAllRead: 'Mark all read', clearAll: 'Clear all', noNotifications: 'No notifications yet.',
     monthlyExpenses: 'Monthly Expenses', estimatedValue: 'Estimated Value', printReport: 'Print Report', shareReport: 'Share Report',
 
-    // ✅ New settings keys
-    preferences: 'Regional Preferences', privacyAndSecurity: 'Privacy & Security', version: 'Version'
+    // New settings keys
+    preferences: 'Regional Preferences', privacyAndSecurity: 'Privacy & Security', version: 'Version',
+    selectCurrency: 'Select Currency', searchCurrency: 'Search for a currency...',
+
+    // ✅ Currency keys (Added recently)
+    currency_MAD: 'Moroccan Dirham', currency_SAR: 'Saudi Riyal', currency_AED: 'UAE Dirham', 
+    currency_EGP: 'Egyptian Pound', currency_QAR: 'Qatari Riyal', currency_KWD: 'Kuwaiti Dinar', 
+    currency_BHD: 'Bahraini Dinar', currency_OMR: 'Omani Rial', currency_JOD: 'Jordanian Dinar', 
+    currency_DZD: 'Algerian Dinar', currency_TND: 'Tunisian Dinar', currency_LYD: 'Libyan Dinar', 
+    currency_USD: 'US Dollar', currency_EUR: 'Euro'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -137,13 +153,21 @@ const translations = {
     exportSuccess: 'Données exportées avec succès!', confirmImport: 'Attention : Cela écrasera vos données actuelles. Êtes-vous sûr ?',
     importSuccess: 'Données importées avec succès ! Redémarrage...', importError: 'Erreur : Fichier invalide ou corrompu.',
 
-    // ✅ Nouvelles pages
+    // Nouvelles pages
     notifications: 'Notifications', inbox: 'Boîte', reports: 'Rapports', resale: 'Revente', timeline: 'Historique',
     unread: 'Nouveau', markAllRead: 'Tout lire', clearAll: 'Effacer', noNotifications: 'Aucune notification.',
     monthlyExpenses: 'Dépenses mensuelles', estimatedValue: 'Valeur estimée', printReport: 'Imprimer', shareReport: 'Partager',
 
-    // ✅ Nouvelles clés de paramètres
-    preferences: 'Préférences Régionales', privacyAndSecurity: 'Confidentialité & Sécurité', version: 'Version'
+    // Nouvelles clés de paramètres
+    preferences: 'Préférences Régionales', privacyAndSecurity: 'Confidentialité & Sécurité', version: 'Version',
+    selectCurrency: 'Choisir la devise', searchCurrency: 'Rechercher une devise...',
+
+    // ✅ Clés de devises (Ajoutées récemment)
+    currency_MAD: 'Dirham Marocain', currency_SAR: 'Riyal Saoudien', currency_AED: 'Dirham des Émirats', 
+    currency_EGP: 'Livre Égyptienne', currency_QAR: 'Riyal Qatari', currency_KWD: 'Dinar Koweïtien', 
+    currency_BHD: 'Dinar Bahreïni', currency_OMR: 'Rial Omani', currency_JOD: 'Dinar Jordanien', 
+    currency_DZD: 'Dinar Algérien', currency_TND: 'Dinar Tunisien', currency_LYD: 'Dinar Libyen', 
+    currency_USD: 'Dollar Américain', currency_EUR: 'Euro'
   }
 };
 
