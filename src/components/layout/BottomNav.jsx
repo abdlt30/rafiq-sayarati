@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { NavLink } from 'react-router-dom';
-import { Home, Wallet, Wrench, FileText, Menu, Fuel } from 'lucide-react';
+import { Home, Wallet, Wrench, Menu, Fuel } from 'lucide-react'; // ✅ تم حذف FileText غير المستخدم
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
@@ -15,7 +15,8 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] pb-safe fixed bottom-0 w-full z-50">
+    // ✅ إصلاح: إزالة fixed و bottom-0 و pb-safe لأنها موجودة في Layout.jsx لتجنب التضارب
+    <nav className="flex justify-around items-center h-16 w-full bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)]">
       {navItems.map((item) => (
         <NavLink
           key={item.path}
@@ -29,12 +30,12 @@ export default function BottomNav() {
         >
           {({ isActive }) => (
             <>
-              {/* ✅ إضافة الخط العلوي (Active Indicator) */}
+              {/* ✅ الخط العلوي (Active Indicator) - تصميم احترافي */}
               {isActive && (
-                <span className="absolute top-0 w-6 h-[3px] rounded-b-md bg-[var(--primary)]"></span>
+                <span className="absolute top-0 w-8 h-[3px] rounded-b-md bg-[var(--primary)] transition-all duration-300"></span>
               )}
-              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[9px] font-medium">{item.label}</span>
+              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'scale-110 transition-transform' : ''} />
+              <span className="text-[10px] font-bold mt-1">{item.label}</span>
             </>
           )}
         </NavLink>
