@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
+import { AppContext } from '../../context/AppContext';
 import { Check, ChevronDown, X } from 'lucide-react';
 
 export default function OptionPicker({ label, options, value, onChange }) {
+  const { t } = useContext(AppContext); // ✅ جلب دالة الترجمة
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find(o => o.value === value) || options[0];
 
@@ -22,7 +24,8 @@ export default function OptionPicker({ label, options, value, onChange }) {
         <div className="fixed inset-0 bg-black/60 z-[150] flex flex-col justify-end backdrop-blur-sm">
           <div className="bg-[var(--surface)] w-full max-w-md mx-auto rounded-t-3xl border-t border-[var(--border)] animate-slide-up flex flex-col max-h-[70vh]">
             <div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
-              <h3 className="font-bold text-base text-[var(--text)]">اختر {label}</h3>
+              {/* ✅ استخدام الترجمة هنا */}
+              <h3 className="font-bold text-base text-[var(--text)]">{t('select') || 'اختر'} {label}</h3>
               <button type="button" onClick={() => setIsOpen(false)} className="p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)]">
                 <X size={18} />
               </button>
