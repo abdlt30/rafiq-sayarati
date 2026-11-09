@@ -43,10 +43,13 @@ const translations = {
     exportSuccess: 'تم تصدير البيانات بنجاح!', confirmImport: 'تحذير: سيتم استبدال جميع بياناتك الحالية. هل أنت متأكد؟',
     importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.', importError: 'خطأ: الملف غير صالح أو تالف.',
 
-    // ✅ مفاتيح الصفحات الجديدة (Notifications, Reports, Resale, Timeline)
+    // ✅ مفاتيح الصفحات الجديدة
     notifications: 'مركز التنبيهات', inbox: 'التنبيهات', reports: 'التقارير', resale: 'تقييم السيارة', timeline: 'سجل السيارة',
     unread: 'جديد', markAllRead: 'تحديد الكل كمقروء', clearAll: 'مسح الكل', noNotifications: 'لا توجد تنبيهات حالياً.',
-    monthlyExpenses: 'المصاريف الشهرية', estimatedValue: 'القيمة التقديرية', printReport: 'طباعة التقرير', shareReport: 'مشاركة التقرير'
+    monthlyExpenses: 'المصاريف الشهرية', estimatedValue: 'القيمة التقديرية', printReport: 'طباعة التقرير', shareReport: 'مشاركة التقرير',
+    
+    // ✅ مفاتيح صفحة الإعدادات الجديدة
+    preferences: 'التفضيلات الإقليمية', privacyAndSecurity: 'الخصوصية والأمان', version: 'الإصدار'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -90,7 +93,10 @@ const translations = {
     // ✅ New pages keys
     notifications: 'Notifications', inbox: 'Inbox', reports: 'Reports', resale: 'Resale Value', timeline: 'Timeline',
     unread: 'New', markAllRead: 'Mark all read', clearAll: 'Clear all', noNotifications: 'No notifications yet.',
-    monthlyExpenses: 'Monthly Expenses', estimatedValue: 'Estimated Value', printReport: 'Print Report', shareReport: 'Share Report'
+    monthlyExpenses: 'Monthly Expenses', estimatedValue: 'Estimated Value', printReport: 'Print Report', shareReport: 'Share Report',
+
+    // ✅ New settings keys
+    preferences: 'Regional Preferences', privacyAndSecurity: 'Privacy & Security', version: 'Version'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -134,7 +140,10 @@ const translations = {
     // ✅ Nouvelles pages
     notifications: 'Notifications', inbox: 'Boîte', reports: 'Rapports', resale: 'Revente', timeline: 'Historique',
     unread: 'Nouveau', markAllRead: 'Tout lire', clearAll: 'Effacer', noNotifications: 'Aucune notification.',
-    monthlyExpenses: 'Dépenses mensuelles', estimatedValue: 'Valeur estimée', printReport: 'Imprimer', shareReport: 'Partager'
+    monthlyExpenses: 'Dépenses mensuelles', estimatedValue: 'Valeur estimée', printReport: 'Imprimer', shareReport: 'Partager',
+
+    // ✅ Nouvelles clés de paramètres
+    preferences: 'Préférences Régionales', privacyAndSecurity: 'Confidentialité & Sécurité', version: 'Version'
   }
 };
 
