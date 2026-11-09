@@ -1,38 +1,67 @@
-import { useContext } from 'react'; // 1. إضافة استدعاء useContext
-import { AppContext } from '../context/AppContext'; // 2. استدعاء الـ Context
-import { Link } from 'react-router-dom';
-import { FileText, Bell, Database, Settings, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useContext } from 'react';
+import { AppContext } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Car, FileText, Bell, Settings, Info, Database, 
+  ChartPie, Clock, Tag, ShieldAlert, ChevronLeft, ChevronRight
+} from 'lucide-react';
 
 export default function More() {
-  const { t, lang } = useContext(AppContext); // 3. جلب الترجمة واللغة
+  const { t, lang } = useContext(AppContext);
+  const navigate = useNavigate();
 
-  const menuItems = [
-    { path: '/documents', icon: FileText, label: t('documents') || 'الوثائق', color: '#a78bfa' },
-    { path: '/reminders', icon: Bell, label: t('reminders') || 'التذكيرات', color: '#f59e0b' },
-    { path: '/backup', icon: Database, label: t('backup') || 'النسخ الاحتياطي', color: '#22c55e' },
-    { path: '/settings', icon: Settings, label: t('settings') || 'الإعدادات', color: '#64748b' },
-    { path: '/about', icon: Info, label: t('aboutApp') || 'حول التطبيق', color: '#3b82f6' },
-  ];
+  // دالة لتوليد زر القائمة بشكل موحد
+  const MenuRow = ({ icon: Icon, label, path, color, badge }) => (
+    <button 
+      onClick={() => navigate(path)} 
+      className="w-full flex items-center justify-between p-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-colors mb-2"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-xl bg-[var(--surface-2)] ${color}`}>
+          <Icon size={18} />
+        </div>
+        <span className="text-sm font-bold text-[var(--text)]">{label}</span>
+        {badge && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{badge}</span>}
+      </div>
+      {lang === 'ar' ? <ChevronLeft size={16} className="text-[var(--text-muted)]" /> : <ChevronRight size={16} className="text-[var(--text-muted)]" />}
+    </button>
+  );
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-[var(--text)] mb-6">{t('more') || 'المزيد'}</h1>
-      <div className="space-y-3">
-        {menuItems.map((item, index) => (
-          <Link key={index} to={item.path} className="flex items-center justify-between p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[var(--surface-2)]" style={{ color: item.color }}><item.icon size={20} /></div>
-              <span className="text-[var(--text)] font-medium">{item.label}</span>
-            </div>
-            {/* 4. تغيير اتجاه السهم حسب اللغة */}
-            {lang === 'ar' ? (
-              <ChevronLeft className="text-[var(--text-muted)]" size={20} />
-            ) : (
-              <ChevronRight className="text-[var(--text-muted)]" size={20} />
-            )}
-          </Link>
-        ))}
+    <div className="space-y-6 pb-24 px-4 pt-4 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-extrabold text-[var(--text)]">{t('more') || 'المزيد'}</h1>
+
+      {/* 1. قسم الإدارة */}
+      <div>
+        <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
+          {t('management') || 'الإدارة'}
+        </h2>
+        <MenuRow icon={Car} label={t('vehicles') || 'السيارات'} path="/vehicles" color="text-blue-500" />
+        <MenuRow icon={FileText} label={t('documents') || 'الوثائق'} path="/documents" color="text-purple-500" />
+        <MenuRow icon={Bell} label={t('reminders') || 'التذكيرات'} path="/reminders" color="text-yellow-500" />
       </div>
+
+      {/* 2. قسم التحليلات والرؤى */}
+      <div>
+        <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
+          {t('insights') || 'التحليلات'}
+        </h2>
+        <MenuRow icon={ChartPie} label={t('reports') || 'التقارير'} path="/reports" color="text-green-500" />
+        <MenuRow icon={Clock} label={t('timeline') || 'سجل السيارة'} path="/timeline" color="text-orange-500" />
+        <MenuRow icon={Tag} label={t('resale') || 'تقييم السيارة'} path="/resale" color="text-teal-500" />
+      </div>
+
+      {/* 3. قسم النظام */}
+      <div>
+        <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
+          {t('system') || 'النظام'}
+        </h2>
+        <MenuRow icon={ShieldAlert} label={t('notifications') || 'مركز التنبيهات'} path="/notifications" color="text-red-500" badge="3" />
+        <MenuRow icon={Database} label={t('backup') || 'النسخ الاحتياطي'} path="/backup" color="text-indigo-500" />
+        <MenuRow icon={Settings} label={t('settings') || 'الإعدادات'} path="/settings" color="text-slate-500" />
+        <MenuRow icon={Info} label={t('aboutApp') || 'حول التطبيق'} path="/about" color="text-sky-500" />
+      </div>
+
     </div>
   );
 }
