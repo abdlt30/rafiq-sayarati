@@ -1,15 +1,24 @@
-import Button from './Button';
+import { AlertTriangle } from 'lucide-react';
 
-export default function ConfirmModal({ isOpen, onClose, onConfirm, message }) {
+export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-dark-800 w-full max-w-sm rounded-2xl border border-dark-700 p-6 shadow-2xl text-center">
-        <p className="text-white text-lg mb-6">{message}</p>
-        <div className="flex gap-4">
-          <button onClick={onClose} className="flex-1 py-2 rounded-xl text-slate-400 bg-dark-700 hover:bg-dark-600">إلغاء</button>
-          <button onClick={onConfirm} className="flex-1 py-2 rounded-xl text-white bg-red-500 hover:bg-red-600">حذف</button>
+    <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+      <div className="bg-[var(--surface)] w-full max-w-sm rounded-3xl p-6 border border-[var(--border)] shadow-2xl text-center">
+        <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle size={32} />
+        </div>
+        <h2 className="text-xl font-bold text-[var(--text)] mb-2">{title || 'تأكيد الحذف'}</h2>
+        <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">{message}</p>
+        
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3.5 bg-[var(--surface-2)] text-[var(--text)] font-bold rounded-xl hover:bg-[var(--border)] transition-colors">
+            إلغاء
+          </button>
+          <button onClick={onConfirm} className="flex-1 py-3.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">
+            نعم، احذف
+          </button>
         </div>
       </div>
     </div>
