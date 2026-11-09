@@ -25,7 +25,6 @@ export default function Dashboard() {
     const docs = dbService.getDocuments().filter(r => r.carId === currentCar.id);
     const reminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
 
-    // الحسابات
     const totalFuel = fuel.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const totalExp = expenses.reduce((sum, r) => sum + Number(r.cost || 0), 0);
     const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost || 0), 0);
@@ -50,7 +49,6 @@ export default function Dashboard() {
     
     const costPerKm = distance > 0 ? (grandTotal / distance).toFixed(2) : 0;
 
-    // التنبيهات الذكية
     const allAlerts = [
       ...maintenance.filter(m => m.nextKm && Number(m.nextKm) > (currentCar.currentOdometer || 0)).map(m => ({ ...m, alertText: m.type, value: Number(m.nextKm), isKm: true })),
       ...reminders.map(r => ({ ...r, alertText: r.type, value: r.odometer || new Date(r.date), isKm: !!r.odometer }))
@@ -60,7 +58,6 @@ export default function Dashboard() {
         return r.value > new Date();
     }).slice(0, 2);
 
-    // آخر العمليات
     const allActivities = [
       ...fuel.map(r => ({ ...r, type: 'fuel', icon: Fuel, color: 'text-blue-500' })),
       ...expenses.map(r => ({ ...r, type: 'expense', icon: Wallet, color: 'text-purple-500' })),
@@ -83,8 +80,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 pb-24 px-4">
-      
-      {/* الشريط العلوي */}
       <div className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 transition-all">
         <div>
           <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
@@ -101,7 +96,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* بطاقة السيارة */}
       <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10 border border-[var(--hero-border)]">
         <div className="flex justify-between items-start">
           <div>
@@ -129,7 +123,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* إجراءات سريعة */}
       <div className="grid grid-cols-4 gap-2.5">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl mb-2"><Fuel size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('fuel') || 'وقود'}</span></Link>
         <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-xl mb-2"><Wallet size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('expenses') || 'مصاريف'}</span></Link>
@@ -137,7 +130,6 @@ export default function Dashboard() {
         <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-green-500/10 text-green-500 rounded-xl mb-2"><FileText size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('documents') || 'وثائق'}</span></Link>
       </div>
 
-      {/* لوحة البيانات (KPIs) */}
       <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
           <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalCost') || 'إجمالي المصاريف'}</span>
@@ -157,7 +149,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* التنبيهات */}
       {data.upcomingReminders.length > 0 && (
         <div className="bg-[var(--surface)] border border-red-500/30 rounded-2xl p-4 mt-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
@@ -180,7 +171,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* آخر العمليات */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
