@@ -3,7 +3,21 @@ import { useContext } from 'react';
 import { AppContext } from './context/AppContext';
 import Layout from './components/layout/Layout';
 
-// ... الاستيرادات السابقة
+// ✅ استيراد جميع الصفحات (تأكد من وجود Welcome هنا)
+import Welcome from './pages/Welcome';
+import Dashboard from './pages/Dashboard';
+import Fuel from './pages/Fuel';
+import Maintenance from './pages/Maintenance';
+import Expenses from './pages/Expenses';
+import More from './pages/More';
+import AddVehicle from './pages/AddVehicle';
+import Settings from './pages/Settings';
+import Documents from './pages/Documents'; 
+import Reminders from './pages/Reminders'; 
+import Backup from './pages/Backup'; 
+import Vehicles from './pages/Vehicles';
+
+// ✅ استيراد الصفحات الجديدة
 import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 import Resale from './pages/Resale';
@@ -28,9 +42,11 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
+        {/* المسارات العامة */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/add-vehicle" element={<AddVehicle />} />
         
+        {/* المسارات المحمية */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
@@ -44,7 +60,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/more" element={<More />} />
             
-            {/* ✅ المسارات الجديدة */}
+            {/* المسارات الجديدة */}
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/resale" element={<Resale />} />
@@ -52,6 +68,7 @@ export default function App() {
           </Route>
         </Route>
         
+        {/* إعادة التوجيه */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
