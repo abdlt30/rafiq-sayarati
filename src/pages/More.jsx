@@ -3,14 +3,13 @@ import { AppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { 
   Car, FileText, Bell, Settings, Info, Database, 
-  ChartPie, Clock, Tag, ShieldAlert, ChevronLeft, ChevronRight
+  PieChart, Clock, Tag, ShieldAlert, ChevronLeft, ChevronRight // ✅ تم التصحيح هنا
 } from 'lucide-react';
 
 export default function More() {
   const { t, lang } = useContext(AppContext);
   const navigate = useNavigate();
 
-  // دالة لتوليد زر القائمة بشكل موحد
   const MenuRow = ({ icon: Icon, label, path, color, badge }) => (
     <button 
       onClick={() => navigate(path)} 
@@ -31,7 +30,6 @@ export default function More() {
     <div className="space-y-6 pb-24 px-4 pt-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-extrabold text-[var(--text)]">{t('more') || 'المزيد'}</h1>
 
-      {/* 1. قسم الإدارة */}
       <div>
         <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
           {t('management') || 'الإدارة'}
@@ -41,17 +39,16 @@ export default function More() {
         <MenuRow icon={Bell} label={t('reminders') || 'التذكيرات'} path="/reminders" color="text-yellow-500" />
       </div>
 
-      {/* 2. قسم التحليلات والرؤى */}
       <div>
         <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
           {t('insights') || 'التحليلات'}
         </h2>
-        <MenuRow icon={ChartPie} label={t('reports') || 'التقارير'} path="/reports" color="text-green-500" />
+        {/* ✅ تم تغيير الأيقونة هنا أيضاً */}
+        <MenuRow icon={PieChart} label={t('reports') || 'التقارير'} path="/reports" color="text-green-500" />
         <MenuRow icon={Clock} label={t('timeline') || 'سجل السيارة'} path="/timeline" color="text-orange-500" />
         <MenuRow icon={Tag} label={t('resale') || 'تقييم السيارة'} path="/resale" color="text-teal-500" />
       </div>
 
-      {/* 3. قسم النظام */}
       <div>
         <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
           {t('system') || 'النظام'}
@@ -61,7 +58,6 @@ export default function More() {
         <MenuRow icon={Settings} label={t('settings') || 'الإعدادات'} path="/settings" color="text-slate-500" />
         <MenuRow icon={Info} label={t('aboutApp') || 'حول التطبيق'} path="/about" color="text-sky-500" />
       </div>
-
     </div>
   );
 }
