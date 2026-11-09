@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, ChartPie, BarChart3 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, PieChart, BarChart3 } from 'lucide-react'; // ✅ تم التصحيح هنا
 
 export default function Reports() {
   const { currentCar, currency, t, lang } = useContext(AppContext);
@@ -16,30 +16,26 @@ export default function Reports() {
   useEffect(() => {
     if (!currentCar) return;
     
-    // جلب البيانات
     const fuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
     const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
     const maintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
 
-    // حسابات التقارير
     const totalFuel = fuel.reduce((s, r) => s + Number(r.cost || 0), 0);
     const totalExp = expenses.reduce((s, r) => s + Number(r.cost || 0), 0);
     const totalMaint = maintenance.reduce((s, r) => s + Number(r.cost || 0), 0);
     const grandTotal = totalFuel + totalExp + totalMaint;
 
-    // التوزيع حسب النوع (للمخطط الدائري)
     const categories = [
       { label: t('fuel') || 'وقود', value: totalFuel, color: '#3b82f6' },
       { label: t('maintenance') || 'صيانة', value: totalMaint, color: '#f59e0b' },
       { label: t('expenses') || 'مصاريف', value: totalExp, color: '#a855f7' }
     ].filter(c => c.value > 0);
 
-    // مصاريف آخر 6 أشهر (للمخطط الشريطي)
     const monthlyData = [];
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthKey = d.toISOString().slice(0, 7); // YYYY-MM
+      const monthKey = d.toISOString().slice(0, 7);
       
       const mFuel = fuel.filter(r => r.date && r.date.startsWith(monthKey)).reduce((s, r) => s + Number(r.cost || 0), 0);
       const mExp = expenses.filter(r => r.date && r.date.startsWith(monthKey)).reduce((s, r) => s + Number(r.cost || 0), 0);
@@ -51,13 +47,11 @@ export default function Reports() {
       });
     }
 
-    // حساب مصاريف الشهر الحالي
     const currentMonth = monthlyData[monthlyData.length - 1].value;
 
     setData({ total: grandTotal, monthly: currentMonth, categories, monthlyData });
   }, [currentCar, t, lang]);
 
-  // دالة رسم المخطط الدائري (Donut)
   const renderDonut = () => {
     const total = data.categories.reduce((s, c) => s + c.value, 0);
     if (total === 0) return <p className="text-center text-xs text-[var(--text-muted)]">{t('noData') || 'لا توجد بيانات'}</p>;
@@ -99,7 +93,6 @@ export default function Reports() {
     );
   };
 
-  // دالة رسم المخطط الشريطي (Bar)
   const renderBars = () => {
     const max = Math.max(...data.monthlyData.map(d => d.value), 1);
     return (
@@ -138,7 +131,7 @@ export default function Reports() {
 
       <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm mt-4">
         <div className="flex items-center gap-2 mb-6 text-[var(--text)]">
-          <ChartPie size={18} className="text-[var(--primary)]" />
+          <PieChart size={18} className="text-[var(--primary)]" /> {/* ✅ تم التصحيح هنا */}
           <h2 className="font-bold text-sm">{t('distributionByType') || 'توزيع المصاريف'}</h2>
         </div>
         {renderDonut()}
