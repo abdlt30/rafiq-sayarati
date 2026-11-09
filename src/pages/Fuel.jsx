@@ -13,17 +13,17 @@ export default function Fuel() {
   const [deleteId, setDeleteId] = useState(null); 
   const [formData, setFormData] = useState({ date: '', odometer: '', liters: '', cost: '' });
 
+  // 1. جلب البيانات عند تحميل الصفحة أو تغيير السيارة
   useEffect(() => {
     if (currentCar) {
-      // ✅ تحسين: استخدام Optional Chaining لتجنب الأخطاء إذا كانت الدالة ترجع null
       const allFuel = dbService.getFuel()?.filter(r => r.carId === currentCar.id) || [];
       setRecords(allFuel.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } else {
-      setRecords([]); // تصفير السجلات إذا لم تكن هناك سيارة محددة
+      setRecords([]); 
     }
   }, [currentCar]);
 
-  // ✅ حساب الاستهلاك L/100km
+  // 2. حساب الاستهلاك L/100km
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
     const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
@@ -42,53 +42,67 @@ export default function Fuel() {
     return calculated.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [records]);
 
+  // 3. دالة الحفظ (تم إصلاحها لضمان تحديث الواجهة)
   const handleSave = (e) => {
     e.preventDefault();
-    if (!currentCar) return; // ✅ حماية إضافية
+    if (!currentCar) {
+      alert("الرجاء اختيار سيارة أولاً"); // حماية إضافية
+      return; 
+    }
     
+    // تجهيز البيانات بأرقام صحيحة
     const data = { 
       carId: currentCar.id, 
-      ...formData, 
+      date: formData.date,
       odometer: Number(formData.odometer), 
       liters: Number(formData.liters), 
       cost: Number(formData.cost) 
     };
     
-    if (editingId) {
-      const updated = dbService.updateFuel(editingId, data);
-      setRecords(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    } else {
-      const newRecord = dbService.addFuel(data);
-      if (newRecord) setRecords([newRecord, ...records].sort((a, b) => new Date(b.date) - new Date(a.date)));
+    try {
+      if (editingId) {
+        dbService.updateFuel(editingId, data);
+      } else {
+        dbService.addFuel(data);
+      }
+      
+      // ✅ الحل الجذري: إعادة جلب البيانات من الداتابيز لضمان ظهورها في الواجهة فوراً
+      const updatedRecords = dbService.getFuel()?.filter(r => r.carId === currentCar.id) || [];
+      setRecords(updatedRecords.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      
+      closeModal();
+    } catch (error) {
+      console.error("خطأ أثناء حفظ البيانات:", error);
+      alert("حدث خطأ أثناء الحفظ. تأكد من المدخلات.");
     }
-    closeModal();
   };
 
+  // 4. دالة الحذف
   const handleDelete = () => {
     if(deleteId) {
       const updated = dbService.deleteFuel(deleteId);
       setRecords(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
-      setDeleteId(null); // إغلاق النافذة وتصفير الحالة
+      setDeleteId(null); 
     }
   };
 
+  // 5. فتح نافذة التعديل
   const openEdit = (record) => {
     setEditingId(record.id);
     setFormData({ date: record.date, odometer: record.odometer, liters: record.liters, cost: record.cost });
     setIsModalOpen(true);
   };
 
+  // 6. إغلاق النافذة وتصفير الحقول
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
     setFormData({ date: '', odometer: '', liters: '', cost: '' });
   };
 
-  // ... (باقي كود الـ JSX كما هو، لا يوجد به أخطاء)
-  
   return (
-    // ... كود الواجهة الخاص بك (نفسه تماماً، ممتاز)
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
+      
       {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('fuel') || 'سجل الوقود'}</h1>
@@ -106,6 +120,7 @@ export default function Fuel() {
         <div className="space-y-2">
           {recordsWithConsumption.map(record => (
             <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-xl flex items-center justify-between shadow-sm hover:border-blue-500/30 transition-colors">
+              
               {/* البيانات الأساسية */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
@@ -139,6 +154,7 @@ export default function Fuel() {
                   <button onClick={() => setDeleteId(record.id)} className="text-red-500 bg-red-500/10 p-1.5 rounded-md hover:bg-red-500/20"><Trash2 size={14} /></button>
                 </div>
               </div>
+
             </div>
           ))}
         </div>
@@ -152,7 +168,7 @@ export default function Fuel() {
         <Plus size={28} />
       </button>
 
-      {/* نافذة الحذف الاحترافية */}
+      {/* نافذة الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
@@ -161,10 +177,40 @@ export default function Fuel() {
         message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف سجل الوقود هذا؟ لا يمكن التراجع عن هذا الإجراء.'}
       />
 
-      {/* نافذة الإضافة/التعديل (كما هي في كودك) */}
+      {/* ✅ نافذة الإضافة/التعديل (تم إعادة كتابتها بالكامل هنا) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-           {/* ... محتوى النموذج الخاص بك ... */}
+          <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
+              <X size={20} />
+            </button>
+            <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
+              {editingId ? (t('edit') || 'تعديل') : (t('addFuel') || 'إضافة تعبئة')}
+            </h2>
+            
+            <div className="space-y-3 overflow-y-auto pb-2">
+              <div>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
+                <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد'} (KM)</label>
+                <input type="number" required placeholder="0" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('liters') || 'اللترات'}</label>
+                <input type="number" step="0.01" required placeholder="0.00" value={formData.liters} onChange={e => setFormData({...formData, liters: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
+                <input type="number" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+              </div>
+            </div>
+            
+            <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex-shrink-0">
+              {t('save') || 'حفظ'}
+            </button>
+          </form>
         </div>
       )}
     </div>
