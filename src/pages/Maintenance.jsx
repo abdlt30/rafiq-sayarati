@@ -2,8 +2,8 @@ import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2 } from 'lucide-react';
-import ConfirmModal from '../components/ui/ConfirmModal'; // تأكد من وجوده
-import OptionPicker from '../components/ui/OptionPicker'; // تأكد من وجوده
+import ConfirmModal from '../components/ui/ConfirmModal'; 
+import OptionPicker from '../components/ui/OptionPicker'; 
 
 export default function Maintenance() {
   const { currentCar, t, currency, lang } = useContext(AppContext);
@@ -30,14 +30,23 @@ export default function Maintenance() {
     ...customTypes.map(ct => ({ value: ct, label: ct }))
   ];
 
-  const sortRecords = (data) => [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+  // ✅ دالة مركزية لجلب البيانات لضمان التحديث الفوري للواجهة
+  const loadData = () => {
+    if (currentCar) {
+      const allMaintenance = dbService.getMaintenance() || [];
+      const carMaintenance = allMaintenance.filter(r => r.carId === currentCar.id);
+      setRecords(carMaintenance.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      
+      const types = dbService.getCustomTypes() || [];
+      setCustomTypes(types);
+    } else {
+      setRecords([]);
+      setCustomTypes([]);
+    }
+  };
 
   useEffect(() => {
-    if (currentCar) {
-      const carMaintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
-      setRecords(sortRecords(carMaintenance));
-      setCustomTypes(dbService.getCustomTypes());
-    }
+    loadData();
   }, [currentCar]);
 
   const handleAddCustomType = () => {
@@ -51,30 +60,45 @@ export default function Maintenance() {
 
   const handleSave = (e) => {
     e.preventDefault();
-    const data = { carId: currentCar.id, ...formData, cost: Number(formData.cost), nextKm: Number(formData.nextKm) || null };
-    
-    if (editingId) {
-      const updated = dbService.updateMaintenance(editingId, data);
-      setRecords(sortRecords(updated));
-    } else {
-      const newRecord = dbService.addMaintenance(data);
-      if (newRecord) setRecords(sortRecords([newRecord, ...records]));
+    if (!currentCar) return;
+
+    try {
+      const data = { 
+        carId: currentCar.id, 
+        date: formData.date,
+        type: formData.type,
+        cost: Number(formData.cost), 
+        nextKm: Number(formData.nextKm) || null 
+      };
+      
+      if (editingId) {
+        dbService.updateMaintenance(editingId, data);
+      } else {
+        dbService.addMaintenance(data);
+      }
+      
+      loadData(); // ✅ إعادة جلب البيانات لضمان التحديث الفوري
+      closeModal();
+    } catch (error) {
+      console.error("خطأ في حفظ الصيانة:", error);
+      alert("حدث خطأ أثناء الحفظ.");
     }
-    closeModal();
   };
 
   const handleDelete = () => {
     if(deleteId) {
-      const updated = dbService.deleteMaintenance(deleteId);
-      setRecords(sortRecords(updated));
+      dbService.deleteMaintenance(deleteId);
+      loadData(); // ✅ إعادة جلب البيانات بعد الحذف
       setDeleteId(null);
     }
   };
 
   const openEdit = (record) => {
     setEditingId(record.id);
+    // خريطة ذكية للتعامل مع البيانات القديمة التي قد تكون محفوظة بالعربية
     const typeKeyMap = { 'تغيير زيت': 'oilChange', 'إطارات': 'tires', 'فرامل': 'brakes', 'بطارية': 'battery', 'فلتر هواء': 'airFilter', 'فحص شامل': 'fullInspection', 'أخرى': 'other' };
     const typeKey = typeKeyMap[record.type] || record.type;
+    
     setFormData({ date: record.date, type: typeKey, cost: record.cost, nextKm: record.nextKm || '' });
     setIsModalOpen(true);
   };
@@ -87,10 +111,13 @@ export default function Maintenance() {
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
+      
+      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('maintenance') || 'الصيانة'}</h1>
       </div>
 
+      {/* قائمة السجلات */}
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
@@ -109,7 +136,8 @@ export default function Maintenance() {
                 </div>
                 <div>
                   <p className="font-bold text-[var(--text)] text-sm">
-                    {t(record.type) !== record.type ? t(record.type) : record.type}
+                    {/* عرض الترجمة الصحيحة للنوع */}
+                    {defaultTypes.find(dt => dt.value === record.type)?.label || record.type}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date}</p>
                 </div>
@@ -140,14 +168,15 @@ export default function Maintenance() {
         </div>
       )}
 
-      {/* ✅ الزر العائم (تم تصحيح كلاس rtl) */}
+      {/* الزر العائم (FAB) */}
       <button 
         onClick={() => setIsModalOpen(true)} 
-        className={`fixed bottom-24 ${lang === 'ar' ? 'left-6' : 'right-6'} w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 transition-transform z-40`}
+        className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 transition-transform z-40"
       >
         <Plus size={28} />
       </button>
 
+      {/* نافذة الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
@@ -156,10 +185,11 @@ export default function Maintenance() {
         message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف سجل الصيانة هذا؟ لا يمكن التراجع عن هذا الإجراء.'}
       />
 
+      {/* نافذة الإضافة/التعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
-            <button type="button" onClick={closeModal} className={`absolute top-4 ${lang === 'ar' ? 'left-4' : 'right-4'} p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10`}>
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
               <X size={20} />
             </button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
