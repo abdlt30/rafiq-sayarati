@@ -15,7 +15,8 @@ export const notificationService = {
     if (!currentCar) return [];
     
     const alerts = [];
-    const currentOdo = Number(currentCar.currentOdometer) || 0;
+    // ✅ إصلاح 1: استخدام odometer بدلاً من currentOdometer
+    const currentOdo = Number(currentCar.odometer) || 0;
 
     // 1. فحص تنبيهات الصيانة (بناءً على العداد أو التاريخ)
     const maintenance = dbService.getMaintenance().filter(m => m.carId === currentCar.id);
@@ -25,7 +26,9 @@ export const notificationService = {
         const kmLeft = Number(m.nextKm) - currentOdo;
         if (kmLeft <= 500 && kmLeft > 0) {
           alerts.push({
-            id: `mnt_km_${m.id}`,
+            id: `mnt_km_${m.id}`, // معرف فريد للتنبيه
+            recordId: m.id,       // ✅ إصلاح 2: معرف السجل الأصلي
+            nextKm: m.nextKm,     // ✅ إصلاح 2: تمرير العداد المستهدف
             type: 'maintenance',
             severity: kmLeft <= 100 ? 'critical' : 'warning',
             title: t(m.type) || m.type,
@@ -38,6 +41,8 @@ export const notificationService = {
          // متأخر عن العداد
          alerts.push({
             id: `mnt_km_late_${m.id}`,
+            recordId: m.id,       // ✅
+            nextKm: m.nextKm,     // ✅
             type: 'maintenance',
             severity: 'critical',
             title: t(m.type) || m.type,
@@ -53,6 +58,7 @@ export const notificationService = {
         if (daysLeft <= 7 && daysLeft > 0) {
            alerts.push({
             id: `mnt_date_${m.id}`,
+            recordId: m.id, // ✅
             type: 'maintenance',
             severity: 'warning',
             title: t(m.type) || m.type,
@@ -63,6 +69,7 @@ export const notificationService = {
         } else if (daysLeft <= 0) {
            alerts.push({
             id: `mnt_date_late_${m.id}`,
+            recordId: m.id, // ✅
             type: 'maintenance',
             severity: 'critical',
             title: t(m.type) || m.type,
@@ -85,8 +92,8 @@ export const notificationService = {
           severity: daysLeft <= 7 ? 'critical' : 'warning',
           title: t(d.type) || d.type,
           desc: daysLeft < 0 
-            ? (lang === 'ar' ? `منتهية منذ ${Math.abs(daysLeft)} يوم` : `Expired ${Math.abs(daysLeft)} days ago`)
-            : (lang === 'ar' ? `تنتهي خلال ${daysLeft} يوم` : `Expires in ${daysLeft} days`),
+            ? (lang === 'ar' ? `منتهية منذ ${Math.abs(daysLeft)} يوم` : lang === 'fr' ? `Expiré depuis ${Math.abs(daysLeft)} jours` : `Expired ${Math.abs(daysLeft)} days ago`)
+            : (lang === 'ar' ? `تنتهي خلال ${daysLeft} يوم` : lang === 'fr' ? `Expire dans ${daysLeft} jours` : `Expires in ${daysLeft} days`),
           date: d.endDate,
           link: '/documents'
         });
@@ -104,8 +111,8 @@ export const notificationService = {
           severity: daysLeft <= 3 ? 'critical' : 'warning',
           title: t(r.type) || r.title || r.type,
           desc: daysLeft < 0 
-            ? (lang === 'ar' ? `متأخر بـ ${Math.abs(daysLeft)} يوم` : `Overdue by ${Math.abs(daysLeft)} days`)
-            : (lang === 'ar' ? `بعد ${daysLeft} يوم` : `In ${daysLeft} days`),
+            ? (lang === 'ar' ? `متأخر بـ ${Math.abs(daysLeft)} يوم` : lang === 'fr' ? `En retard de ${Math.abs(daysLeft)} jours` : `Overdue by ${Math.abs(daysLeft)} days`)
+            : (lang === 'ar' ? `بعد ${daysLeft} يوم` : lang === 'fr' ? `Dans ${daysLeft} jours` : `In ${daysLeft} days`),
           date: r.date,
           link: '/reminders'
         });
@@ -123,7 +130,7 @@ export const notificationService = {
             type: 'fuel',
             severity: 'info',
             title: t('fuel') || 'الوقود',
-            desc: lang === 'ar' ? `لم تسجل تعبئة وقود منذ ${daysSinceFuel} يوم` : `No fuel logged for ${daysSinceFuel} days`,
+            desc: lang === 'ar' ? `لم تسجل تعبئة وقود منذ ${daysSinceFuel} يوم` : lang === 'fr' ? `Pas de carburant enregistré depuis ${daysSinceFuel} jours` : `No fuel logged for ${daysSinceFuel} days`,
             date: latestFuel.date,
             link: '/fuel'
           });
