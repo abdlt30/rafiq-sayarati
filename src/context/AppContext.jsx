@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
-import { dbService } from '../services/dbService'; // ✅ ضروري لحذف بيانات السيارة المرتبطة
+import { dbService } from '../services/dbService'; 
 
 export const AppContext = createContext();
 
@@ -57,7 +57,20 @@ const translations = {
     currency_EGP: 'جنيه مصري', currency_QAR: 'ريال قطري', currency_KWD: 'دينار كويتي', 
     currency_BHD: 'دينار بحريني', currency_OMR: 'ريال عماني', currency_JOD: 'دينار أردني', 
     currency_DZD: 'دينار جزائري', currency_TND: 'دينار تونسي', currency_LYD: 'دينار ليبي', 
-    currency_USD: 'دولار أمريكي', currency_EUR: 'يورو'
+    currency_USD: 'دولار أمريكي', currency_EUR: 'يورو',
+
+    // ✅ مفاتيح الإيرادات (جديد)
+    income: 'الإيرادات',
+    totalIncome: 'إجمالي الإيرادات',
+    noIncome: 'لا توجد إيرادات مسجلة.',
+    incomeType: 'نوع الإيراد',
+    rideIncome: 'رحلات / توصيل',
+    rentalIncome: 'تأجير السيارة',
+    deliveryIncome: 'توصيل طرود',
+    otherIncome: 'إيراد آخر',
+    netProfit: 'صافي الربح',
+    saveIncome: 'حفظ الإيراد',
+    notes: 'ملاحظات'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -111,7 +124,20 @@ const translations = {
     currency_EGP: 'Egyptian Pound', currency_QAR: 'Qatari Riyal', currency_KWD: 'Kuwaiti Dinar', 
     currency_BHD: 'Bahraini Dinar', currency_OMR: 'Omani Rial', currency_JOD: 'Jordanian Dinar', 
     currency_DZD: 'Algerian Dinar', currency_TND: 'Tunisian Dinar', currency_LYD: 'Libyan Dinar', 
-    currency_USD: 'US Dollar', currency_EUR: 'Euro'
+    currency_USD: 'US Dollar', currency_EUR: 'Euro',
+
+    // ✅ Income Keys (New)
+    income: 'Income',
+    totalIncome: 'Total Income',
+    noIncome: 'No income recorded.',
+    incomeType: 'Income Type',
+    rideIncome: 'Rides / Delivery',
+    rentalIncome: 'Car Rental',
+    deliveryIncome: 'Package Delivery',
+    otherIncome: 'Other Income',
+    netProfit: 'Net Profit',
+    saveIncome: 'Save Income',
+    notes: 'Notes'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -165,13 +191,25 @@ const translations = {
     currency_EGP: 'Livre Égyptienne', currency_QAR: 'Riyal Qatari', currency_KWD: 'Dinar Koweïtien', 
     currency_BHD: 'Dinar Bahreïni', currency_OMR: 'Rial Omani', currency_JOD: 'Dinar Jordanien', 
     currency_DZD: 'Dinar Algérien', currency_TND: 'Dinar Tunisien', currency_LYD: 'Dinar Libyen', 
-    currency_USD: 'Dollar Américain', currency_EUR: 'Euro'
+    currency_USD: 'Dollar Américain', currency_EUR: 'Euro',
+
+    // ✅ Clés de Revenus (Nouveau)
+    income: 'Revenus',
+    totalIncome: 'Revenu Total',
+    noIncome: 'Aucun revenu enregistré.',
+    incomeType: 'Type de Revenu',
+    rideIncome: 'Courses / Livraison',
+    rentalIncome: 'Location de Voiture',
+    deliveryIncome: 'Livraison de Colis',
+    otherIncome: 'Autre Revenu',
+    netProfit: 'Bénéfice Net',
+    saveIncome: 'Enregistrer le Revenu',
+    notes: 'Remarques'
   }
 };
 
 export const AppProvider = ({ children }) => {
   
-  // ✅ 1. إضافة حالة المستخدم (user) لحفظ الاسم
   const [user, setUserState] = useState(() => {
     try {
       const savedName = localStorage.getItem('user_name');
@@ -237,7 +275,6 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // ✅ 2. إصلاح دالة التحديث لتستقبل (carId, updatedData) وتتوافق مع الداشبورد
   const updateCar = (carId, updatedData) => {
     try {
       const updatedVehicles = vehicles.map(v => v.id === carId ? { ...v, ...updatedData } : v);
@@ -255,11 +292,10 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // ✅ 3. إصلاح دالة الحذف لحذف البيانات المرتبطة (وقود، صيانة...) لتوفير المساحة
   const deleteCar = (id) => {
     try {
       if (dbService && dbService.deleteCarData) {
-        dbService.deleteCarData(id); // حذف البيانات المرتبطة
+        dbService.deleteCarData(id); 
       }
 
       const updatedVehicles = vehicles.filter(v => v.id !== id);
@@ -287,7 +323,6 @@ export const AppProvider = ({ children }) => {
 
   const t = (key) => translations[lang]?.[key] || key;
 
-  // ✅ 4. تصدير user و setUser لباقي التطبيق
   return (
     <AppContext.Provider value={{ 
       currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, 
