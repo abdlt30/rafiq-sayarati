@@ -5,8 +5,8 @@ import { notificationService } from '../services/notificationService';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
-  ChevronLeft, Pencil, Check, X, Bell, Settings, AlertTriangle, Activity, ShieldAlert, TrendingUp
-} from 'lucide-react'; // ✅ إضافة TrendingUp للإيرادات
+  ChevronLeft, Pencil, Check, X, Bell, Settings, AlertTriangle, Activity, ShieldAlert, TrendingUp, CheckCircle
+} from 'lucide-react'; 
 
 export default function Dashboard() {
   const { currentCar, updateCar, t, currency, user, lang } = useContext(AppContext);
@@ -16,7 +16,6 @@ export default function Dashboard() {
 
   const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
 
-  // ✅ 1. إصلاح: إضافة income و net للقيم الافتراضية لمنع انهيار التطبيق
   const totals = useMemo(() => {
     if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
     return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
@@ -53,14 +52,12 @@ export default function Dashboard() {
     }
   }, [currentCar, t, lang]);
 
-  // ✅ 2. إصلاح: إضافة الإيرادات إلى "آخر العمليات"
   const recentActivity = useMemo(() => {
     if (!currentCar) return [];
     const fuel = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: 'fuel' }));
     const maintenance = (dbService.getMaintenance() || []).filter(m => m.carId === currentCar.id).map(m => ({ ...m, type: 'maintenance' }));
     const expenses = (dbService.getExpenses() || []).filter(e => e.carId === currentCar.id).map(e => ({ ...e, type: 'expense' }));
     
-    // جلب الإيرادات وتوحيد اسم المبلغ إلى cost ليعمل مع الواجهة
     const incomes = (dbService.getIncomes() || [])
       .filter(i => i.carId === currentCar.id)
       .map(i => ({ ...i, type: 'income', cost: i.amount })); 
@@ -78,6 +75,22 @@ export default function Dashboard() {
     if (newOdo && Number(newOdo) >= 0) {
       updateCar(currentCar.id, { odometer: Number(newOdo) }); 
       setIsEditingOdo(false);
+    }
+  };
+
+  // ✅ دالة الإنجاز السريع للتنبيهات
+  const handleQuickDone = (e, alert) => {
+    e.preventDefault(); 
+    e.stopPropagation();
+
+    if (alert.nextKm) {
+      // 1. تحديث عداد السيارة إلى العداد المستهدف
+      updateCar(currentCar.id, { odometer: Number(alert.nextKm) });
+      
+      // 2. حذف سجل الصيانة
+      if (alert.recordId) {
+         dbService.deleteMaintenance(alert.recordId);
+      }
     }
   };
 
@@ -136,49 +149,66 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* التنبيهات الهامة */}
+      {/* ✅ التنبيهات الهامة (مع إصلاح بنية HTML وإضافة زر الإنجاز) */}
       {criticalAlerts.length > 0 && (
         <div className="space-y-2 animate-fade-in">
           <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">تنبيهات تحتاج انتباهك</h3>
           {criticalAlerts.map((alert, idx) => (
-            <Link key={idx} to={alert.link} className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all hover:scale-[1.01] ${alert.severity === 'critical' ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]'}`}>
-              <div className={`p-2 rounded-xl ${alert.severity === 'critical' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
-                {alert.severity === 'critical' ? <AlertTriangle size={18} /> : <ShieldAlert size={18} />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold truncate">{alert.title}</p>
-                <p className="text-[11px] opacity-80 truncate mt-0.5">{alert.desc}</p>
-              </div>
-              <ChevronLeft size={16} className="flex-shrink-0 opacity-50" />
-            </Link>
+            <div key={idx} className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${alert.severity === 'critical' ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]'}`}>
+              
+              {/* محتوى التنبيه (قابل للنقر) */}
+              <Link to={alert.link} className="flex-1 flex items-center gap-3 min-w-0">
+                <div className={`p-2 rounded-xl ${alert.severity === 'critical' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                  {alert.severity === 'critical' ? <AlertTriangle size={18} /> : <ShieldAlert size={18} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{alert.title}</p>
+                  <p className="text-[11px] opacity-80 truncate mt-0.5">{alert.desc}</p>
+                </div>
+              </Link>
+              
+              {/* زر الإنجاز السريع (يظهر فقط لتنبيهات الصيانة) */}
+              {alert.nextKm ? (
+                <button 
+                  onClick={(e) => handleQuickDone(e, alert)}
+                  className="bg-green-500 text-white p-2 rounded-xl shadow-lg hover:bg-green-600 active:scale-90 transition-all flex flex-col items-center justify-center gap-0.5 flex-shrink-0"
+                >
+                  <CheckCircle size={16} />
+                  <span className="text-[9px] font-bold">إنجاز</span>
+                </button>
+              ) : (
+                <Link to={alert.link} className="p-2 flex-shrink-0">
+                  <ChevronLeft size={16} className="opacity-50" />
+                </Link>
+              )}
+            </div>
           ))}
         </div>
       )}
 
       {/* الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-4">
-        <Link to="/fuel" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 transition-colors">
+        <Link to="/fuel" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all">
           <div className="p-1.5 sm:p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1 sm:mb-2"><Fuel size={18} /></div>
           <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">وقود</span>
         </Link>
-        <Link to="/maintenance" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 transition-colors">
+        <Link to="/maintenance" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 active:scale-95 transition-all">
           <div className="p-1.5 sm:p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-1 sm:mb-2"><Wrench size={18} /></div>
           <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">صيانة</span>
         </Link>
-        <Link to="/expenses" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 transition-colors">
+        <Link to="/expenses" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all">
           <div className="p-1.5 sm:p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-1 sm:mb-2"><Wallet size={18} /></div>
           <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">مصاريف</span>
         </Link>
-        <Link to="/documents" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 transition-colors">
+        <Link to="/documents" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all">
           <div className="p-1.5 sm:p-2 bg-green-500/10 text-green-500 rounded-lg mb-1 sm:mb-2"><FileText size={18} /></div>
           <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">وثائق</span>
         </Link>
       </div>
 
-      {/* ✅ 3. بطاقات الإحصائيات (مع إضافة الإيرادات وصافي الربح) */}
+      {/* بطاقات الإحصائيات */}
       <div className="grid grid-cols-2 gap-3 mt-4">
         
-        {/* إجمالي الإيرادات */}
         <div className="bg-[var(--surface)] border border-green-500/20 p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي الإيرادات</p>
           <p className="text-lg sm:text-xl font-extrabold text-green-500 truncate">
@@ -186,7 +216,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* إجمالي المصاريف */}
         <div className="bg-[var(--surface)] border border-red-500/20 p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
           <p className="text-lg sm:text-xl font-extrabold text-red-500 truncate">
@@ -194,7 +223,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* صافي الربح (بطاقة عريضة) */}
         <div className={`col-span-2 border p-3 sm:p-4 rounded-2xl flex justify-between items-center ${totals.net >= 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
             <div>
                 <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">صافي الربح</p>
@@ -205,13 +233,13 @@ export default function Dashboard() {
             <TrendingUp size={32} className={totals.net >= 0 ? 'text-green-500/20' : 'text-red-500/20'} />
         </div>
 
-        {/* عداد السيارة */}
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">عداد السيارة</p>
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1">
               <input 
                 type="number" 
+                inputMode="numeric" // ✅ إضافة لوحة المفاتيح الرقمية
                 value={newOdo} 
                 onChange={(e) => setNewOdo(e.target.value)}
                 placeholder={currentCar.odometer || 0}
@@ -236,7 +264,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* متوسط الاستهلاك */}
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
             <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">متوسط الاستهلاك</p>
             <p className="text-lg sm:text-xl font-extrabold text-yellow-500 flex items-center gap-1">
@@ -259,7 +286,6 @@ export default function Dashboard() {
              <div className="p-6 text-center text-xs text-[var(--text-muted)]">لا توجد عمليات مسجلة بعد.</div>
           ) : (
             recentActivity.map((activity, index) => {
-              // ✅ إضافة التعامل مع الإيرادات في القائمة
               const isFuel = activity.type === 'fuel';
               const isMaint = activity.type === 'maintenance';
               const isIncome = activity.type === 'income';
