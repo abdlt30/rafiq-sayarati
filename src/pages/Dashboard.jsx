@@ -5,7 +5,7 @@ import { notificationService } from '../services/notificationService';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
-  ChevronLeft, Pencil, Check, X, Bell, Settings, AlertTriangle, Activity
+  ChevronLeft, Pencil, Check, X, Bell, Settings, AlertTriangle, Activity, ShieldAlert
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -14,16 +14,14 @@ export default function Dashboard() {
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  const userName = user?.name || user?.username || 'عزيزي'; 
+  // ✅ إصلاح الترحيب: إذا لم يكن هناك اسم، نستخدم "مرحباً بك"
+  const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
 
-  // 1. حساب الإحصائيات (محمي ضد القيم الفارغة)
   const totals = useMemo(() => {
     if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
-    const data = dbService.getTotals(currentCar.id);
-    return data || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
+    return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
   }, [currentCar]);
 
-  // 2. حساب متوسط استهلاك الوقود (محمي ضد القسمة على صفر)
   const avgConsumption = useMemo(() => {
     if (!currentCar) return 0;
     const fuelRecords = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id);
@@ -45,19 +43,17 @@ export default function Dashboard() {
     return isNaN(result) || !isFinite(result) ? 0 : result.toFixed(1);
   }, [currentCar]);
 
-  // 3. جلب التنبيهات (محمي ضد انهيار notificationService)
+  // ✅ جلب جميع التنبيهات الهامة (وثائق، صيانة، زيت)
   const criticalAlerts = useMemo(() => {
     if (!currentCar) return [];
     try {
       const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
-      return (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 2);
+      return (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 3); // عرض 3 تنبيهات كحد أقصى
     } catch (e) {
-      console.error("Alert error:", e);
       return [];
     }
   }, [currentCar, t, lang]);
 
-  // 4. جلب آخر العمليات (محمي ضد التواريخ الخاطئة)
   const recentActivity = useMemo(() => {
     if (!currentCar) return [];
     const fuel = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: 'fuel' }));
@@ -73,7 +69,6 @@ export default function Dashboard() {
 
   const today = new Date().toLocaleDateString(lang === 'ar' ? 'ar-MA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // 5. دالة تحديث العداد (تم تصحيحها لتتوافق مع AppContext)
   const handleSaveOdometer = () => {
     if (newOdo && Number(newOdo) >= 0) {
       updateCar(currentCar.id, { odometer: Number(newOdo) }); 
@@ -88,7 +83,7 @@ export default function Dashboard() {
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-extrabold text-[var(--text)] truncate">
-            مرحباً، {userName} 👋
+            {greeting}
           </h1>
           <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
         </div>
@@ -136,15 +131,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* التنبيهات الهامة */}
+      {/* ✅ التنبيهات الهامة (تظهر بشكل احترافي) */}
       {criticalAlerts.length > 0 && (
         <div className="space-y-2 animate-fade-in">
+          <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">تنبيهات تحتاج انتباهك</h3>
           {criticalAlerts.map((alert, idx) => (
-            <Link key={idx} to={alert.link} className={`flex items-center gap-3 p-3 rounded-xl border ${alert.severity === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'}`}>
-              <AlertTriangle size={18} className="flex-shrink-0" />
+            <Link key={idx} to={alert.link} className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all hover:scale-[1.01] ${alert.severity === 'critical' ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]'}`}>
+              <div className={`p-2 rounded-xl ${alert.severity === 'critical' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                {alert.severity === 'critical' ? <AlertTriangle size={18} /> : <ShieldAlert size={18} />}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold truncate">{alert.title}</p>
-                <p className="text-[10px] opacity-80 truncate mt-0.5">{alert.desc}</p>
+                <p className="text-sm font-bold truncate">{alert.title}</p>
+                <p className="text-[11px] opacity-80 truncate mt-0.5">{alert.desc}</p>
               </div>
               <ChevronLeft size={16} className="flex-shrink-0 opacity-50" />
             </Link>
@@ -153,7 +151,7 @@ export default function Dashboard() {
       )}
 
       {/* الإجراءات السريعة */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-4">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 transition-colors">
           <div className="p-1.5 sm:p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1 sm:mb-2"><Fuel size={18} /></div>
           <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">وقود</span>
@@ -173,7 +171,7 @@ export default function Dashboard() {
       </div>
 
       {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
           <p className="text-lg sm:text-xl font-extrabold text-[var(--text)] truncate">
@@ -224,7 +222,7 @@ export default function Dashboard() {
 
       {/* آخر العمليات */}
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center mb-3 mt-4">
           <h3 className="font-bold text-[var(--text)] text-sm">آخر العمليات</h3>
           <Link to="/timeline" className="text-xs text-[var(--primary)] font-bold flex items-center">
             عرض الكل <ChevronLeft size={14} />
