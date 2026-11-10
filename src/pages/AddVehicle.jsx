@@ -13,21 +13,30 @@ export default function AddVehicle() {
   const editId = searchParams.get('id');
   const isEditing = Boolean(editId);
 
+  // ✅ إصلاح 1: توحيد اسم العداد ليكون odometer (مثل باقي التطبيق)
   const [car, setCar] = useState({ 
-    make: '', model: '', plate: '', currentOdometer: '', 
+    make: '', model: '', plate: '', odometer: '', 
     year: '', color: '', image: '' 
   });
+
+  const [isSaving, setIsSaving] = useState(false); // ✅ حماية من النقر المزدوج
 
   useEffect(() => {
     if (isEditing && vehicles.length > 0) {
       const carToEdit = vehicles.find(v => String(v.id) === String(editId));
-      if (carToEdit) setCar(carToEdit);
+      if (carToEdit) {
+        // نضمن قراءة العداد سواء كان مسماه القديم أو الجديد
+        setCar({
+          ...carToEdit,
+          odometer: carToEdit.odometer || carToEdit.currentOdometer || ''
+        });
+      }
     }
   }, [isEditing, editId, vehicles]);
 
-  // دالة ضغط الصورة (هندسة عالية المستوى)
+  // ✅ دالة ضغط الصورة (أمنية وممتازة جداً)
   const compressImage = (file, maxWidth = 600, maxHeight = 600) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
@@ -53,32 +62,44 @@ export default function AddVehicle() {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          // جودة 0.7 تضمن حجم صغير جداً وصورة واضحة
           resolve(canvas.toDataURL('image/jpeg', 0.7)); 
         };
+        img.onerror = (error) => reject(error);
       };
+      reader.onerror = (error) => reject(error);
     });
   };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const compressedBase64 = await compressImage(file);
-      setCar({ ...car, image: compressedBase64 });
+      try {
+        const compressedBase64 = await compressImage(file);
+        setCar({ ...car, image: compressedBase64 });
+      } catch (error) {
+        alert("حدث خطأ أثناء معالجة الصورة. يرجى اختيار صورة أخرى.");
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if(!car.make || !car.model || !car.currentOdometer) {
+    if(!car.make || !car.model || !car.odometer) {
       return alert(t('fillRequiredFields') || 'الرجاء تعبئة الحقول الأساسية');
     }
     
-    const carData = { ...car, currentOdometer: Number(car.currentOdometer) };
+    // تجهيز البيانات وتوحيد اسم العداد
+    const carData = { 
+      ...car, 
+      odometer: Number(car.odometer) 
+    };
+    delete carData.currentOdometer; // حذف الاسم القديم إن وجد
 
+    setIsSaving(true);
     try {
       if (isEditing) {
-        updateCar({ ...carData, id: editId });
+        // ✅ إصلاح 2: استدعاء دالة التحديث بالشكل الصحيح (id, data)
+        updateCar(editId, carData);
         navigate('/vehicles');
       } else {
         addNewCar(carData);
@@ -86,6 +107,8 @@ export default function AddVehicle() {
       }
     } catch (error) {
       alert('حدث خطأ أثناء الحفظ، قد تكون مساحة التخزين ممتلئة.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -128,15 +151,21 @@ export default function AddVehicle() {
         <Input label={t('carModel') || 'الموديل (مثال: كورولا)'} value={car.model} onChange={(e) => setCar({...car, model: e.target.value})} required />
         
         <div className="grid grid-cols-2 gap-3">
-          <Input label="سنة الصنع (اختياري)" type="number" value={car.year || ''} onChange={(e) => setCar({...car, year: e.target.value})} />
-          <Input label="اللون (اختياري)" value={car.color || ''} onChange={(e) => setCar({...car, color: e.target.value})} />
+          {/* ✅ إصلاح 3: استخدام الترجمة للحقول */}
+          <Input label={t('carYear') || 'سنة الصنع'} type="number" value={car.year || ''} onChange={(e) => setCar({...car, year: e.target.value})} />
+          <Input label={t('carColor') || 'اللون'} value={car.color || ''} onChange={(e) => setCar({...car, color: e.target.value})} />
         </div>
 
         <Input label={t('plateNumber') || 'رقم اللوحة (اختياري)'} value={car.plate} onChange={(e) => setCar({...car, plate: e.target.value})} />
-        <Input label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} type="number" value={car.currentOdometer} onChange={(e) => setCar({...car, currentOdometer: e.target.value})} required />
+        
+        {/* ✅ إصلاح 4: توحيد الاسم إلى odometer */}
+        <Input label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} type="number" value={car.odometer || ''} onChange={(e) => setCar({...car, odometer: e.target.value})} required />
         
         <div className="mt-8">
-          <Button type="submit">{isEditing ? (t('save') || 'حفظ التعديلات') : (t('saveAndContinue') || 'حفظ ومتابعة')}</Button>
+          {/* ✅ إضافة حالة isSaving لتعطيل الزر أثناء الحفظ */}
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? 'جاري الحفظ...' : (isEditing ? (t('save') || 'حفظ التعديلات') : (t('saveAndContinue') || 'حفظ ومتابعة'))}
+          </Button>
         </div>
       </form>
     </div>
