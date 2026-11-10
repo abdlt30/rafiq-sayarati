@@ -9,7 +9,6 @@ export default function Documents() {
   const [documents, setDocuments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   
-  // حالة النموذج
   const [formData, setFormData] = useState({ type: 'insurance', endDate: '', image: null });
   const [deleteId, setDeleteId] = useState(null);
 
@@ -27,7 +26,6 @@ export default function Documents() {
 
   useEffect(() => { loadData(); }, [currentCar]);
 
-  // التحقق من حجم الصورة قبل حفظها
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -36,7 +34,6 @@ export default function Documents() {
         e.target.value = null; 
         return;
       }
-
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData({ ...formData, image: reader.result });
@@ -96,8 +93,7 @@ export default function Documents() {
   };
 
   return (
-    <div className="space-y-4 pb-24 px-4">
-      
+    <div className="space-y-4 pb-24 px-4 min-h-screen">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
         <button 
@@ -110,7 +106,6 @@ export default function Documents() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
-          
           <div>
             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentType') || 'نوع الوثيقة'}</label>
             <select 
@@ -176,7 +171,6 @@ export default function Documents() {
             
             return (
               <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
-                
                 <div className="flex items-center gap-3">
                   {doc.image ? (
                     <div className="w-12 h-12 rounded-xl border border-[var(--border)] overflow-hidden flex-shrink-0">
