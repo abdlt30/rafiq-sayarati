@@ -1,19 +1,22 @@
 import { useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
+import { useNavigate } from 'react-router-dom'; // ✅ إضافة useNavigate للتنقل
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { PieChart as PieIcon, BarChart3 } from 'lucide-react';
+import { PieChart as PieIcon, BarChart3, Printer } from 'lucide-react'; // ✅ إضافة أيقونة الطابعة
 
 export default function Reports() {
   const { currentCar, currency, t } = useContext(AppContext);
+  const navigate = useNavigate(); // ✅ تعريف دالة التنقل
 
   // 1. حساب الإجماليات
   const totals = useMemo(() => {
-    if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
-    return dbService.getTotals(currentCar.id);
+    if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
+    // ✅ إضافة حماية للقيم الافتراضية
+    return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
   }, [currentCar]);
 
-  // 2. تجميع بيانات المصاريف الشهرية (للمخطط الشريطي)
+  // 2. تجميع بيانات المصاريف الشهرية
   const monthlyData = useMemo(() => {
     if (!currentCar) return [];
     
@@ -22,7 +25,6 @@ export default function Reports() {
     const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
     const allRecords = [...fuel, ...maintenance, ...expenses];
 
-    // تجميع المصاريف حسب الشهر
     const monthsMap = {};
     const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
@@ -43,21 +45,31 @@ export default function Reports() {
       monthsMap[key].total += Number(record.cost) || 0;
     });
 
-    // تحويل الكائن إلى مصفوفة وترتيبها حسب التاريخ
-    return Object.values(monthsMap).sort((a, b) => a.timestamp - b.timestamp).slice(-6); // آخر 6 أشهر
+    return Object.values(monthsMap).sort((a, b) => a.timestamp - b.timestamp).slice(-6); 
   }, [currentCar]);
 
   // بيانات الدائرة (Pie Chart)
   const pieData = [
-    { name: t('fuel') || 'الوقود', value: totals.fuel, color: '#3b82f6' }, // أزرق
-    { name: t('maintenance') || 'الصيانة', value: totals.maintenance, color: '#f59e0b' }, // أصفر
-    { name: t('expenses') || 'المصاريف', value: totals.expenses, color: '#a855f7' }, // بنفسجي
+    { name: t('fuel') || 'الوقود', value: totals.fuel, color: '#3b82f6' }, 
+    { name: t('maintenance') || 'الصيانة', value: totals.maintenance, color: '#f59e0b' }, 
+    { name: t('expenses') || 'المصاريف', value: totals.expenses, color: '#a855f7' }, 
   ].filter(item => item.value > 0);
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-4">
+      
+      {/* ✅ الشريط العلوي المحدث مع زر التقرير */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('reports') || 'التقارير'}</h1>
+        
+        {/* زر الانتقال لصفحة تقرير PDF */}
+        <button 
+          onClick={() => navigate('/report-print')} 
+          className="bg-[var(--primary)] text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+        >
+          <Printer size={16} /> 
+          {t('pdfReport') || 'تقرير PDF'}
+        </button>
       </div>
 
       {/* بطاقات الإجمالي */}
@@ -102,7 +114,7 @@ export default function Reports() {
         </div>
       )}
 
-      {/* المخطط الشريطي (المصاريف الشهرية) - ✅ تم إصلاحه */}
+      {/* المخطط الشريطي (المصاريف الشهرية) */}
       <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="text-green-500" size={20} />
