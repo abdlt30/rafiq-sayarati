@@ -23,7 +23,6 @@ export default function Expenses() {
     { value: 'other', label: t('other') || 'أخرى' }
   ];
 
-  // ✅ دالة موحدة لجلب البيانات وترتيبها
   const loadData = () => {
     if (currentCar) {
       const allExpenses = dbService.getExpenses() || [];
@@ -37,6 +36,17 @@ export default function Expenses() {
   useEffect(() => {
     loadData();
   }, [currentCar]);
+
+  // ✅ إضافة: دالة لفتح النموذج وتعبئة التاريخ تلقائياً
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormData({ 
+      date: new Date().toISOString().split('T')[0], // تاريخ اليوم
+      type: 'insurance', 
+      cost: '' 
+    });
+    setIsModalOpen(true);
+  };
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -56,7 +66,6 @@ export default function Expenses() {
         dbService.addExpense(data);
       }
       
-      // ✅ إعادة جلب البيانات لضمان التحديث الفوري للواجهة
       loadData(); 
       closeModal();
     } catch (error) {
@@ -68,7 +77,7 @@ export default function Expenses() {
   const handleDelete = () => {
     if(deleteId) {
       dbService.deleteExpense(deleteId);
-      loadData(); // تحديث الواجهة بعد الحذف
+      loadData(); 
       setDeleteId(null);
     }
   };
@@ -112,9 +121,9 @@ export default function Expenses() {
       ) : (
         <div className="space-y-2">
           {records.map(record => (
-            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-xl flex items-center justify-between shadow-sm hover:border-purple-500/30 transition-colors">
+            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm hover:border-purple-500/30 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center flex-shrink-0">
                   <Wallet size={18} />
                 </div>
                 <div>
@@ -127,16 +136,20 @@ export default function Expenses() {
                 </div>
               </div>
               <div className="flex gap-1.5">
-                <button onClick={() => openEdit(record)} className="text-blue-500 bg-blue-500/10 p-1.5 rounded-md hover:bg-blue-500/20"><Edit2 size={14} /></button>
-                <button onClick={() => setDeleteId(record.id)} className="text-red-500 bg-red-500/10 p-1.5 rounded-md hover:bg-red-500/20"><Trash2 size={14} /></button>
+                {/* ✅ إضافة تأثيرات اللمس active:scale-90 */}
+                <button onClick={() => openEdit(record)} className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"><Edit2 size={14} /></button>
+                <button onClick={() => setDeleteId(record.id)} className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"><Trash2 size={14} /></button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* الزر العائم */}
-      <button onClick={() => setIsModalOpen(true)} className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 transition-transform z-40">
+      {/* الزر العائم (FAB) */}
+      <button 
+        onClick={openAddModal} // ✅ استخدام الدالة الجديدة
+        className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+      >
         <Plus size={28} />
       </button>
 
@@ -147,13 +160,15 @@ export default function Expenses() {
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
         message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذا المصروف؟ لا يمكن التراجع عن هذا الإجراء.'}
+        variant="danger" // ✅ إضافة لون الحذف
+        confirmText="نعم، احذف" // ✅ إضافة نص مخصص
       />
 
       {/* نافذة الإضافة/التعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
-            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white z-10"><X size={20} /></button>
+            <button type="button" onClick={closeModal} className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white active:scale-90 transition-all z-10"><X size={20} /></button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">{editingId ? 'تعديل مصروف' : 'إضافة مصروف'}</h2>
             
             <div className="space-y-3 overflow-y-auto pb-2">
@@ -171,11 +186,12 @@ export default function Expenses() {
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('amount') || 'المبلغ'} ({currency})</label>
-                <input type="number" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                {/* ✅ إصلاح أمني: منع الأرقام السالبة بـ min="0" */}
+                <input type="number" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
-            <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-colors">
-              {t('save') || 'حفظ'}
+            <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all">
+              {t('save') || 'حفظ البيانات'}
             </button>
           </form>
         </div>
