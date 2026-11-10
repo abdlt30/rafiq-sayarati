@@ -28,11 +28,10 @@ import Resale from './pages/Resale';
 import Timeline from './pages/Timeline';
 import About from './pages/About'; 
 import Valuation from './pages/Valuation'; 
-import FuelStations from './pages/FuelStations'; // ✅ إضافة: استيراد صفحة الخريطة
+import FuelStations from './pages/FuelStations'; 
 
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
-  // حماية المسارات: إذا لم تكن هناك سيارة، يتم التوجيه لصفحة الترحيب
   return currentCar ? <Outlet /> : <Navigate to="/welcome" replace />;
 };
 
@@ -59,7 +58,9 @@ export default function App() {
         {/* 2. المسارات المحمية (تتطلب وجود سيارة) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
+            {/* ✅ مسار الرئيسية سليم 100% */}
             <Route path="/" element={<Dashboard />} />
+            
             <Route path="/vehicles" element={<Vehicles />} />
             <Route path="/fuel" element={<Fuel />} />
             <Route path="/maintenance" element={<Maintenance />} />
@@ -77,7 +78,7 @@ export default function App() {
             <Route path="/timeline" element={<Timeline />} />
             <Route path="/about" element={<About />} />
             <Route path="/valuation" element={<Valuation />} />
-            <Route path="/fuel-stations" element={<FuelStations />} /> {/* ✅ إضافة: مسار الخريطة */}
+            <Route path="/fuel-stations" element={<FuelStations />} /> 
           </Route>
         </Route>
         
