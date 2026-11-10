@@ -20,7 +20,7 @@ import Documents from './pages/Documents';
 import Reminders from './pages/Reminders'; 
 import Backup from './pages/Backup'; 
 import Vehicles from './pages/Vehicles';
-import Income from './pages/Income'; // ✅ إضافة: استيراد صفحة الإيرادات
+import Income from './pages/Income'; 
 
 // ✅ استيراد الصفحات المتقدمة
 import Notifications from './pages/Notifications';
@@ -30,6 +30,7 @@ import Timeline from './pages/Timeline';
 import About from './pages/About'; 
 import Valuation from './pages/Valuation'; 
 import FuelStations from './pages/FuelStations'; 
+import ReportPrint from './pages/ReportPrint'; // ✅ إضافة: استيراد صفحة تقرير الطباعة
 
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
@@ -65,7 +66,7 @@ export default function App() {
             <Route path="/fuel" element={<Fuel />} />
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/expenses" element={<Expenses />} />
-            <Route path="/income" element={<Income />} /> {/* ✅ إضافة: مسار صفحة الإيرادات */}
+            <Route path="/income" element={<Income />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/backup" element={<Backup />} />
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/valuation" element={<Valuation />} />
             <Route path="/fuel-stations" element={<FuelStations />} /> 
+            <Route path="/report-print" element={<ReportPrint />} /> {/* ✅ إضافة: مسار تقرير الطباعة */}
           </Route>
         </Route>
         
