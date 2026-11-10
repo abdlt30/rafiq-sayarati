@@ -54,14 +54,22 @@ const translations = {
     avgConsumption: 'متوسط الاستهلاك', totalLiters: 'إجمالي اللترات',
     externalNotifications: 'الإشعارات الخارجية', defaultTypes: 'أنواع افتراضية',
     
-    // ✅ مفاتيح جديدة تمت إضافتها
+    // ✅ المفاتيح المصلحة والمضافة حديثاً
     fuelStations: 'محطات الوقود',
     valuation: 'تقييم السيارة',
     errorSaving: 'حدث خطأ أثناء الحفظ.',
     errorSavingMsg: 'حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.',
     confirmDeleteBtn: 'نعم، احذف',
+    add: 'إضافة',
+    manageFleet: 'إدارة أسطول سياراتك',
+    totalFuelCost: 'إجمالي الوقود',
+    totalExpenses: 'إجمالي المصاريف',
+    expenseDistribution: 'توزيع المصاريف',
+    pdfReport: 'تقرير PDF',
+    storageFull: 'مساحة التخزين ممتلئة. يرجى اختيار صورة أصغر أو حذف بعض البيانات.',
+    storageError: 'تعذر حفظ التعديلات. مساحة التخزين ممتلئة.',
 
-    // ✅ مفاتيح الإيرادات
+    // مفاتيح الإيرادات
     income: 'الإيرادات',
     totalIncome: 'إجمالي الإيرادات',
     noIncome: 'لا توجد إيرادات مسجلة.',
@@ -127,7 +135,8 @@ const translations = {
     privacyText: 'All your data is stored locally on your phone. We do not collect any personal data. When cloud sync is enabled, your data will be encrypted and secure.',
     noResults: 'No results found',
     management: 'Management', insights: 'Insights', system: 'System',
-    avgConsumption: 'Avg Consumption', totalLiters: 'Total Liters',
+    // ✅ تم تصحيح: Average Consumption بدلاً من Avg
+    avgConsumption: 'Average Consumption', totalLiters: 'Total Liters',
     externalNotifications: 'External Notifications', defaultTypes: 'Default Types',
 
     // ✅ New Keys Added
@@ -136,6 +145,14 @@ const translations = {
     errorSaving: 'Error during saving.',
     errorSavingMsg: 'Error saving data. Please try again.',
     confirmDeleteBtn: 'Yes, Delete',
+    add: 'Add',
+    manageFleet: 'Manage your fleet',
+    totalFuelCost: 'Total Fuel Cost',
+    totalExpenses: 'Total Expenses',
+    expenseDistribution: 'Expense Distribution',
+    pdfReport: 'PDF Report',
+    storageFull: 'Storage is full. Please choose a smaller image or delete some data.',
+    storageError: 'Failed to save changes. Storage is full.',
 
     // ✅ Income Keys
     income: 'Income',
@@ -203,7 +220,8 @@ const translations = {
     privacyText: 'Toutes vos données sont stockées localement sur votre téléphone. Nous ne collectons aucune donnée personnelle. Lorsque la synchronisation cloud est activée, vos données seront cryptées et sécurisées.',
     noResults: 'Aucun résultat trouvé',
     management: 'Gestion', insights: 'Analyses', system: 'Système',
-    avgConsumption: 'Consommation Moy.', totalLiters: 'Total Litres',
+    // ✅ تم تصحيح: Consommation Moyenne بدلاً من Moy.
+    avgConsumption: 'Consommation Moyenne', totalLiters: 'Total Litres',
     externalNotifications: 'Notifications Externes', defaultTypes: 'Types par défaut',
 
     // ✅ Nouvelles clés ajoutées
@@ -212,6 +230,14 @@ const translations = {
     errorSaving: 'Erreur lors de l\'enregistrement.',
     errorSavingMsg: 'Erreur lors de l\'enregistrement. Veuillez réessayer.',
     confirmDeleteBtn: 'Oui, Supprimer',
+    add: 'Ajouter',
+    manageFleet: 'Gérer votre flotte',
+    totalFuelCost: 'Coût Total du Carburant',
+    totalExpenses: 'Dépenses Totales',
+    expenseDistribution: 'Répartition des Dépenses',
+    pdfReport: 'Rapport PDF',
+    storageFull: 'Le stockage est plein. Veuillez choisir une image plus petite ou supprimer des données.',
+    storageError: 'Échec de la sauvegarde. Le stockage est plein.',
 
     // ✅ Clés de Revenus
     income: 'Revenus',
@@ -298,7 +324,8 @@ export const AppProvider = ({ children }) => {
       setVehicles(updatedVehicles);
     } catch (error) {
       console.error("Storage Error:", error);
-      alert(t('storageFull') || 'مساحة التخزين ممتلئة. يرجى اختيار صورة أصغر الحجم أو حذف بعض البيانات.');
+      // ✅ تم استخدام الترجمة هنا
+      alert(t('storageFull') || 'مساحة التخزين ممتلئة.');
     }
   };
 
@@ -315,7 +342,8 @@ export const AppProvider = ({ children }) => {
       setVehicles(updatedVehicles);
     } catch (error) {
       console.error("Storage Error:", error);
-      alert(t('storageError') || 'مساحة التخزين ممتلئة. تعذر حفظ التعديلات.');
+      // ✅ تم استخدام الترجمة هنا
+      alert(t('storageError') || 'تعذر حفظ التعديلات.');
     }
   };
 
