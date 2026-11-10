@@ -1,270 +1,225 @@
-import { useContext, useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { 
-  Wallet, Gauge, Fuel, Wrench, Car, FileText, 
-  Bell, Settings, Plus, ArrowLeftRight, Calendar, ChevronLeft, Sparkles, AlertTriangle, Activity
-} from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { FileText, Plus, Shield, Trash2, X, AlertTriangle, CheckCircle, Camera } from 'lucide-react'; 
+import ConfirmModal from '../components/ui/ConfirmModal';
 
-export default function Dashboard() {
-  const { currentCar, currency, t, lang } = useContext(AppContext); 
-  const navigate = useNavigate();
+export default function Documents() {
+  const { currentCar, t, lang } = useContext(AppContext);
+  const [documents, setDocuments] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  
+  // ✅ إضافة حقل الصورة إلى حالة النموذج
+  const [formData, setFormData] = useState({ type: 'insurance', endDate: '', image: null });
+  const [deleteId, setDeleteId] = useState(null);
 
-  const [data, setData] = useState({
-    totalCost: 0, 
-    monthlyCost: 0, 
-    costPerKm: 0, 
-    distance: 0,
-    avgConsumption: 0, // ✅ جديد: متوسط الاستهلاك
-    totalLiters: 0,    // ✅ جديد: إجمالي اللترات
-    upcomingReminders: [], 
-    recentActivity: []
-  });
-
-  useEffect(() => {
-    if (!currentCar) return;
-
-    const fuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
-    const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
-    const maintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
-    const reminders = dbService.getReminders().filter(r => r.carId === currentCar.id);
-
-    // --- 1. حساب التكاليف ---
-    const totalFuel = fuel.reduce((sum, r) => sum + Number(r.cost || 0), 0);
-    const totalExp = expenses.reduce((sum, r) => sum + Number(r.cost || 0), 0);
-    const totalMaint = maintenance.reduce((sum, r) => sum + Number(r.cost || 0), 0);
-    const grandTotal = totalFuel + totalExp + totalMaint;
-
-    const now = new Date();
-    const isThisMonth = (dateStr) => {
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    };
-
-    const monthTotal = 
-      fuel.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0) +
-      expenses.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0) +
-      maintenance.filter(r => isThisMonth(r.date)).reduce((sum, r) => sum + Number(r.cost || 0), 0);
-
-    // --- 2. حساب المسافة (بأمان) ---
-    // نستخدم filter للتأكد من أن العداد رقم صحيح وأكبر من صفر
-    const validOdometers = fuel.map(r => Number(r.odometer)).filter(o => !isNaN(o) && o > 0).sort((a, b) => a - b);
-    let distance = 0;
-    if (validOdometers.length > 1) {
-      distance = validOdometers[validOdometers.length - 1] - validOdometers[0];
-    } else if (validOdometers.length === 1 && currentCar.currentOdometer) {
-      distance = Math.max(0, Number(currentCar.currentOdometer) - validOdometers[0]);
+  const loadData = () => {
+    if (currentCar) {
+      const allDocs = dbService.getDocuments() || [];
+      const carDocs = allDocs
+        .filter(d => d.carId === currentCar.id)
+        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+      setDocuments(carDocs);
+    } else {
+      setDocuments([]); 
     }
-    
-    const costPerKm = distance > 0 ? (grandTotal / distance).toFixed(2) : 0;
-
-    // --- 3. حساب استهلاك الوقود (L/100km) ---
-    const totalLiters = fuel.reduce((sum, r) => sum + Number(r.liters || 0), 0);
-    // المعادلة: (إجمالي اللترات / المسافة) * 100
-    const avgConsumption = distance > 0 ? ((totalLiters / distance) * 100).toFixed(1) : 0;
-
-    // --- 4. التنبيهات الذكية ---
-    const allAlerts = [
-      ...maintenance.filter(m => m.nextKm && Number(m.nextKm) > (Number(currentCar.currentOdometer) || 0)).map(m => ({ ...m, alertText: m.type, value: Number(m.nextKm), isKm: true })),
-      ...reminders.map(r => ({ ...r, alertText: r.type, value: r.odometer || new Date(r.date), isKm: !!r.odometer }))
-    ];
-    
-    const upcoming = allAlerts.filter(r => {
-        if (r.isKm) return r.value > (Number(currentCar.currentOdometer) || 0);
-        return r.value > new Date();
-    }).slice(0, 2);
-
-    // --- 5. آخر العمليات ---
-    const allActivities = [
-      ...fuel.map(r => ({ ...r, type: 'fuel', icon: Fuel, color: 'text-blue-500' })),
-      ...expenses.map(r => ({ ...r, type: 'expense', icon: Wallet, color: 'text-purple-500' })),
-      ...maintenance.map(r => ({ ...r, type: 'maintenance', icon: Wrench, color: 'text-yellow-500' }))
-    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
-
-    setData({
-      totalCost: grandTotal, 
-      monthlyCost: monthTotal, 
-      costPerKm, 
-      distance,
-      avgConsumption, // ✅ حفظ القيمة الجديدة
-      totalLiters,    // ✅ حفظ القيمة الجديدة
-      upcomingReminders: upcoming, 
-      recentActivity: allActivities
-    });
-
-  }, [currentCar]);
-
-  const getFormattedDate = () => {
-    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
-    return new Date().toLocaleDateString(localeMap[lang] || 'ar-MA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  const isEmptyState = data.totalCost === 0 && data.distance === 0 && data.recentActivity.length === 0;
+  useEffect(() => { loadData(); }, [currentCar]);
+
+  // ✅ دالة تحويل الصورة إلى Base64 ليمكن حفظها في LocalStorage
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!currentCar) return;
+    
+    try {
+      const newRecord = dbService.addDocument({ 
+        carId: currentCar.id, 
+        type: formData.type, 
+        endDate: formData.endDate,
+        image: formData.image // ✅ حفظ الصورة مع الوثيقة
+      });
+
+      if (newRecord) {
+        setShowForm(false);
+        setFormData({ type: 'insurance', endDate: '', image: null }); // تصفير الحقول
+        loadData(); 
+      }
+    } catch (error) {
+      console.error("خطأ في حفظ الوثيقة:", error);
+      alert("حدث خطأ أثناء محاولة الحفظ. قد تكون مساحة التخزين ممتلئة.");
+    }
+  };
+
+  const handleDelete = () => {
+    if(deleteId) {
+      dbService.deleteDocument(deleteId);
+      setDeleteId(null);
+      loadData();
+    }
+  };
+
+  const getStatus = (endDate) => {
+    if(!endDate) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800', icon: FileText };
+    const diffDays = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { label: t('expired') || 'منتهية', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
+    }
+    if (diffDays <= 30) {
+      return { label: `${t('expiringSoon') || 'تنتهي قريباً'} (${diffDays} ${t('days') || 'يوم'})`, color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: AlertTriangle };
+    }
+    return { label: t('valid') || 'صالح', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle };
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
+    return new Date(dateString).toLocaleDateString(localeMap[lang] || 'ar-MA', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
 
   return (
     <div className="space-y-4 pb-24 px-4">
+      
       {/* الشريط العلوي */}
-      <div className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 flex justify-between items-center border-b border-[var(--border)]/50 transition-all">
-        <div>
-          <h2 className="text-xl font-bold text-[var(--text)]">{t('welcome') || 'مرحباً،'} 👋</h2>
-          <p className="text-xs text-[var(--text-muted)]">{getFormattedDate()}</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => navigate('/reminders')} className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] relative hover:text-[var(--primary)] transition-colors">
-            <Bell size={18} />
-            <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[var(--bg)]"></span>
-          </button>
-          <button onClick={() => navigate('/settings')} className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
-            <Settings size={18} />
-          </button>
-        </div>
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
+        <button 
+          onClick={() => setShowForm(!showForm)} 
+          className={`p-3 rounded-full text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center ${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[var(--primary)] hover:bg-blue-600'}`}
+        >
+          {showForm ? <X size={24} /> : <Plus size={24} />}
+        </button>
       </div>
 
-      {/* بطاقة السيارة */}
-      <div className="hero-card p-5 mt-2 shadow-2xl shadow-blue-500/10 border border-[var(--hero-border)]">
-        <div className="flex justify-between items-start">
+      {/* نموذج الإضافة */}
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
+          
           <div>
-            <p className="text-xs font-medium text-[var(--text-muted)] mb-1">{t('currentCar') || 'السيارة الحالية'}</p>
-            <h3 className="text-2xl font-extrabold text-[var(--text)] tracking-wide">{currentCar?.make} {currentCar?.model}</h3>
-            <p className="text-sm font-medium text-[var(--text)] mt-1 bg-[var(--surface-2)] w-fit px-2 py-0.5 rounded-md border border-[var(--border)]">{currentCar?.plate}</p>
+            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentType') || 'نوع الوثيقة'}</label>
+            <select 
+              value={formData.type} 
+              onChange={e => setFormData({...formData, type: e.target.value})} 
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]"
+            >
+              <option value="insurance">{t('insurance') || 'تأمين'}</option>
+              <option value="technicalInspection">{t('technicalInspection') || 'فحص تقني'}</option>
+              <option value="license">{t('license') || 'رخصة'}</option>
+            </select>
           </div>
-          <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[var(--surface-2)] shadow-lg flex-shrink-0 ml-4">
-            {currentCar?.image ? (
-              <img src={currentCar.image} alt="Car" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-[var(--surface-2)] flex items-center justify-center">
-                <Car size={32} className="text-[var(--text-muted)]" />
-              </div>
-            )}
+          
+          <div>
+             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'تاريخ الانتهاء'}</label>
+             <input 
+                type="date" 
+                required 
+                value={formData.endDate} 
+                onChange={e => setFormData({...formData, endDate: e.target.value})} 
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" 
+              />
           </div>
-        </div>
-        <div className="flex gap-3 mt-5">
-          <button onClick={() => navigate('/vehicles')} className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 hover:bg-[var(--border)] transition-all">
-            <ArrowLeftRight size={16} /> {t('switchCar') || 'تغيير'}
+
+          {/* ✅ حقل رفع الصورة */}
+          <div>
+            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentImage') || 'صورة الوثيقة (اختياري)'}</label>
+            <label className="flex flex-col items-center justify-center w-full h-32 bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--primary)]/50 transition-colors overflow-hidden relative">
+              {formData.image ? (
+                <>
+                  <img src={formData.image} alt="Preview" className="w-full h-full object-contain" />
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <span className="text-white text-xs font-bold">تغيير الصورة</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center text-[var(--text-muted)]">
+                  <Camera size={28} className="mb-2" />
+                  <span className="text-xs font-bold">اضغط لإضافة صورة</span>
+                </div>
+              )}
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            </label>
+          </div>
+
+          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all shadow-lg shadow-blue-500/20">
+            {t('save') || 'حفظ الوثيقة'}
           </button>
-          <button onClick={() => navigate('/add-vehicle')} className="flex-1 bg-[var(--primary)] text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all shadow-lg shadow-blue-500/30">
-            <Plus size={16} /> {t('addNewCar') || 'إضافة'}
-          </button>
-        </div>
-      </div>
+        </form>
+      )}
 
-      {/* إجراءات سريعة */}
-      <div className="grid grid-cols-4 gap-2.5">
-        <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl mb-2"><Fuel size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('fuel') || 'وقود'}</span></Link>
-        <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-xl mb-2"><Wallet size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('expenses') || 'مصاريف'}</span></Link>
-        <Link to="/maintenance" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-yellow-500/10 text-yellow-500 rounded-xl mb-2"><Wrench size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('maintenance') || 'صيانة'}</span></Link>
-        <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-all"><div className="p-2.5 bg-green-500/10 text-green-500 rounded-xl mb-2"><FileText size={20} /></div><span className="text-[10px] font-bold text-[var(--text-muted)]">{t('documents') || 'وثائق'}</span></Link>
-      </div>
-
-      {/* لوحة البيانات (KPIs) */}
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalCost') || 'إجمالي المصاريف'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.totalCost}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
-        </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('monthlyCost') || 'مصاريف الشهر'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.monthlyCost}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
-        </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('costPerKm') || 'تكلفة الكيلومتر'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.costPerKm}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">{currency}</span></div>
-        </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('distance') || 'المسافة المقطوعة'}</span>
-          <div className="flex items-end gap-1"><span className="text-xl font-extrabold text-[var(--text)]">{data.distance}</span><span className="text-xs font-medium text-[var(--text-muted)] mb-0.5">KM</span></div>
-        </div>
-
-        {/* ✅ بطاقة متوسط الاستهلاك */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1 flex items-center gap-1">
-            <Activity size={12} className="text-green-500" /> {t('avgConsumption') || 'متوسط الاستهلاك'}
-          </span>
-          <div className="flex items-end gap-1">
-            <span className="text-xl font-extrabold text-[var(--text)]">{data.avgConsumption}</span>
-            <span className="text-[10px] font-medium text-[var(--text-muted)] mb-1">L/100km</span>
+      {/* قائمة الوثائق */}
+      {documents.length === 0 ? (
+        <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
+          <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
+            <FileText size={48} className="opacity-40" />
           </div>
+          <p>{t('noDocuments') || 'لا توجد وثائق مسجلة.'}</p>
         </div>
-
-        {/* ✅ بطاقة إجمالي اللترات */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl relative overflow-hidden">
-          <span className="text-[10px] font-medium text-[var(--text-muted)] block mb-1">{t('totalLiters') || 'إجمالي اللترات'}</span>
-          <div className="flex items-end gap-1">
-            <span className="text-xl font-extrabold text-[var(--text)]">{data.totalLiters.toFixed(1)}</span>
-            <span className="text-[10px] font-medium text-[var(--text-muted)] mb-1">L</span>
-          </div>
-        </div>
-      </div>
-
-      {/* التنبيهات */}
-      {data.upcomingReminders.length > 0 && (
-        <div className="bg-[var(--surface)] border border-red-500/30 rounded-2xl p-4 mt-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-              <AlertTriangle size={16} className="text-red-500"/> {t('upcomingAlerts') || 'تنبيهات هامة'}
-            </h3>
-            <Link to="/maintenance" className="text-xs text-[var(--primary)] font-medium">{t('viewAll') || 'عرض الكل'}</Link>
-          </div>
-          <div className="space-y-2">
-            {data.upcomingReminders.map((rem, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-[var(--surface-2)] p-3 rounded-xl text-xs">
-                <span className="font-bold text-[var(--text)]">{t(rem.alertText) || rem.alertText}</span>
-                <span className="text-red-400 font-medium bg-red-400/10 px-2 py-1 rounded-md">
-                  {rem.isKm ? `${rem.value} KM` : new Date(rem.value).toLocaleDateString()}
-                </span>
+      ) : (
+        <div className="space-y-3">
+          {documents.map(doc => {
+            const status = getStatus(doc.endDate);
+            const StatusIcon = status.icon;
+            
+            return (
+              <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
+                
+                <div className="flex items-center gap-3">
+                  {/* ✅ عرض الصورة المصغرة إذا كانت موجودة */}
+                  {doc.image ? (
+                    <div className="w-12 h-12 rounded-xl border border-[var(--border)] overflow-hidden flex-shrink-0">
+                      <img src={doc.image} alt="doc" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${status.bg} ${status.color}`}>
+                      <StatusIcon size={24} />
+                    </div>
+                  )}
+                  
+                  <div>
+                    <p className="font-bold text-[var(--text)] text-base">{t(doc.type) || doc.type}</p>
+                    <p className={`text-[11px] font-bold mt-0.5 ${status.color}`}>{status.label}</p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-[10px] text-[var(--text-muted)] font-medium">
+                    {t('endsOn') || 'ينتهي في'}: <br/>
+                    <span className="font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-0.5 rounded inline-block mt-0.5">{formatDate(doc.endDate)}</span>
+                  </p>
+                  <button 
+                    onClick={() => setDeleteId(doc.id)} 
+                    className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {/* آخر العمليات */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mt-4">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-            <Calendar size={16} className="text-[var(--primary)]"/> {t('recentActivity') || 'آخر العمليات'}
-          </h3>
-          {!isEmptyState && (
-             <Link to="/expenses" className="text-xs text-[var(--primary)] font-medium flex items-center gap-1 hover:underline">
-               {t('viewAll') || 'عرض الكل'} <ChevronLeft size={14} className={lang === 'ar' ? '' : 'rotate-180'} />
-             </Link>
-          )}
-        </div>
-        
-        {isEmptyState ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <div className="p-3 bg-[var(--primary)]/10 text-[var(--primary)] rounded-full mb-3">
-              <Sparkles size={28} />
-            </div>
-            <p className="text-sm font-bold text-[var(--text)] mb-1">ابدأ رحلتك!</p>
-            <p className="text-xs text-[var(--text-muted)] max-w-[250px]">قم بإضافة أول تعبئة وقود أو مصروف لترى إحصائياتك هنا.</p>
-            <Link to="/fuel" className="mt-4 bg-[var(--primary)] text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition-colors">
-              إضافة وقود
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {data.recentActivity.map((act, idx) => (
-              <div key={idx} className="flex items-center justify-between border-b border-[var(--border)] last:border-0 pb-3 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl bg-[var(--surface-2)] ${act.color}`}>
-                    <act.icon size={18} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-[var(--text)]">{t(act.type) || act.type}</p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{act.date}</p>
-                  </div>
-                </div>
-                <span className="font-extrabold text-sm text-[var(--text)]">{act.cost} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span></span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
+      <ConfirmModal 
+        isOpen={!!deleteId} 
+        onClose={() => setDeleteId(null)} 
+        onConfirm={handleDelete} 
+        title={t('confirmDelete') || 'تأكيد الحذف'}
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟ لا يمكن التراجع عن هذا الإجراء.'}
+        variant="danger"
+        confirmText="نعم، احذف"
+      />
     </div>
   );
 }
