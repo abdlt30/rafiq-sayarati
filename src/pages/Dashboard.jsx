@@ -1,30 +1,56 @@
 import { useContext, useMemo, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
+import { notificationService } from '../services/notificationService'; // ✅ ضروري للتنبيهات
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
-  ChevronLeft, Pencil, Check, X, Bell, Settings
+  ChevronLeft, Pencil, Check, X, Bell, Settings, AlertTriangle, Activity
 } from 'lucide-react';
 
 export default function Dashboard() {
-  // ✅ جلب بيانات المستخدم (user) من الـ Context
-  const { currentCar, updateCar, t, currency, user } = useContext(AppContext);
+  const { currentCar, updateCar, t, currency, user, lang } = useContext(AppContext);
 
-  // حالة تعديل العداد السريع
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  // استخراج الاسم (إذا لم يكن موجوداً نستخدم "عزيزي")
   const userName = user?.name || user?.username || 'عزيزي'; 
 
-  // حساب الإحصائيات
+  // 1. حساب الإحصائيات
   const totals = useMemo(() => {
     if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
     return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
   }, [currentCar]);
 
-  // جلب آخر العمليات
+  // ✅ 2. حساب متوسط استهلاك الوقود
+  const avgConsumption = useMemo(() => {
+    if (!currentCar) return 0;
+    const fuelRecords = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id);
+    if (fuelRecords.length < 2) return 0; 
+    
+    const sorted = [...fuelRecords].sort((a, b) => Number(a.odometer) - Number(b.odometer));
+    let totalLiters = 0;
+    let totalDistance = 0;
+
+    for (let i = 1; i < sorted.length; i++) {
+        const dist = Number(sorted[i].odometer) - Number(sorted[i-1].odometer);
+        if (dist > 0) {
+            totalDistance += dist;
+            totalLiters += Number(sorted[i].liters);
+        }
+    }
+    if (totalDistance === 0) return 0;
+    return ((totalLiters / totalDistance) * 100).toFixed(1);
+  }, [currentCar]);
+
+  // ✅ 3. جلب التنبيهات الهامة (الأحمر والأصفر)
+  const criticalAlerts = useMemo(() => {
+    if (!currentCar) return [];
+    const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
+    return alerts.filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 2);
+  }, [currentCar, t, lang]);
+
+  // 4. جلب آخر العمليات
   const recentActivity = useMemo(() => {
     if (!currentCar) return [];
     const fuel = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: 'fuel' }));
@@ -38,33 +64,32 @@ export default function Dashboard() {
 
   if (!currentCar) return null;
 
-  const today = new Date().toLocaleDateString('ar-MA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString(lang === 'ar' ? 'ar-MA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+  // ✅ 5. إصلاح استدعاء دالة التحديث
   const handleSaveOdometer = () => {
     if (newOdo && Number(newOdo) >= 0) {
-      updateCar(currentCar.id, { ...currentCar, odometer: Number(newOdo) });
+      updateCar(currentCar.id, { odometer: Number(newOdo) }); // تم تصحيحها
       setIsEditingOdo(false);
     }
   };
 
   return (
-    <div className="space-y-5 pb-24 px-4 pt-4">
+    <div className="space-y-5 pb-24 px-4 pt-2">
       
-      {/* ✅ 1. الشريط العلوي المحدث (الترحيب بالاسم + الأزرار) */}
-      <div className="flex justify-between items-start mb-2 gap-3">
+      {/* ✅ 6. الشريط العلوي المثبت (Sticky) */}
+      <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
-          {/* truncate يمنع الاسم الطويل من تخريب الشاشة */}
           <h1 className="text-2xl font-extrabold text-[var(--text)] truncate">
             مرحباً، {userName} 👋
           </h1>
           <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
         </div>
         
-        {/* أزرار التنبيهات والإعدادات */}
         <div className="flex gap-2 flex-shrink-0">
           <Link to="/notifications" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative">
             <Bell size={18} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--surface)]"></span>
+            {criticalAlerts.length > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--surface)]"></span>}
           </Link>
           <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors">
             <Settings size={18} />
@@ -72,14 +97,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 2. بطاقة السيارة الحالية (متناسقة مع كل الشاشات) */}
+      {/* بطاقة السيارة الحالية */}
       <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
         <div className="absolute top-0 right-0 p-4 opacity-5"><Car size={100} /></div>
         
         <p className="text-xs text-blue-300 font-bold mb-3">السيارة الحالية</p>
         
         <div className="flex items-center gap-3 sm:gap-4 relative z-10">
-          {/* حجم الصورة مصغر ليناسب الشاشات الصغيرة */}
           <div className="w-16 h-16 sm:w-20 sm:h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
              {currentCar.image ? (
                <img src={currentCar.image} alt="car" className="w-full h-full object-cover" />
@@ -105,7 +129,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 3. الإجراءات السريعة (تتناسب مع عروض الشاشات المختلفة) */}
+      {/* ✅ 7. قسم التنبيهات الهامة */}
+      {criticalAlerts.length > 0 && (
+        <div className="space-y-2 animate-fade-in">
+          {criticalAlerts.map((alert, idx) => (
+            <Link key={idx} to={alert.link} className={`flex items-center gap-3 p-3 rounded-xl border ${alert.severity === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'}`}>
+              <AlertTriangle size={18} className="flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold truncate">{alert.title}</p>
+                <p className="text-[10px] opacity-80 truncate mt-0.5">{alert.desc}</p>
+              </div>
+              <ChevronLeft size={16} className="flex-shrink-0 opacity-50" />
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 transition-colors">
           <div className="p-1.5 sm:p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1 sm:mb-2"><Fuel size={18} /></div>
@@ -125,7 +165,7 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* 4. بطاقات الإحصائيات */}
+      {/* بطاقات الإحصائيات */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
@@ -163,9 +203,20 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* ✅ 8. بطاقة متوسط الاستهلاك */}
+        <div className="col-span-2 bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl flex justify-between items-center">
+            <div>
+                <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">متوسط استهلاك الوقود</p>
+                <p className="text-lg sm:text-xl font-extrabold text-green-500 flex items-center gap-1">
+                    {avgConsumption > 0 ? avgConsumption : '—'} <span className="text-[10px] sm:text-xs font-normal">L/100km</span>
+                </p>
+            </div>
+            <Activity size={28} className="text-green-500/20" />
+        </div>
       </div>
 
-      {/* 5. آخر العمليات */}
+      {/* آخر العمليات */}
       <div>
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-[var(--text)] text-sm">آخر العمليات</h3>
