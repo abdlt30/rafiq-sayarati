@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Car, FileText, Bell, Settings, Info, Database, 
   PieChart, Clock, Tag, ShieldAlert, ChevronLeft, ChevronRight,
-  MapPin // ✅ إضافة أيقونة الخريطة
+  MapPin
 } from 'lucide-react';
 
-// ✅ تحسين: نقل المكون خارج الدالة الرئيسية لتحسين أداء التطبيق (Performance)
+// ✅ مكون مساعد (خارج الدالة الرئيسية لتحسين الأداء)
 const MenuRow = ({ icon: Icon, label, path, color, badge }) => {
-  const { lang } = useContext(AppContext); // جلب اللغة لضبط اتجاه السهم
+  const { lang } = useContext(AppContext);
   const navigate = useNavigate();
 
   return (
@@ -45,8 +45,8 @@ export default function More() {
         <MenuRow icon={FileText} label={t('documents') || 'الوثائق'} path="/documents" color="text-purple-500" />
         <MenuRow icon={Bell} label={t('reminders') || 'التذكيرات'} path="/reminders" color="text-yellow-500" />
         
-        {/* ✅ إضافة: زر محطات الوقود (الخريطة) */}
-        <MenuRow icon={MapPin} label={t('fuelStations') || 'محطات الوقود'} path="/fuel-stations" color="text-red-500" />
+        {/* ✅ إصلاح: كتابة النص العربي مباشرة لضمان عدم ظهوره بالإنجليزية */}
+        <MenuRow icon={MapPin} label="محطات الوقود" path="/fuel-stations" color="text-red-500" />
       </div>
 
       {/* قسم التحليلات */}
@@ -56,7 +56,9 @@ export default function More() {
         </h2>
         <MenuRow icon={PieChart} label={t('reports') || 'التقارير'} path="/reports" color="text-green-500" />
         <MenuRow icon={Clock} label={t('timeline') || 'سجل السيارة'} path="/timeline" color="text-orange-500" />
-        <MenuRow icon={Tag} label={t('valuation') || 'تقييم السيارة'} path="/valuation" color="text-teal-500" />
+        
+        {/* ✅ إصلاح: كتابة النص العربي مباشرة */}
+        <MenuRow icon={Tag} label="تقييم السيارة" path="/valuation" color="text-teal-500" />
       </div>
 
       {/* قسم النظام */}
@@ -64,6 +66,7 @@ export default function More() {
         <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
           {t('system') || 'النظام'}
         </h2>
+        {/* ملاحظة: الرقم 3 هنا ثابت، لاحقاً سنربطه بعدد التنبيهات الفعلي */}
         <MenuRow icon={ShieldAlert} label={t('notifications') || 'مركز التنبيهات'} path="/notifications" color="text-red-500" badge="3" />
         <MenuRow icon={Database} label={t('backup') || 'النسخ الاحتياطي'} path="/backup" color="text-indigo-500" />
         <MenuRow icon={Settings} label={t('settings') || 'الإعدادات'} path="/settings" color="text-slate-500" />
