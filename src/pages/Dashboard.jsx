@@ -1,222 +1,158 @@
-import { useState, useEffect, useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { FileText, Plus, Trash2, X, AlertTriangle, CheckCircle, Camera } from 'lucide-react'; 
-import ConfirmModal from '../components/ui/ConfirmModal';
+import { Link } from 'react-router-dom';
+import { 
+  Car, Fuel, Wrench, Wallet, FileText, 
+  AlertTriangle, ChevronLeft, CalendarDays, Gauge, Activity
+} from 'lucide-react';
 
-export default function Documents() {
-  const { currentCar, t, lang } = useContext(AppContext);
-  const [documents, setDocuments] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  
-  const [formData, setFormData] = useState({ type: 'insurance', endDate: '', image: null });
-  const [deleteId, setDeleteId] = useState(null);
+export default function Dashboard() {
+  const { currentCar, t, currency } = useContext(AppContext);
 
-  const loadData = () => {
-    if (currentCar) {
-      const allDocs = dbService.getDocuments() || [];
-      const carDocs = allDocs
-        .filter(d => d.carId === currentCar.id)
-        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
-      setDocuments(carDocs);
-    } else {
-      setDocuments([]); 
-    }
-  };
+  // 1. حساب الإحصائيات بأمان تام (استخدام ?. لمنع الانهيار)
+  const totals = useMemo(() => {
+    if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
+    return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
+  }, [currentCar]);
 
-  useEffect(() => { loadData(); }, [currentCar]);
-
-  // ✅ حماية التخزين (الحد الأقصى للصورة 1.5 ميجا)
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 1.5 * 1024 * 1024) {
-        alert('حجم الصورة كبير جداً! يرجى اختيار صورة أصغر من 1.5 ميجابايت لتجنب امتلاء مساحة التخزين.');
-        e.target.value = null; 
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!currentCar) return;
+  // 2. جلب آخر العمليات
+  const recentActivity = useMemo(() => {
+    if (!currentCar) return [];
+    const fuel = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: 'fuel' }));
+    const maintenance = (dbService.getMaintenance() || []).filter(m => m.carId === currentCar.id).map(m => ({ ...m, type: 'maintenance' }));
+    const expenses = (dbService.getExpenses() || []).filter(e => e.carId === currentCar.id).map(e => ({ ...e, type: 'expense' }));
     
-    try {
-      const newRecord = dbService.addDocument({ 
-        carId: currentCar.id, 
-        type: formData.type, 
-        endDate: formData.endDate,
-        image: formData.image
-      });
+    return [...fuel, ...maintenance, ...expenses]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 4); // آخر 4 عمليات فقط
+  }, [currentCar]);
 
-      if (newRecord) {
-        setShowForm(false);
-        setFormData({ type: 'insurance', endDate: '', image: null }); 
-        loadData(); 
-      }
-    } catch (error) {
-      console.error("خطأ في حفظ الوثيقة:", error);
-      alert("حدث خطأ أثناء محاولة الحفظ. قد تكون مساحة التخزين ممتلئة.");
-    }
-  };
+  if (!currentCar) return null; // حماية
 
-  const handleDelete = () => {
-    if(deleteId) {
-      dbService.deleteDocument(deleteId);
-      setDeleteId(null);
-      loadData();
-    }
-  };
-
-  const getStatus = (endDate) => {
-    if(!endDate) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800', icon: FileText };
-    const diffDays = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) {
-      return { label: t('expired') || 'منتهية', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
-    }
-    if (diffDays <= 30) {
-      return { label: `${t('expiringSoon') || 'تنتهي قريباً'} (${diffDays} ${t('days') || 'يوم'})`, color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: AlertTriangle };
-    }
-    return { label: t('valid') || 'صالح', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle };
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
-    return new Date(dateString).toLocaleDateString(localeMap[lang] || 'ar-MA', { year: 'numeric', month: 'short', day: 'numeric' });
-  };
+  // الحصول على التاريخ الحالي
+  const today = new Date().toLocaleDateString('ar-MA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
-    <div className="space-y-4 pb-24 px-4 min-h-screen">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
-        <button 
-          onClick={() => setShowForm(!showForm)} 
-          className={`p-3 rounded-full text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center ${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[var(--primary)] hover:bg-blue-600'}`}
-        >
-          {showForm ? <X size={24} /> : <Plus size={24} />}
-        </button>
+    <div className="space-y-5 pb-24 px-4 pt-4">
+      
+      {/* 1. الترحيب والتاريخ */}
+      <div className="flex justify-between items-center mb-2">
+        <div>
+          <h1 className="text-2xl font-extrabold text-[var(--text)]">مرحباً 👋</h1>
+          <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold">{today}</p>
+        </div>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
-          <div>
-            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentType') || 'نوع الوثيقة'}</label>
-            <select 
-              value={formData.type} 
-              onChange={e => setFormData({...formData, type: e.target.value})} 
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]"
-            >
-              <option value="insurance">{t('insurance') || 'تأمين'}</option>
-              <option value="technicalInspection">{t('technicalInspection') || 'فحص تقني'}</option>
-              <option value="license">{t('license') || 'رخصة'}</option>
-            </select>
-          </div>
-          
-          <div>
-             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'تاريخ الانتهاء'}</label>
-             <input 
-                type="date" 
-                required 
-                value={formData.endDate} 
-                onChange={e => setFormData({...formData, endDate: e.target.value})} 
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" 
-              />
-          </div>
-
-          <div>
-            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentImage') || 'صورة الوثيقة (اختياري)'}</label>
-            <label className="flex flex-col items-center justify-center w-full h-32 bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--primary)]/50 transition-colors overflow-hidden relative">
-              {formData.image ? (
-                <>
-                  <img src={formData.image} alt="Preview" className="w-full h-full object-contain" />
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-white text-xs font-bold">تغيير الصورة</span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center text-[var(--text-muted)]">
-                  <Camera size={28} className="mb-2" />
-                  <span className="text-xs font-bold">اضغط لإضافة صورة</span>
-                </div>
-              )}
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-            </label>
-          </div>
-
-          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all shadow-lg shadow-blue-500/20">
-            {t('save') || 'حفظ الوثيقة'}
-          </button>
-        </form>
-      )}
-
-      {documents.length === 0 ? (
-        <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
-          <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
-            <FileText size={48} className="opacity-40" />
-          </div>
-          <p>{t('noDocuments') || 'لا توجد وثائق مسجلة.'}</p>
+      {/* 2. بطاقة السيارة الحالية */}
+      <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
+        <div className="absolute top-0 right-0 p-4 opacity-5">
+          <Car size={100} />
         </div>
-      ) : (
-        <div className="space-y-3">
-          {documents.map(doc => {
-            const status = getStatus(doc.endDate);
-            const StatusIcon = status.icon;
-            
-            return (
-              <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
-                <div className="flex items-center gap-3">
-                  {doc.image ? (
-                    <div className="w-12 h-12 rounded-xl border border-[var(--border)] overflow-hidden flex-shrink-0">
-                      <img src={doc.image} alt="doc" className="w-full h-full object-cover" />
+        
+        <p className="text-xs text-blue-300 font-bold mb-3">السيارة الحالية</p>
+        
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="w-20 h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
+             {currentCar.image ? (
+               <img src={currentCar.image} alt="car" className="w-full h-full object-cover" />
+             ) : (
+               <Car size={32} className="text-white/50" />
+             )}
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-white leading-tight">{currentCar.make} {currentCar.model}</h2>
+            <p className="text-sm font-mono text-blue-200 mt-1 bg-blue-500/20 px-2 py-0.5 rounded inline-block">{currentCar.plate || 'بدون لوحة'}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-4 relative z-10">
+          <Link to="/vehicles" className="flex-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 rounded-xl text-center backdrop-blur-md transition-colors flex items-center justify-center gap-1">
+            تغيير السيارة
+          </Link>
+          <Link to="/add-vehicle" className="flex-1 bg-[var(--primary)] hover:bg-blue-600 text-white text-xs font-bold py-2.5 rounded-xl text-center shadow-lg transition-colors flex items-center justify-center gap-1">
+            إضافة سيارة +
+          </Link>
+        </div>
+      </div>
+
+      {/* 3. الإجراءات السريعة (المربعات الأربعة) */}
+      <div className="grid grid-cols-4 gap-2">
+        <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 transition-colors">
+          <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-2"><Fuel size={20} /></div>
+          <span className="text-[10px] font-bold text-[var(--text)]">وقود</span>
+        </Link>
+        <Link to="/maintenance" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 transition-colors">
+          <div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-2"><Wrench size={20} /></div>
+          <span className="text-[10px] font-bold text-[var(--text)]">صيانة</span>
+        </Link>
+        <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 transition-colors">
+          <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-2"><Wallet size={20} /></div>
+          <span className="text-[10px] font-bold text-[var(--text)]">مصاريف</span>
+        </Link>
+        <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 transition-colors">
+          <div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-2"><FileText size={20} /></div>
+          <span className="text-[10px] font-bold text-[var(--text)]">وثائق</span>
+        </Link>
+      </div>
+
+      {/* 4. بطاقات الإحصائيات */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
+          <p className="text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
+          <p className="text-xl font-extrabold text-[var(--text)]">{totals.total.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
+        </div>
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
+          <p className="text-[11px] text-[var(--text-muted)] font-bold mb-1">عداد السيارة</p>
+          <p className="text-xl font-extrabold text-blue-500 flex items-center gap-1">
+            {Number(currentCar.odometer || 0).toLocaleString()} <span className="text-xs font-normal">KM</span>
+          </p>
+        </div>
+      </div>
+
+      {/* 5. آخر العمليات */}
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-bold text-[var(--text)] text-sm">آخر العمليات</h3>
+          <Link to="/timeline" className="text-xs text-[var(--primary)] font-bold flex items-center">
+            عرض الكل <ChevronLeft size={14} />
+          </Link>
+        </div>
+        
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
+          {recentActivity.length === 0 ? (
+             <div className="p-6 text-center text-xs text-[var(--text-muted)]">لا توجد عمليات مسجلة بعد.</div>
+          ) : (
+            recentActivity.map((activity, index) => {
+              const isFuel = activity.type === 'fuel';
+              const isMaint = activity.type === 'maintenance';
+              const Icon = isFuel ? Fuel : isMaint ? Wrench : Wallet;
+              const color = isFuel ? 'text-blue-500' : isMaint ? 'text-yellow-500' : 'text-purple-500';
+              const bg = isFuel ? 'bg-blue-500/10' : isMaint ? 'bg-yellow-500/10' : 'bg-purple-500/10';
+
+              return (
+                <div key={index} className={`flex items-center justify-between p-3 ${index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${bg} ${color}`}>
+                      <Icon size={16} />
                     </div>
-                  ) : (
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${status.bg} ${status.color}`}>
-                      <StatusIcon size={24} />
+                    <div>
+                      <p className="text-xs font-bold text-[var(--text)]">
+                        {isFuel ? 'تعبئة وقود' : isMaint ? (activity.type || 'صيانة') : (activity.type || 'مصروف')}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-muted)]">{activity.date}</p>
                     </div>
-                  )}
-                  
-                  <div>
-                    <p className="font-bold text-[var(--text)] text-base">{t(doc.type) || doc.type}</p>
-                    <p className={`text-[11px] font-bold mt-0.5 ${status.color}`}>{status.label}</p>
                   </div>
-                </div>
-                
-                <div className="flex flex-col items-end gap-2">
-                  <p className="text-[10px] text-[var(--text-muted)] font-medium">
-                    {t('endsOn') || 'ينتهي في'}: <br/>
-                    <span className="font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-0.5 rounded inline-block mt-0.5">{formatDate(doc.endDate)}</span>
+                  <p className="text-sm font-bold text-[var(--text)]">
+                    {Number(activity.cost || 0).toLocaleString()} <span className="text-[10px] font-normal">{currency}</span>
                   </p>
-                  <button 
-                    onClick={() => setDeleteId(doc.id)} 
-                    className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
-      )}
+      </div>
 
-      <ConfirmModal 
-        isOpen={!!deleteId} 
-        onClose={() => setDeleteId(null)} 
-        onConfirm={handleDelete} 
-        title={t('confirmDelete') || 'تأكيد الحذف'}
-        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟ لا يمكن التراجع عن هذا الإجراء.'}
-        variant="danger"
-        confirmText="نعم، احذف"
-      />
     </div>
   );
 }
