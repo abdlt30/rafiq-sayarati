@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { NavLink } from 'react-router-dom';
-import { Home, Wallet, Wrench, Menu, Fuel } from 'lucide-react'; // ✅ تم حذف FileText غير المستخدم
+import { Home, Wallet, Wrench, Menu, Fuel } from 'lucide-react'; 
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
@@ -15,7 +15,6 @@ export default function BottomNav() {
   ];
 
   return (
-    // ✅ إصلاح: إزالة fixed و bottom-0 و pb-safe لأنها موجودة في Layout.jsx لتجنب التضارب
     <nav className="flex justify-around items-center h-16 w-full bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)]">
       {navItems.map((item) => (
         <NavLink
@@ -30,7 +29,6 @@ export default function BottomNav() {
         >
           {({ isActive }) => (
             <>
-              {/* ✅ الخط العلوي (Active Indicator) - تصميم احترافي */}
               {isActive && (
                 <span className="absolute top-0 w-8 h-[3px] rounded-b-md bg-[var(--primary)] transition-all duration-300"></span>
               )}
