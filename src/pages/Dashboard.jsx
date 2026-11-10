@@ -1,7 +1,7 @@
 import { useContext, useMemo, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { notificationService } from '../services/notificationService'; // ✅ ضروري للتنبيهات
+import { notificationService } from '../services/notificationService';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
@@ -16,13 +16,14 @@ export default function Dashboard() {
 
   const userName = user?.name || user?.username || 'عزيزي'; 
 
-  // 1. حساب الإحصائيات
+  // 1. حساب الإحصائيات (محمي ضد القيم الفارغة)
   const totals = useMemo(() => {
     if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
-    return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
+    const data = dbService.getTotals(currentCar.id);
+    return data || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
   }, [currentCar]);
 
-  // ✅ 2. حساب متوسط استهلاك الوقود
+  // 2. حساب متوسط استهلاك الوقود (محمي ضد القسمة على صفر)
   const avgConsumption = useMemo(() => {
     if (!currentCar) return 0;
     const fuelRecords = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id);
@@ -40,17 +41,23 @@ export default function Dashboard() {
         }
     }
     if (totalDistance === 0) return 0;
-    return ((totalLiters / totalDistance) * 100).toFixed(1);
+    const result = (totalLiters / totalDistance) * 100;
+    return isNaN(result) || !isFinite(result) ? 0 : result.toFixed(1);
   }, [currentCar]);
 
-  // ✅ 3. جلب التنبيهات الهامة (الأحمر والأصفر)
+  // 3. جلب التنبيهات (محمي ضد انهيار notificationService)
   const criticalAlerts = useMemo(() => {
     if (!currentCar) return [];
-    const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
-    return alerts.filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 2);
+    try {
+      const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
+      return (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 2);
+    } catch (e) {
+      console.error("Alert error:", e);
+      return [];
+    }
   }, [currentCar, t, lang]);
 
-  // 4. جلب آخر العمليات
+  // 4. جلب آخر العمليات (محمي ضد التواريخ الخاطئة)
   const recentActivity = useMemo(() => {
     if (!currentCar) return [];
     const fuel = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: 'fuel' }));
@@ -58,7 +65,7 @@ export default function Dashboard() {
     const expenses = (dbService.getExpenses() || []).filter(e => e.carId === currentCar.id).map(e => ({ ...e, type: 'expense' }));
     
     return [...fuel, ...maintenance, ...expenses]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 4);
   }, [currentCar]);
 
@@ -66,10 +73,10 @@ export default function Dashboard() {
 
   const today = new Date().toLocaleDateString(lang === 'ar' ? 'ar-MA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // ✅ 5. إصلاح استدعاء دالة التحديث
+  // 5. دالة تحديث العداد (تم تصحيحها لتتوافق مع AppContext)
   const handleSaveOdometer = () => {
     if (newOdo && Number(newOdo) >= 0) {
-      updateCar(currentCar.id, { odometer: Number(newOdo) }); // تم تصحيحها
+      updateCar(currentCar.id, { odometer: Number(newOdo) }); 
       setIsEditingOdo(false);
     }
   };
@@ -77,7 +84,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-5 pb-24 px-4 pt-2">
       
-      {/* ✅ 6. الشريط العلوي المثبت (Sticky) */}
+      {/* الشريط العلوي المثبت */}
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-extrabold text-[var(--text)] truncate">
@@ -129,7 +136,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ✅ 7. قسم التنبيهات الهامة */}
+      {/* التنبيهات الهامة */}
       {criticalAlerts.length > 0 && (
         <div className="space-y-2 animate-fade-in">
           {criticalAlerts.map((alert, idx) => (
@@ -204,7 +211,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ✅ 8. بطاقة متوسط الاستهلاك */}
         <div className="col-span-2 bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl flex justify-between items-center">
             <div>
                 <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">متوسط استهلاك الوقود</p>
@@ -242,7 +248,7 @@ export default function Dashboard() {
                     <div className={`p-2 rounded-lg ${bg} ${color} flex-shrink-0`}><Icon size={16} /></div>
                     <div className="min-w-0">
                       <p className="text-[11px] sm:text-xs font-bold text-[var(--text)] truncate">{isFuel ? 'تعبئة وقود' : isMaint ? 'صيانة' : 'مصروف'}</p>
-                      <p className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">{activity.date}</p>
+                      <p className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">{activity.date || 'غير محدد'}</p>
                     </div>
                   </div>
                   <p className="text-xs sm:text-sm font-bold text-[var(--text)] flex-shrink-0 ml-2">
