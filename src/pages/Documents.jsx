@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { FileText, Plus, Shield, Trash2, X, AlertTriangle, CheckCircle, Camera } from 'lucide-react'; 
+import { FileText, Plus, Trash2, X, AlertTriangle, CheckCircle, Camera } from 'lucide-react'; 
 import ConfirmModal from '../components/ui/ConfirmModal';
 
 export default function Documents() {
@@ -9,7 +9,7 @@ export default function Documents() {
   const [documents, setDocuments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   
-  // ✅ إضافة حقل الصورة إلى حالة النموذج
+  // ✅ حالة النموذج
   const [formData, setFormData] = useState({ type: 'insurance', endDate: '', image: null });
   const [deleteId, setDeleteId] = useState(null);
 
@@ -27,10 +27,17 @@ export default function Documents() {
 
   useEffect(() => { loadData(); }, [currentCar]);
 
-  // ✅ دالة تحويل الصورة إلى Base64 ليمكن حفظها في LocalStorage
+  // ✅ إصلاح حرج: التحقق من حجم الصورة قبل حفظها
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // إذا كان حجم الصورة أكبر من 1.5 ميجابايت، نرفضها
+      if (file.size > 1.5 * 1024 * 1024) {
+        alert('حجم الصورة كبير جداً! يرجى اختيار صورة أصغر من 1.5 ميجابايت لتجنب امتلاء مساحة التخزين.');
+        e.target.value = null; // تصفير الحقل
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData({ ...formData, image: reader.result });
@@ -48,12 +55,12 @@ export default function Documents() {
         carId: currentCar.id, 
         type: formData.type, 
         endDate: formData.endDate,
-        image: formData.image // ✅ حفظ الصورة مع الوثيقة
+        image: formData.image
       });
 
       if (newRecord) {
         setShowForm(false);
-        setFormData({ type: 'insurance', endDate: '', image: null }); // تصفير الحقول
+        setFormData({ type: 'insurance', endDate: '', image: null }); 
         loadData(); 
       }
     } catch (error) {
@@ -131,7 +138,7 @@ export default function Documents() {
               />
           </div>
 
-          {/* ✅ حقل رفع الصورة */}
+          {/* حقل رفع الصورة */}
           <div>
             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentImage') || 'صورة الوثيقة (اختياري)'}</label>
             <label className="flex flex-col items-center justify-center w-full h-32 bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--primary)]/50 transition-colors overflow-hidden relative">
@@ -176,7 +183,7 @@ export default function Documents() {
               <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
                 
                 <div className="flex items-center gap-3">
-                  {/* ✅ عرض الصورة المصغرة إذا كانت موجودة */}
+                  {/* عرض الصورة المصغرة إذا كانت موجودة */}
                   {doc.image ? (
                     <div className="w-12 h-12 rounded-xl border border-[var(--border)] overflow-hidden flex-shrink-0">
                       <img src={doc.image} alt="doc" className="w-full h-full object-cover" />
