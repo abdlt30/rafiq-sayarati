@@ -1,148 +1,129 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, PieChart, BarChart3 } from 'lucide-react'; // ✅ تم التصحيح هنا
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart as PieIcon, BarChart3 } from 'lucide-react';
 
 export default function Reports() {
-  const { currentCar, currency, t, lang } = useContext(AppContext);
-  const navigate = useNavigate();
+  const { currentCar, currency, t } = useContext(AppContext);
 
-  const [data, setData] = useState({
-    total: 0, monthly: 0,
-    categories: [], monthlyData: []
-  });
+  // 1. حساب الإجماليات
+  const totals = useMemo(() => {
+    if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
+    return dbService.getTotals(currentCar.id);
+  }, [currentCar]);
 
-  useEffect(() => {
-    if (!currentCar) return;
+  // 2. تجميع بيانات المصاريف الشهرية (للمخطط الشريطي)
+  const monthlyData = useMemo(() => {
+    if (!currentCar) return [];
     
     const fuel = dbService.getFuel().filter(r => r.carId === currentCar.id);
-    const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
     const maintenance = dbService.getMaintenance().filter(r => r.carId === currentCar.id);
+    const expenses = dbService.getExpenses().filter(r => r.carId === currentCar.id);
+    const allRecords = [...fuel, ...maintenance, ...expenses];
 
-    const totalFuel = fuel.reduce((s, r) => s + Number(r.cost || 0), 0);
-    const totalExp = expenses.reduce((s, r) => s + Number(r.cost || 0), 0);
-    const totalMaint = maintenance.reduce((s, r) => s + Number(r.cost || 0), 0);
-    const grandTotal = totalFuel + totalExp + totalMaint;
+    // تجميع المصاريف حسب الشهر
+    const monthsMap = {};
+    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
-    const categories = [
-      { label: t('fuel') || 'وقود', value: totalFuel, color: '#3b82f6' },
-      { label: t('maintenance') || 'صيانة', value: totalMaint, color: '#f59e0b' },
-      { label: t('expenses') || 'مصاريف', value: totalExp, color: '#a855f7' }
-    ].filter(c => c.value > 0);
+    allRecords.forEach(record => {
+      if (!record.date) return;
+      const date = new Date(record.date);
+      const monthIndex = date.getMonth();
+      const year = date.getFullYear();
+      const key = `${year}-${monthIndex}`;
 
-    const monthlyData = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthKey = d.toISOString().slice(0, 7);
-      
-      const mFuel = fuel.filter(r => r.date && r.date.startsWith(monthKey)).reduce((s, r) => s + Number(r.cost || 0), 0);
-      const mExp = expenses.filter(r => r.date && r.date.startsWith(monthKey)).reduce((s, r) => s + Number(r.cost || 0), 0);
-      const mMaint = maintenance.filter(r => r.date && r.date.startsWith(monthKey)).reduce((s, r) => s + Number(r.cost || 0), 0);
-      
-      monthlyData.push({
-        label: d.toLocaleDateString(lang === 'ar' ? 'ar-MA' : 'en-US', { month: 'short' }),
-        value: mFuel + mExp + mMaint
-      });
-    }
+      if (!monthsMap[key]) {
+        monthsMap[key] = {
+          name: `${monthNames[monthIndex]} ${year}`,
+          total: 0,
+          timestamp: date.getTime()
+        };
+      }
+      monthsMap[key].total += Number(record.cost) || 0;
+    });
 
-    const currentMonth = monthlyData[monthlyData.length - 1].value;
+    // تحويل الكائن إلى مصفوفة وترتيبها حسب التاريخ
+    return Object.values(monthsMap).sort((a, b) => a.timestamp - b.timestamp).slice(-6); // آخر 6 أشهر
+  }, [currentCar]);
 
-    setData({ total: grandTotal, monthly: currentMonth, categories, monthlyData });
-  }, [currentCar, t, lang]);
-
-  const renderDonut = () => {
-    const total = data.categories.reduce((s, c) => s + c.value, 0);
-    if (total === 0) return <p className="text-center text-xs text-[var(--text-muted)]">{t('noData') || 'لا توجد بيانات'}</p>;
-    
-    let offset = 0;
-    const radius = 50;
-    const circumference = 2 * Math.PI * radius;
-
-    return (
-      <div className="flex flex-col items-center">
-        <div className="relative w-40 h-40">
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--surface-2)" strokeWidth="12" />
-            {data.categories.map((c, i) => {
-              const length = (c.value / total) * circumference;
-              const circle = (
-                <circle key={i} cx="60" cy="60" r={radius} fill="none" stroke={c.color} strokeWidth="12"
-                  strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-offset} />
-              );
-              offset += length;
-              return circle;
-            })}
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[10px] text-[var(--text-muted)]">{t('totalCost') || 'الإجمالي'}</span>
-            <span className="text-lg font-bold text-[var(--text)]">{data.total.toLocaleString()} <span className="text-xs">{currency}</span></span>
-          </div>
-        </div>
-        <div className="flex gap-4 mt-6">
-          {data.categories.map((c, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <span className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: c.color }}></span>
-              <span className="text-[10px] font-bold text-[var(--text)]">{c.label}</span>
-              <span className="text-xs text-[var(--text-muted)]">{c.value.toLocaleString()}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderBars = () => {
-    const max = Math.max(...data.monthlyData.map(d => d.value), 1);
-    return (
-      <div className="flex items-end justify-between h-32 gap-2 mt-4">
-        {data.monthlyData.map((d, i) => (
-          <div key={i} className="flex flex-col items-center flex-1">
-            <div className="w-full bg-[var(--surface-2)] rounded-t-md relative flex-1 flex items-end">
-              <div className="w-full bg-[var(--primary)] rounded-t-md transition-all duration-500" style={{ height: `${(d.value / max) * 100}%` }}></div>
-            </div>
-            <span className="text-[10px] text-[var(--text-muted)] mt-2 font-medium">{d.label}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
+  // بيانات الدائرة (Pie Chart)
+  const pieData = [
+    { name: t('fuel') || 'الوقود', value: totals.fuel, color: '#3b82f6' }, // أزرق
+    { name: t('maintenance') || 'الصيانة', value: totals.maintenance, color: '#f59e0b' }, // أصفر
+    { name: t('expenses') || 'المصاريف', value: totals.expenses, color: '#a855f7' }, // بنفسجي
+  ].filter(item => item.value > 0);
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-4">
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)]">
-          {lang === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
-        </button>
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('reports') || 'التقارير'}</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* بطاقات الإجمالي */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <span className="text-[10px] font-bold text-[var(--text-muted)] block mb-1">{t('totalCost') || 'الإجمالي'}</span>
-          <span className="text-xl font-extrabold text-[var(--text)]">{data.total.toLocaleString()} <span className="text-xs font-normal">{currency}</span></span>
+          <p className="text-xs text-[var(--text-muted)] mb-1">{t('totalExpenses') || 'إجمالي المصاريف'}</p>
+          <p className="text-xl font-extrabold text-[var(--text)]">{totals.total.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
         </div>
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <span className="text-[10px] font-bold text-[var(--text-muted)] block mb-1">{t('monthlyCost') || 'هذا الشهر'}</span>
-          <span className="text-xl font-extrabold text-[var(--text)]">{data.monthly.toLocaleString()} <span className="text-xs font-normal">{currency}</span></span>
+          <p className="text-xs text-[var(--text-muted)] mb-1">{t('totalFuelCost') || 'إجمالي الوقود'}</p>
+          <p className="text-xl font-extrabold text-blue-500">{totals.fuel.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
         </div>
       </div>
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm mt-4">
-        <div className="flex items-center gap-2 mb-6 text-[var(--text)]">
-          <PieChart size={18} className="text-[var(--primary)]" /> {/* ✅ تم التصحيح هنا */}
-          <h2 className="font-bold text-sm">{t('distributionByType') || 'توزيع المصاريف'}</h2>
+      {/* المخطط الدائري */}
+      {totals.total > 0 && (
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <PieIcon className="text-[var(--primary)]" size={20} />
+            <h2 className="font-bold text-[var(--text)]">{t('expenseDistribution') || 'توزيع المصاريف'}</h2>
+          </div>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip formatter={(value) => `${value.toLocaleString()} ${currency}`} contentStyle={{ borderRadius: '10px', border: 'none', backgroundColor: 'var(--surface-2)', color: 'var(--text)' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center gap-4 mt-2">
+            {pieData.map((entry, index) => (
+              <div key={index} className="flex items-center gap-1.5 text-xs">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                <span className="text-[var(--text-muted)]">{entry.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        {renderDonut()}
-      </div>
+      )}
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm mt-4">
-        <div className="flex items-center gap-2 mb-2 text-[var(--text)]">
-          <BarChart3 size={18} className="text-[var(--primary)]" />
-          <h2 className="font-bold text-sm">{t('monthlyExpenses') || 'المصاريف الشهرية'}</h2>
+      {/* المخطط الشريطي (المصاريف الشهرية) - ✅ تم إصلاحه */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-2 mb-6">
+          <BarChart3 className="text-green-500" size={20} />
+          <h2 className="font-bold text-[var(--text)]">{t('monthlyExpenses') || 'المصاريف الشهرية'}</h2>
         </div>
-        {renderBars()}
+        
+        {monthlyData.length === 0 ? (
+          <p className="text-center text-sm text-[var(--text-muted)] py-10">لا توجد بيانات كافية لعرض المخطط.</p>
+        ) : (
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <RechartsTooltip cursor={{ fill: 'var(--surface-2)' }} contentStyle={{ borderRadius: '10px', border: 'none', backgroundColor: 'var(--surface-2)', color: 'var(--text)' }} formatter={(value) => `${value.toLocaleString()} ${currency}`} />
+                <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={30} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );
