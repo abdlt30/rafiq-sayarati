@@ -9,7 +9,7 @@ export default function Documents() {
   const [documents, setDocuments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   
-  // ✅ حالة النموذج
+  // حالة النموذج
   const [formData, setFormData] = useState({ type: 'insurance', endDate: '', image: null });
   const [deleteId, setDeleteId] = useState(null);
 
@@ -27,14 +27,13 @@ export default function Documents() {
 
   useEffect(() => { loadData(); }, [currentCar]);
 
-  // ✅ إصلاح حرج: التحقق من حجم الصورة قبل حفظها
+  // التحقق من حجم الصورة قبل حفظها
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // إذا كان حجم الصورة أكبر من 1.5 ميجابايت، نرفضها
       if (file.size > 1.5 * 1024 * 1024) {
         alert('حجم الصورة كبير جداً! يرجى اختيار صورة أصغر من 1.5 ميجابايت لتجنب امتلاء مساحة التخزين.');
-        e.target.value = null; // تصفير الحقل
+        e.target.value = null; 
         return;
       }
 
@@ -99,7 +98,6 @@ export default function Documents() {
   return (
     <div className="space-y-4 pb-24 px-4">
       
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
         <button 
@@ -110,7 +108,6 @@ export default function Documents() {
         </button>
       </div>
 
-      {/* نموذج الإضافة */}
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
           
@@ -138,7 +135,6 @@ export default function Documents() {
               />
           </div>
 
-          {/* حقل رفع الصورة */}
           <div>
             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentImage') || 'صورة الوثيقة (اختياري)'}</label>
             <label className="flex flex-col items-center justify-center w-full h-32 bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--primary)]/50 transition-colors overflow-hidden relative">
@@ -165,7 +161,6 @@ export default function Documents() {
         </form>
       )}
 
-      {/* قائمة الوثائق */}
       {documents.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
@@ -183,7 +178,6 @@ export default function Documents() {
               <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
                 
                 <div className="flex items-center gap-3">
-                  {/* عرض الصورة المصغرة إذا كانت موجودة */}
                   {doc.image ? (
                     <div className="w-12 h-12 rounded-xl border border-[var(--border)] overflow-hidden flex-shrink-0">
                       <img src={doc.image} alt="doc" className="w-full h-full object-cover" />
