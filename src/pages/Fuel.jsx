@@ -5,17 +5,16 @@ import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity } from 'lucid
 import ConfirmModal from '../components/ui/ConfirmModal'; 
 
 export default function Fuel() {
-  const { currentCar, t, currency } = useContext(AppContext); 
+  // ✅ إصلاح 1: استدعاء updateCar من الـ Context لتحديث العداد الرئيسي
+  const { currentCar, updateCar, t, currency } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null); 
   
-  // حالة النموذج
   const [formData, setFormData] = useState({ date: '', odometer: '', liters: '', cost: '' });
 
-  // 1. جلب البيانات
   const loadData = () => {
     if (currentCar) {
       const allFuel = dbService.getFuel()?.filter(r => r.carId === currentCar.id) || [];
@@ -29,7 +28,6 @@ export default function Fuel() {
     loadData();
   }, [currentCar]);
 
-  // 2. حساب الاستهلاك L/100km (المنطق الخاص بك ممتاز هنا)
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
     const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
@@ -48,7 +46,6 @@ export default function Fuel() {
     return calculated.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [records]);
 
-  // 3. حفظ البيانات
   const handleSave = (e) => {
     e.preventDefault();
     if (!currentCar) return; 
@@ -67,7 +64,13 @@ export default function Fuel() {
       } else {
         dbService.addFuel(data);
       }
-      loadData(); // تحديث فوري
+
+      // ✅ إصلاح 2 (السحر هنا): تحديث عداد السيارة الرئيسي إذا كان هذا العداد أكبر
+      if (data.odometer > (currentCar.odometer || 0)) {
+        updateCar(currentCar.id, { odometer: data.odometer });
+      }
+
+      loadData(); 
       closeModal();
     } catch (error) {
       console.error("خطأ أثناء حفظ البيانات:", error);
@@ -75,7 +78,6 @@ export default function Fuel() {
     }
   };
 
-  // 4. حذف البيانات (تم توحيدها مع loadData)
   const handleDelete = () => {
     if(deleteId) {
       dbService.deleteFuel(deleteId);
@@ -84,19 +86,17 @@ export default function Fuel() {
     }
   };
 
-  // 5. فتح نافذة الإضافة/التعديل
   const openEdit = (record) => {
     setEditingId(record.id);
     setFormData({ date: record.date, odometer: record.odometer, liters: record.liters, cost: record.cost });
     setIsModalOpen(true);
   };
 
-  // ✅ لمسة احترافية: تعبئة التاريخ والعداد تلقائياً عند الإضافة
   const openAddModal = () => {
     setEditingId(null);
     setFormData({ 
-      date: new Date().toISOString().split('T')[0], // تاريخ اليوم
-      odometer: currentCar?.odometer || '', // العداد الحالي للسيارة
+      date: new Date().toISOString().split('T')[0], 
+      odometer: currentCar?.odometer || '', // تعبئة العداد الحالي تلقائياً
       liters: '', 
       cost: '' 
     });
@@ -112,12 +112,10 @@ export default function Fuel() {
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('fuel') || 'سجل الوقود'}</h1>
       </div>
 
-      {/* قائمة السجلات */}
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
@@ -152,7 +150,6 @@ export default function Fuel() {
                       <Activity size={10} /> {record.consumption} L/100km
                     </p>
                   ) : (
-                    /* ✅ تعريب مباشر لضمان عدم ظهورها بالإنجليزية */
                     <p className="text-[10px] text-[var(--text-muted)] mt-1">أول تعبئة</p>
                   )}
                 </div>
@@ -168,15 +165,13 @@ export default function Fuel() {
         </div>
       )}
 
-      {/* الزر العائم (FAB) */}
       <button 
-        onClick={openAddModal} // ✅ استخدام الدالة الجديدة
+        onClick={openAddModal} 
         className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus size={28} />
       </button>
 
-      {/* نافذة الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
@@ -187,7 +182,6 @@ export default function Fuel() {
         confirmText="نعم، احذف"
       />
 
-      {/* نافذة الإضافة/التعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
@@ -205,17 +199,14 @@ export default function Fuel() {
               </div>
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">العداد (KM)</label>
-                {/* ✅ إضافة min="0" */}
                 <input type="number" min="0" required placeholder="0" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">اللترات</label>
-                {/* ✅ إضافة min="0" */}
                 <input type="number" min="0" step="0.01" required placeholder="0.00" value={formData.liters} onChange={e => setFormData({...formData, liters: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">التكلفة ({currency})</label>
-                {/* ✅ إضافة min="0" */}
                 <input type="number" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
