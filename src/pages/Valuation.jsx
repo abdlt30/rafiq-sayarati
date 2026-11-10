@@ -1,15 +1,22 @@
-import { useState, useContext, useMemo } from 'react';
+import { useState, useContext, useMemo, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Tag, TrendingDown, Calculator, Info, AlertCircle } from 'lucide-react'; // ✅ إضافة أيقونة التنبيه
+import { Tag, TrendingDown, Calculator, Info, AlertCircle, Sparkles } from 'lucide-react'; 
 
 export default function Valuation() {
-  const { currentCar, t, currency } = useContext(AppContext);
+  const { currentCar, currency } = useContext(AppContext);
   
   const [purchasePrice, setPurchasePrice] = useState('');
   const [purchaseYear, setPurchaseYear] = useState('');
   const [condition, setCondition] = useState('good');
   const [showResult, setShowResult] = useState(false);
-  const [error, setError] = useState(''); // ✅ حالة جديدة للتحقق المخصص
+  const [error, setError] = useState('');
+
+  // ✅ تحسين: إذا كانت السيارة الحالية تمتلك سنة صنع مسجلة، قم بتعبئتها تلقائياً
+  useEffect(() => {
+    if (currentCar?.year) {
+      setPurchaseYear(currentCar.year);
+    }
+  }, [currentCar]);
 
   const calculateValuation = useMemo(() => {
     if (!purchasePrice || !purchaseYear || !currentCar) return null;
@@ -18,18 +25,27 @@ export default function Valuation() {
     const year = Number(purchaseYear);
     const currentYear = new Date().getFullYear();
     
+    // حساب العمر (لا يقل عن 0)
     let age = currentYear - year;
     if (age < 0) age = 0;
 
+    // 1. خصم العمر (10% لكل سنة)
     const ageDepreciation = age * 0.10; 
+    
+    // 2. خصم المسافة (1% لكل 10,000 كم)
     const mileage = Number(currentCar.odometer) || 0;
     const mileageDepreciation = (mileage / 10000) * 0.01;
+    
+    // 3. معامل الحالة
     const conditionMultiplier = condition === 'excellent' ? 1.05 : condition === 'fair' ? 0.90 : 1.0;
 
+    // المعادلة النهائية
     let estimatedValue = price * (1 - ageDepreciation - mileageDepreciation) * conditionMultiplier;
 
-    if (estimatedValue < (price * 0.10)) {
-      estimatedValue = price * 0.10;
+    // الحد الأدنى للقيمة (10% من السعر الأصلي مهما بلغ الاستهلاك)
+    const minimumValue = price * 0.10;
+    if (estimatedValue < minimumValue) {
+      estimatedValue = minimumValue;
     }
 
     return Math.round(estimatedValue);
@@ -37,11 +53,11 @@ export default function Valuation() {
 
   const handleCalculate = (e) => {
     e.preventDefault();
-    setError(''); // تصفير الأخطاء
+    setError(''); 
     
-    // ✅ التحقق المخصص بدلاً من رسالة المتصفح المزعجة
-    if (!purchasePrice || !purchaseYear) {
-      setError('يرجى إدخال سعر الشراء وسنة الصنع للحساب.');
+    // ✅ إصلاح: التأكد من أن السعر أكبر من صفر لمنع أخطاء القسمة (Division by Zero)
+    if (!purchasePrice || Number(purchasePrice) <= 0 || !purchaseYear) {
+      setError('يرجى إدخال سعر شراء صحيح وسنة صنع للحساب.');
       setShowResult(false);
       return;
     }
@@ -54,7 +70,6 @@ export default function Valuation() {
       
       {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        {/* ✅ إصلاح 1: إجبار النص العربي لتجنب مشكلة الترجمة */}
         <h1 className="text-2xl font-bold text-[var(--text)]">تقييم السيارة</h1>
       </div>
 
@@ -62,11 +77,10 @@ export default function Valuation() {
       <div className="bg-[var(--surface-2)] p-4 rounded-2xl flex items-start gap-3 border border-[var(--border)]">
         <Info className="text-blue-500 flex-shrink-0" size={20} />
         <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-          أدخل بيانات السيارة لحساب القيمة السوقية التقديرية بناءً على معادلة الاستهلاك (العمر، المسافة، الحالة).
+          أدخل بيانات السيارة لحساب القيمة السوقية التقديرية بناءً على معادلة الاستهلاك المحلية (العمر، المسافة، الحالة).
         </p>
       </div>
 
-      {/* ✅ إصلاح 2: إضافة noValidate لمنع رسالة المتصفح العمودية المزعجة */}
       <form onSubmit={handleCalculate} noValidate className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-sm">
         
         {/* عرض رسالة الخطأ المخصصة */}
@@ -129,9 +143,10 @@ export default function Valuation() {
               <p className="text-lg font-bold text-blue-200 mt-2">{currency}</p>
             </div>
             
+            {/* ✅ إصلاح: حماية حساب النسبة المئوية من القسمة على صفر */}
             <div className="mt-6 bg-black/20 rounded-xl p-3 inline-flex items-center gap-2 text-xs text-white/80">
               <TrendingDown size={16} className="text-red-400" />
-              <span>انخفاض عن السعر الأصلي: {Math.round(((purchasePrice - calculateValuation) / purchasePrice) * 100)}%</span>
+              <span>انخفاض عن السعر الأصلي: {Math.max(0, Math.round(((Number(purchasePrice) - calculateValuation) / Number(purchasePrice)) * 100))}%</span>
             </div>
           </div>
           
