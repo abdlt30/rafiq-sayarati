@@ -20,6 +20,7 @@ import Documents from './pages/Documents';
 import Reminders from './pages/Reminders'; 
 import Backup from './pages/Backup'; 
 import Vehicles from './pages/Vehicles';
+import Income from './pages/Income'; // ✅ إضافة: استيراد صفحة الإيرادات
 
 // ✅ استيراد الصفحات المتقدمة
 import Notifications from './pages/Notifications';
@@ -58,13 +59,13 @@ export default function App() {
         {/* 2. المسارات المحمية (تتطلب وجود سيارة) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            {/* ✅ مسار الرئيسية سليم 100% */}
             <Route path="/" element={<Dashboard />} />
             
             <Route path="/vehicles" element={<Vehicles />} />
             <Route path="/fuel" element={<Fuel />} />
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/expenses" element={<Expenses />} />
+            <Route path="/income" element={<Income />} /> {/* ✅ إضافة: مسار صفحة الإيرادات */}
             <Route path="/documents" element={<Documents />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/backup" element={<Backup />} />
