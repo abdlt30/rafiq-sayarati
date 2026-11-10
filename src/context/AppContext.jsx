@@ -28,10 +28,10 @@ const translations = {
     expenseType: 'نوع المصروف', amount: 'المبلغ', enterAmount: 'أدخل المبلغ', addExpense: 'إضافة مصروف',
     noExpenses: 'لا توجد مصاريف مسجلة.', insurance: 'تأمين', taxes: 'ضرائب', carWash: 'غسيل', fines: 'مخالفات مرورية', parking: 'رسوم مواقف', other: 'أخرى',
     fuel: 'سجل الوقود', addFuel: 'إضافة وقود', odometer: 'العداد', liters: 'اللترات', 
-    cost: 'التكلفة', noFuelRecords: 'لا توجد سجلات وقود.', date: 'التاريخ',
+    cost: 'التكلفة', noFuelRecords: 'لا توجد سجلات وقود.', date: 'التاريخ', firstFill: 'أول تعبئة',
     addMaintenance: 'إضافة صيانة', maintenanceType: 'نوع الصيانة', oilChange: 'تغيير زيت', tires: 'إطارات', 
-    brakes: 'فرامل', battery: 'بطارية', airFilter: 'فلتر هواء', fullInspection: 'فحص شامل',
-    nextOdometer: 'العداد للصيانة القادمة', enterCost: 'أدخل التكلفة', optional: 'اختياري',
+    brakes: 'فرامل', battery: 'بطارية', airFilter: 'فلتر هواء', fullInspection: 'فحص شامل', otherMaintenance: 'أخرى',
+    nextOdometer: 'العداد للصيانة القادمة', enterCost: 'أدخل التكلفة', optional: 'اختياري', addType: 'إضافة نوع', enterCustomTypeName: 'أدخل اسم نوع الصيانة الجديد:',
     noMaintenanceRecords: 'لا توجد سجلات صيانة.', nextChange: 'التغيير القادم', noNextMaintenance: 'لا توجد صيانة قادمة',
     addDocument: 'إضافة وثيقة', documentType: 'نوع الوثيقة', endDate: 'تاريخ الانتهاء', 
     technicalInspection: 'فحص تقني', license: 'رخصة', expired: 'منتهية', 
@@ -53,13 +53,15 @@ const translations = {
     management: 'الإدارة', insights: 'التحليلات', system: 'النظام',
     avgConsumption: 'متوسط الاستهلاك', totalLiters: 'إجمالي اللترات',
     externalNotifications: 'الإشعارات الخارجية', defaultTypes: 'أنواع افتراضية',
-    currency_MAD: 'درهم مغربي', currency_SAR: 'ريال سعودي', currency_AED: 'درهم إماراتي', 
-    currency_EGP: 'جنيه مصري', currency_QAR: 'ريال قطري', currency_KWD: 'دينار كويتي', 
-    currency_BHD: 'دينار بحريني', currency_OMR: 'ريال عماني', currency_JOD: 'دينار أردني', 
-    currency_DZD: 'دينار جزائري', currency_TND: 'دينار تونسي', currency_LYD: 'دينار ليبي', 
-    currency_USD: 'دولار أمريكي', currency_EUR: 'يورو',
+    
+    // ✅ مفاتيح جديدة تمت إضافتها
+    fuelStations: 'محطات الوقود',
+    valuation: 'تقييم السيارة',
+    errorSaving: 'حدث خطأ أثناء الحفظ.',
+    errorSavingMsg: 'حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.',
+    confirmDeleteBtn: 'نعم، احذف',
 
-    // ✅ مفاتيح الإيرادات (جديد)
+    // ✅ مفاتيح الإيرادات
     income: 'الإيرادات',
     totalIncome: 'إجمالي الإيرادات',
     noIncome: 'لا توجد إيرادات مسجلة.',
@@ -70,7 +72,14 @@ const translations = {
     otherIncome: 'إيراد آخر',
     netProfit: 'صافي الربح',
     saveIncome: 'حفظ الإيراد',
-    notes: 'ملاحظات'
+    notes: 'ملاحظات',
+
+    // مفاتيح أسماء العملات
+    currency_MAD: 'درهم مغربي', currency_SAR: 'ريال سعودي', currency_AED: 'درهم إماراتي', 
+    currency_EGP: 'جنيه مصري', currency_QAR: 'ريال قطري', currency_KWD: 'دينار كويتي', 
+    currency_BHD: 'دينار بحريني', currency_OMR: 'ريال عماني', currency_JOD: 'دينار أردني', 
+    currency_DZD: 'دينار جزائري', currency_TND: 'دينار تونسي', currency_LYD: 'دينار ليبي', 
+    currency_USD: 'دولار أمريكي', currency_EUR: 'يورو'
   },
   en: { 
     home: 'Home', expenses: 'Expenses', maintenance: 'Maintenance', documents: 'Documents', more: 'More', settings: 'Settings', 
@@ -95,10 +104,10 @@ const translations = {
     expenseType: 'Expense Type', amount: 'Amount', enterAmount: 'Enter amount', addExpense: 'Add Expense',
     noExpenses: 'No expenses recorded.', insurance: 'Insurance', taxes: 'Taxes', carWash: 'Car Wash', fines: 'Traffic Fines', parking: 'Parking', other: 'Other',
     fuel: 'Fuel Log', addFuel: 'Add Fuel', odometer: 'Odometer', liters: 'Liters', 
-    cost: 'Cost', noFuelRecords: 'No fuel records found.', date: 'Date',
+    cost: 'Cost', noFuelRecords: 'No fuel records found.', date: 'Date', firstFill: 'First Fill',
     addMaintenance: 'Add Maintenance', maintenanceType: 'Maintenance Type', oilChange: 'Oil Change', tires: 'Tires', 
-    brakes: 'Brakes', battery: 'Battery', airFilter: 'Air Filter', fullInspection: 'Full Inspection',
-    nextOdometer: 'Next Maintenance Odometer', enterCost: 'Enter cost', optional: 'Optional',
+    brakes: 'Brakes', battery: 'Battery', airFilter: 'Air Filter', fullInspection: 'Full Inspection', otherMaintenance: 'Other',
+    nextOdometer: 'Next Maintenance Odometer', enterCost: 'Enter cost', optional: 'Optional', addType: 'Add Type', enterCustomTypeName: 'Enter new maintenance type name:',
     noMaintenanceRecords: 'No maintenance records.', nextChange: 'Next change', noNextMaintenance: 'No next maintenance',
     addDocument: 'Add Document', documentType: 'Document Type', endDate: 'End Date', 
     technicalInspection: 'Technical Inspection', license: 'License', expired: 'Expired', 
@@ -120,13 +129,15 @@ const translations = {
     management: 'Management', insights: 'Insights', system: 'System',
     avgConsumption: 'Avg Consumption', totalLiters: 'Total Liters',
     externalNotifications: 'External Notifications', defaultTypes: 'Default Types',
-    currency_MAD: 'Moroccan Dirham', currency_SAR: 'Saudi Riyal', currency_AED: 'UAE Dirham', 
-    currency_EGP: 'Egyptian Pound', currency_QAR: 'Qatari Riyal', currency_KWD: 'Kuwaiti Dinar', 
-    currency_BHD: 'Bahraini Dinar', currency_OMR: 'Omani Rial', currency_JOD: 'Jordanian Dinar', 
-    currency_DZD: 'Algerian Dinar', currency_TND: 'Tunisian Dinar', currency_LYD: 'Libyan Dinar', 
-    currency_USD: 'US Dollar', currency_EUR: 'Euro',
 
-    // ✅ Income Keys (New)
+    // ✅ New Keys Added
+    fuelStations: 'Fuel Stations',
+    valuation: 'Car Valuation',
+    errorSaving: 'Error during saving.',
+    errorSavingMsg: 'Error saving data. Please try again.',
+    confirmDeleteBtn: 'Yes, Delete',
+
+    // ✅ Income Keys
     income: 'Income',
     totalIncome: 'Total Income',
     noIncome: 'No income recorded.',
@@ -137,7 +148,14 @@ const translations = {
     otherIncome: 'Other Income',
     netProfit: 'Net Profit',
     saveIncome: 'Save Income',
-    notes: 'Notes'
+    notes: 'Notes',
+
+    // Currency keys
+    currency_MAD: 'Moroccan Dirham', currency_SAR: 'Saudi Riyal', currency_AED: 'UAE Dirham', 
+    currency_EGP: 'Egyptian Pound', currency_QAR: 'Qatari Riyal', currency_KWD: 'Kuwaiti Dinar', 
+    currency_BHD: 'Bahraini Dinar', currency_OMR: 'Omani Rial', currency_JOD: 'Jordanian Dinar', 
+    currency_DZD: 'Algerian Dinar', currency_TND: 'Tunisian Dinar', currency_LYD: 'Libyan Dinar', 
+    currency_USD: 'US Dollar', currency_EUR: 'Euro'
   },
   fr: { 
     home: 'Accueil', expenses: 'Dépenses', maintenance: 'Entretien', documents: 'Documents', more: 'Plus', settings: 'Paramètres', 
@@ -162,10 +180,10 @@ const translations = {
     expenseType: 'Type de dépense', amount: 'Montant', enterAmount: 'Entrer le montant', addExpense: 'Ajouter Dépense',
     noExpenses: 'Aucune dépense enregistrée.', insurance: 'Assurance', taxes: 'Impôts', carWash: 'Lavage', fines: 'Amendes', parking: 'Stationnement', other: 'Autre',
     fuel: 'Journal de Carburant', addFuel: 'Ajouter Carburant', odometer: 'Compteur Kilométrique', liters: 'Litres', 
-    cost: 'Coût', noFuelRecords: 'Aucun enregistrement de carburant.', date: 'Date',
+    cost: 'Coût', noFuelRecords: 'Aucun enregistrement de carburant.', date: 'Date', firstFill: 'Premier Plein',
     addMaintenance: 'Ajouter Entretien', maintenanceType: 'Type d\'entretien', oilChange: 'Vidange d\'huile', tires: 'Pneus', 
-    brakes: 'Freins', battery: 'Batterie', airFilter: 'Filtre à air', fullInspection: 'Inspection complète',
-    nextOdometer: 'Compteur pour le prochain entretien', enterCost: 'Entrer le coût', optional: 'Optionnel',
+    brakes: 'Freins', battery: 'Batterie', airFilter: 'Filtre à air', fullInspection: 'Inspection complète', otherMaintenance: 'Autre',
+    nextOdometer: 'Compteur pour le prochain entretien', enterCost: 'Entrer le coût', optional: 'Optionnel', addType: 'Ajouter Type', enterCustomTypeName: 'Entrez le nom du nouveau type d\'entretien:',
     noMaintenanceRecords: 'Aucun enregistrement d\'entretien.', nextChange: 'Prochain changement', noNextMaintenance: 'Pas de prochain entretien',
     addDocument: 'Ajouter Document', documentType: 'Type de document', endDate: 'Date d\'expiration', 
     technicalInspection: 'Contrôle technique', license: 'Permis', expired: 'Expiré', 
@@ -187,13 +205,15 @@ const translations = {
     management: 'Gestion', insights: 'Analyses', system: 'Système',
     avgConsumption: 'Consommation Moy.', totalLiters: 'Total Litres',
     externalNotifications: 'Notifications Externes', defaultTypes: 'Types par défaut',
-    currency_MAD: 'Dirham Marocain', currency_SAR: 'Riyal Saoudien', currency_AED: 'Dirham des Émirats', 
-    currency_EGP: 'Livre Égyptienne', currency_QAR: 'Riyal Qatari', currency_KWD: 'Dinar Koweïtien', 
-    currency_BHD: 'Dinar Bahreïni', currency_OMR: 'Rial Omani', currency_JOD: 'Dinar Jordanien', 
-    currency_DZD: 'Dinar Algérien', currency_TND: 'Dinar Tunisien', currency_LYD: 'Dinar Libyen', 
-    currency_USD: 'Dollar Américain', currency_EUR: 'Euro',
 
-    // ✅ Clés de Revenus (Nouveau)
+    // ✅ Nouvelles clés ajoutées
+    fuelStations: 'Stations-service',
+    valuation: 'Évaluation',
+    errorSaving: 'Erreur lors de l\'enregistrement.',
+    errorSavingMsg: 'Erreur lors de l\'enregistrement. Veuillez réessayer.',
+    confirmDeleteBtn: 'Oui, Supprimer',
+
+    // ✅ Clés de Revenus
     income: 'Revenus',
     totalIncome: 'Revenu Total',
     noIncome: 'Aucun revenu enregistré.',
@@ -204,7 +224,14 @@ const translations = {
     otherIncome: 'Autre Revenu',
     netProfit: 'Bénéfice Net',
     saveIncome: 'Enregistrer le Revenu',
-    notes: 'Remarques'
+    notes: 'Remarques',
+
+    // Clés de devises
+    currency_MAD: 'Dirham Marocain', currency_SAR: 'Riyal Saoudien', currency_AED: 'Dirham des Émirats', 
+    currency_EGP: 'Livre Égyptienne', currency_QAR: 'Riyal Qatari', currency_KWD: 'Dinar Koweïtien', 
+    currency_BHD: 'Dinar Bahreïni', currency_OMR: 'Rial Omani', currency_JOD: 'Dinar Jordanien', 
+    currency_DZD: 'Dinar Algérien', currency_TND: 'Dinar Tunisien', currency_LYD: 'Dinar Libyen', 
+    currency_USD: 'Dollar Américain', currency_EUR: 'Euro'
   }
 };
 
@@ -271,7 +298,7 @@ export const AppProvider = ({ children }) => {
       setVehicles(updatedVehicles);
     } catch (error) {
       console.error("Storage Error:", error);
-      alert("مساحة التخزين ممتلئة. يرجى اختيار صورة أصغر الحجم أو حذف بعض البيانات.");
+      alert(t('storageFull') || 'مساحة التخزين ممتلئة. يرجى اختيار صورة أصغر الحجم أو حذف بعض البيانات.');
     }
   };
 
@@ -288,7 +315,7 @@ export const AppProvider = ({ children }) => {
       setVehicles(updatedVehicles);
     } catch (error) {
       console.error("Storage Error:", error);
-      alert("مساحة التخزين ممتلئة. تعذر حفظ التعديلات.");
+      alert(t('storageError') || 'مساحة التخزين ممتلئة. تعذر حفظ التعديلات.');
     }
   };
 
