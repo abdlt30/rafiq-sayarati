@@ -37,11 +37,10 @@ export default function Expenses() {
     loadData();
   }, [currentCar]);
 
-  // ✅ إضافة: دالة لفتح النموذج وتعبئة التاريخ تلقائياً
   const openAddModal = () => {
     setEditingId(null);
     setFormData({ 
-      date: new Date().toISOString().split('T')[0], // تاريخ اليوم
+      date: new Date().toISOString().split('T')[0], 
       type: 'insurance', 
       cost: '' 
     });
@@ -136,7 +135,6 @@ export default function Expenses() {
                 </div>
               </div>
               <div className="flex gap-1.5">
-                {/* ✅ إضافة تأثيرات اللمس active:scale-90 */}
                 <button onClick={() => openEdit(record)} className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"><Edit2 size={14} /></button>
                 <button onClick={() => setDeleteId(record.id)} className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"><Trash2 size={14} /></button>
               </div>
@@ -147,7 +145,7 @@ export default function Expenses() {
 
       {/* الزر العائم (FAB) */}
       <button 
-        onClick={openAddModal} // ✅ استخدام الدالة الجديدة
+        onClick={openAddModal} 
         className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus size={28} />
@@ -160,8 +158,8 @@ export default function Expenses() {
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
         message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذا المصروف؟ لا يمكن التراجع عن هذا الإجراء.'}
-        variant="danger" // ✅ إضافة لون الحذف
-        confirmText="نعم، احذف" // ✅ إضافة نص مخصص
+        variant="danger" 
+        confirmText="نعم، احذف" 
       />
 
       {/* نافذة الإضافة/التعديل */}
@@ -169,11 +167,14 @@ export default function Expenses() {
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
             <button type="button" onClick={closeModal} className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white active:scale-90 transition-all z-10"><X size={20} /></button>
-            <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">{editingId ? 'تعديل مصروف' : 'إضافة مصروف'}</h2>
+            {/* ✅ إصلاح: استخدام الترجمة للعنوان */}
+            <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
+              {editingId ? (t('edit') || 'تعديل مصروف') : (t('addExpense') || 'إضافة مصروف')}
+            </h2>
             
             <div className="space-y-3 overflow-y-auto pb-2">
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">التاريخ</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
               
@@ -186,10 +187,11 @@ export default function Expenses() {
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('amount') || 'المبلغ'} ({currency})</label>
-                {/* ✅ إصلاح أمني: منع الأرقام السالبة بـ min="0" */}
-                <input type="number" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                {/* ✅ إصلاح: إضافة inputMode="decimal" و active:scale */}
+                <input type="number" inputMode="decimal" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
+            {/* ✅ إصلاح: إضافة active:scale-[0.98] */}
             <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all">
               {t('save') || 'حفظ البيانات'}
             </button>
