@@ -76,6 +76,16 @@ input[type="date"] {
   color-scheme: dark;
 }
 
+/* ✅ جديد: إخفاء أسهم حقول الأرقام (Spinners) لتبدو كتطبيق أصلي */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
 /* =========================================
    4. المكونات (Components)
    ========================================= */
@@ -188,4 +198,74 @@ input[type="date"] {
   place-items: center;
   color: var(--text-muted) !important;
   transition: all 0.3s ease;
+}
+
+/* =========================================
+   5. ✅ جديد: إعدادات الطباعة (PDF Export)
+   ========================================= */
+@page {
+  margin: 1cm; /* هوامش الورقة */
+  size: auto;
+}
+
+@media print {
+  /* إخفاء العناصر غير المرغوب بطباعتها (أزرار، قوائم، شريط سفلي) */
+  .no-print, 
+  .bottom-nav, 
+  .header, 
+  button,
+  .fixed {
+    display: none !important;
+  }
+
+  /* إجبار الخلفية البيضاء والنص الأسود */
+  body, html, #root {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    min-height: auto;
+    overflow: visible !important;
+  }
+
+  /* ضبط حاوية التقرير */
+  .print-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* ضبط الجداول */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  th, td {
+    border: 1px solid #000000 !important;
+    padding: 6px !important;
+    text-align: right !important;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+  }
+
+  /* إجبار النصوص على الظهور بالأسود */
+  h1, h2, h3, h4, h5, h6, p, span, div {
+    color: #000000 !important;
+  }
+  
+  /* فصل الصفحات */
+  .page-break {
+    page-break-before: always;
+  }
 }
