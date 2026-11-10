@@ -2,24 +2,23 @@ import { useContext, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Car, Plus, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import ConfirmModal from '../components/ui/ConfirmModal'; // ✅ استدعاء نافذة التأكيد
+import ConfirmModal from '../components/ui/ConfirmModal';
 
 export default function Vehicles() {
   const { currentCar, vehicles, selectCar, deleteCar, t } = useContext(AppContext);
   const navigate = useNavigate();
   
-  // ✅ حالة لحفظ معرف السيارة المراد حذفها
   const [deleteId, setDeleteId] = useState(null);
 
   const handleDeleteClick = (e, id) => {
-    e.stopPropagation(); // منع فتح السيارة عند الضغط على الحذف
-    setDeleteId(id); // فتح نافذة التأكيد
+    e.stopPropagation(); 
+    setDeleteId(id); 
   };
 
   const handleConfirmDelete = () => {
     if (deleteId) {
       deleteCar(deleteId);
-      setDeleteId(null); // إغلاق النافذة
+      setDeleteId(null); 
     }
   };
 
@@ -40,9 +39,9 @@ export default function Vehicles() {
         
         <button 
           onClick={() => navigate('/add-vehicle')} 
-          className="flex items-center gap-1.5 bg-[var(--primary)] text-white px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-colors text-sm font-bold"
+          className="flex items-center gap-1.5 bg-[var(--primary)] text-white px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-600 active:scale-95 transition-all text-sm font-bold"
         >
-          <Plus size={16} /> {t('add') || 'إضافة'}
+          <Plus size={18} /> {t('add') || 'إضافة'}
         </button>
       </div>
 
@@ -51,8 +50,9 @@ export default function Vehicles() {
           <div className="p-5 bg-[var(--surface-2)] rounded-full mb-4">
             <Car size={48} className="opacity-30" />
           </div>
-          <p className="font-bold">{t('noVehiclesAdded') || 'لا توجد سيارات مضافة.'}</p>
-          <button onClick={() => navigate('/add-vehicle')} className="mt-4 text-[var(--primary)] font-bold text-sm bg-[var(--primary)]/10 px-4 py-2 rounded-lg">
+          <p className="font-bold text-lg">{t('noVehiclesAdded') || 'لا توجد سيارات مضافة.'}</p>
+          <p className="text-sm mt-1 mb-6 text-center max-w-[250px]">أضف سيارتك الأولى لتبدأ في تتبع مصاريفك وصياناتك.</p>
+          <button onClick={() => navigate('/add-vehicle')} className="text-white font-bold text-sm bg-[var(--primary)] px-6 py-3 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-transform">
             إضافة سيارتك الأولى
           </button>
         </div>
@@ -60,20 +60,19 @@ export default function Vehicles() {
         <div className="space-y-3">
           {vehicles.map(car => {
             const isActive = currentCar?.id === car.id;
-            // ✅ التحقق من وجود العداد بأي من المسميين لتجنب الأخطاء
             const odometerValue = car.currentOdometer || car.odometer || 0;
 
             return (
               <div 
                 key={car.id} 
                 onClick={() => { selectCar(car); navigate('/'); }}
-                className={`relative p-3.5 rounded-3xl border flex items-center gap-4 cursor-pointer transition-all duration-300 ${
+                className={`relative p-4 rounded-3xl border flex items-center gap-4 cursor-pointer transition-all duration-300 active:scale-[0.98] ${
                   isActive 
                     ? 'border-[var(--primary)] bg-gradient-to-br from-[var(--primary)]/10 to-transparent shadow-md shadow-blue-500/10' 
                     : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--text-muted)]/50'
                 }`}
               >
-                {/* صورة السيارة (مصغرة) */}
+                {/* صورة السيارة */}
                 <div className={`w-20 h-16 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border ${isActive ? 'border-[var(--primary)]/30 bg-[var(--primary)]/10' : 'border-[var(--border)] bg-[var(--surface-2)]'}`}>
                   {car.image ? (
                     <img src={car.image} alt="car" className="w-full h-full object-cover" />
@@ -94,28 +93,35 @@ export default function Vehicles() {
                         {car.plate && <span className="text-[10px] font-mono border border-[var(--border)] px-1.5 py-0.5 rounded text-[var(--text-muted)]">{car.plate}</span>}
                       </div>
                     </div>
-                    {isActive && <CheckCircle className="text-[var(--primary)] flex-shrink-0" size={18} />}
+                    
+                    {/* ✅ تحسين: إضافة كلمة "نشطة" لتوضيح سبب التمييز */}
+                    {isActive && (
+                      <div className="flex items-center gap-1 bg-[var(--primary)]/10 px-2 py-1 rounded-lg">
+                        <CheckCircle className="text-[var(--primary)]" size={14} />
+                        <span className="text-[10px] font-bold text-[var(--primary)]">نشطة</span>
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex justify-between items-end mt-2">
+                  <div className="flex justify-between items-end mt-3">
                     {/* العداد */}
-                    <span className="text-xs font-bold text-[var(--primary)] bg-[var(--primary)]/5 px-2 py-1 rounded-md">
+                    <span className="text-xs font-bold text-[var(--text)] bg-[var(--surface-2)] px-2.5 py-1 rounded-md border border-[var(--border)]">
                       {Number(odometerValue).toLocaleString()} KM
                     </span>
                     
-                    {/* أزرار التحكم */}
-                    <div className="flex gap-1.5">
+                    {/* ✅ تحسين: تكبير أزرار التحكم لتسهيل الضغط بالإبهام */}
+                    <div className="flex gap-2">
                       <button 
                         onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} 
-                        className="p-1.5 text-blue-500 bg-blue-500/10 rounded-lg hover:bg-blue-500/20 transition-colors"
+                        className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500/20 active:scale-90 transition-all"
                       >
-                        <Edit2 size={14} />
+                        <Edit2 size={16} />
                       </button>
                       <button 
                         onClick={(e) => handleDeleteClick(e, car.id)} 
-                        className="p-1.5 text-red-500 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
+                        className="p-2 text-red-500 bg-red-500/10 rounded-xl hover:bg-red-500/20 active:scale-90 transition-all"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
@@ -126,13 +132,15 @@ export default function Vehicles() {
         </div>
       )}
 
-      {/* ✅ نافذة تأكيد الحذف الاحترافية */}
+      {/* نافذة تأكيد الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleConfirmDelete} 
         title={t('confirmDeleteCar') || 'تأكيد حذف السيارة'}
         message={t('confirmDeleteCarMsg') || 'هل أنت متأكد من حذف هذه السيارة؟ سيتم حذف جميع السجلات المرتبطة بها نهائياً.'}
+        confirmText="نعم، احذف السيارة"
+        cancelText="تراجع"
       />
     </div>
   );
