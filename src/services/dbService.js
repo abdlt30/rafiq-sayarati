@@ -5,6 +5,7 @@ const KEYS = {
   MAINTENANCE: 'maintenance_records',
   DOCUMENTS: 'documents_records',
   REMINDERS: 'reminders_records',
+  INCOMES: 'income_records', // ✅ إضافة: مفتاح الإيرادات
   CUSTOM_MAINTENANCE: 'custom_maintenance_types',
 };
 
@@ -34,7 +35,6 @@ const createLocalStore = (storageKey) => ({
       return newRecord;
     } catch (e) {
       console.error(`Error adding to ${storageKey}:`, e);
-      // ✅ تحسين: التعامل مع خطأ امتلاء المساحة
       if (e.name === 'QuotaExceededError') {
         alert('مساحة التخزين ممتلئة! يرجى حذف بعض السجلات القديمة أو أخذ نسخة احتياطية.');
       } else {
@@ -73,6 +73,7 @@ const expenseStore = createLocalStore(KEYS.EXPENSES);
 const maintenanceStore = createLocalStore(KEYS.MAINTENANCE);
 const documentStore = createLocalStore(KEYS.DOCUMENTS);
 const reminderStore = createLocalStore(KEYS.REMINDERS);
+const incomeStore = createLocalStore(KEYS.INCOMES); // ✅ إضافة: كائن الإيرادات
 
 export const dbService = {
   // --- الوقود ---
@@ -104,6 +105,14 @@ export const dbService = {
   addReminder: reminderStore.add,
   updateReminder: reminderStore.update,
   deleteReminder: reminderStore.delete,
+
+  // ==========================================
+  // ✅ الإيرادات (Income) - جديد
+  // ==========================================
+  getIncomes: incomeStore.get,
+  addIncome: incomeStore.add,
+  updateIncome: incomeStore.update,
+  deleteIncome: incomeStore.delete,
 
   // ==========================================
   // ✅ الأنواع المخصصة للصيانة (Custom Maintenance)
@@ -141,34 +150,40 @@ export const dbService = {
   },
 
   // ==========================================
-  // ✅ الإحصائيات العامة (تم إصلاح الثغرة)
+  // ✅ الإحصائيات العامة (محدثة لدعم صافي الربح)
   // ==========================================
   getTotals: (carId) => {
-    // إصلاح: التحقق الصارم من معرف السيارة لمنع تداخل الإحصائيات
     const filterByCar = (records) => records.filter(r => r.carId && String(r.carId) === String(carId));
     
     const fuel = filterByCar(dbService.getFuel());
     const maintenance = filterByCar(dbService.getMaintenance());
     const expenses = filterByCar(dbService.getExpenses());
+    const incomes = filterByCar(dbService.getIncomes()); // ✅ جلب الإيرادات
 
     const totalFuel = fuel.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
     const totalMaint = maintenance.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
     const totalExp = expenses.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
     const totalLiters = fuel.reduce((sum, r) => sum + (Number(r.liters) || 0), 0);
+    
+    // ✅ حساب الإيرادات وصافي الربح
+    const totalIncome = incomes.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const totalExpensesCombined = totalFuel + totalMaint + totalExp;
+    const netProfit = totalIncome - totalExpensesCombined;
 
     return { 
       fuel: totalFuel, 
       maintenance: totalMaint, 
       expenses: totalExp, 
-      total: totalFuel + totalMaint + totalExp, 
-      totalLiters 
+      total: totalExpensesCombined, 
+      totalLiters,
+      income: totalIncome, // ✅ جديد
+      net: netProfit       // ✅ جديد
     };
   },
 
   // ==========================================
-  // ✅ ميزة جديدة: حذف جميع بيانات سيارة معينة
+  // ✅ حذف جميع بيانات سيارة معينة
   // ==========================================
-  // تستخدم عند حذف السيارة من صفحة "سياراتي" لمنع تراكم البيانات المعلقة
   deleteCarData: (carId) => {
     try {
       const filterOutCar = (records) => records.filter(r => String(r.carId) !== String(carId));
@@ -178,6 +193,7 @@ export const dbService = {
       localStorage.setItem(KEYS.MAINTENANCE, JSON.stringify(filterOutCar(dbService.getMaintenance())));
       localStorage.setItem(KEYS.DOCUMENTS, JSON.stringify(filterOutCar(dbService.getDocuments())));
       localStorage.setItem(KEYS.REMINDERS, JSON.stringify(filterOutCar(dbService.getReminders())));
+      localStorage.setItem(KEYS.INCOMES, JSON.stringify(filterOutCar(dbService.getIncomes()))); // ✅ حذف الإيرادات أيضاً
       
       return true;
     } catch (e) {
