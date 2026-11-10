@@ -1,0 +1,25 @@
+{
+  "name": "رفيق سيارتي - Rafiq Sayarati",
+  "short_name": "رفيق سيارتي",
+  "description": "تطبيقك الذكي لإدارة مصاريف، صيانة، وإيرادات سيارتك.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#2f6bff",
+  "orientation": "portrait",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
