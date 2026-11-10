@@ -27,7 +27,8 @@ import Reports from './pages/Reports';
 import Resale from './pages/Resale';
 import Timeline from './pages/Timeline';
 import About from './pages/About'; 
-import Valuation from './pages/Valuation'; // ✅ إضافة: استيراد صفحة تقييم السيارة
+import Valuation from './pages/Valuation'; 
+import FuelStations from './pages/FuelStations'; // ✅ إضافة: استيراد صفحة الخريطة
 
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
@@ -75,7 +76,8 @@ export default function App() {
             <Route path="/resale" element={<Resale />} />
             <Route path="/timeline" element={<Timeline />} />
             <Route path="/about" element={<About />} />
-            <Route path="/valuation" element={<Valuation />} /> {/* ✅ إضافة: مسار صفحة التقييم */}
+            <Route path="/valuation" element={<Valuation />} />
+            <Route path="/fuel-stations" element={<FuelStations />} /> {/* ✅ إضافة: مسار الخريطة */}
           </Route>
         </Route>
         
