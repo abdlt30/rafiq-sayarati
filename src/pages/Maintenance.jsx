@@ -13,7 +13,6 @@ export default function Maintenance() {
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   
-  // حالة النموذج
   const [formData, setFormData] = useState({ date: '', type: 'oilChange', cost: '', nextKm: '' });
   const [customTypes, setCustomTypes] = useState([]);
 
@@ -51,7 +50,6 @@ export default function Maintenance() {
   }, [currentCar]);
 
   const handleAddCustomType = () => {
-    // ملاحظة: window.prompt يعمل، لكن في النسخ المستقبلية يفضل عمل Modal مخصص
     const newType = window.prompt(t('enterCustomTypeName') || 'أدخل اسم نوع الصيانة الجديد:');
     if (newType && newType.trim() !== '') {
       const updatedTypes = dbService.addCustomType(newType.trim());
@@ -83,7 +81,8 @@ export default function Maintenance() {
       closeModal();
     } catch (error) {
       console.error("خطأ في حفظ الصيانة:", error);
-      alert("حدث خطأ أثناء الحفظ.");
+      // ✅ إصلاح: استخدام الترجمة للرسالة
+      alert(t('errorSaving') || 'حدث خطأ أثناء الحفظ.');
     }
   };
 
@@ -98,7 +97,7 @@ export default function Maintenance() {
   const openAddModal = () => {
     setEditingId(null);
     setFormData({ 
-      date: new Date().toISOString().split('T')[0], // ✅ تعبئة التاريخ تلقائياً
+      date: new Date().toISOString().split('T')[0], 
       type: 'oilChange', 
       cost: '', 
       nextKm: '' 
@@ -181,7 +180,7 @@ export default function Maintenance() {
 
       {/* الزر العائم (FAB) */}
       <button 
-        onClick={openAddModal} // ✅ استخدام الدالة الجديدة لتعبئة التاريخ
+        onClick={openAddModal} 
         className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus size={28} />
@@ -194,8 +193,8 @@ export default function Maintenance() {
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
         message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف سجل الصيانة هذا؟ لا يمكن التراجع عن هذا الإجراء.'}
-        variant="danger" // ✅ إضافة لون الحذف
-        confirmText="نعم، احذف" // ✅ إضافة نص مخصص
+        variant="danger" 
+        confirmText={t('confirmDeleteBtn') || 'نعم، احذف'} 
       />
 
       {/* نافذة الإضافة/التعديل */}
@@ -232,14 +231,14 @@ export default function Maintenance() {
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
-                {/* ✅ إضافة min="0" */}
-                <input type="number" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                {/* ✅ إصلاح: إضافة inputMode="decimal" */}
+                <input type="number" inputMode="decimal" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('nextOdometer') || 'العداد للصيانة القادمة'} (KM)</label>
-                {/* ✅ إضافة min="0" */}
-                <input type="number" min="0" placeholder={t('optional') || 'اختياري'} value={formData.nextKm} onChange={e => setFormData({...formData, nextKm: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                {/* ✅ إصلاح: إضافة inputMode="numeric" */}
+                <input type="number" inputMode="numeric" min="0" placeholder={t('optional') || 'اختياري'} value={formData.nextKm} onChange={e => setFormData({...formData, nextKm: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
 
