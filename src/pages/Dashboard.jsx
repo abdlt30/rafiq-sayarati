@@ -5,8 +5,8 @@ import { notificationService } from '../services/notificationService';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
-  ChevronLeft, Pencil, Check, X, Bell, Settings, AlertTriangle, Activity, ShieldAlert
-} from 'lucide-react';
+  ChevronLeft, Pencil, Check, X, Bell, Settings, AlertTriangle, Activity, ShieldAlert, TrendingUp
+} from 'lucide-react'; // ✅ إضافة TrendingUp للإيرادات
 
 export default function Dashboard() {
   const { currentCar, updateCar, t, currency, user, lang } = useContext(AppContext);
@@ -14,12 +14,12 @@ export default function Dashboard() {
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  // ✅ إصلاح الترحيب: إذا لم يكن هناك اسم، نستخدم "مرحباً بك"
   const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
 
+  // ✅ 1. إصلاح: إضافة income و net للقيم الافتراضية لمنع انهيار التطبيق
   const totals = useMemo(() => {
-    if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
-    return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
+    if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
+    return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
   }, [currentCar]);
 
   const avgConsumption = useMemo(() => {
@@ -43,24 +43,29 @@ export default function Dashboard() {
     return isNaN(result) || !isFinite(result) ? 0 : result.toFixed(1);
   }, [currentCar]);
 
-  // ✅ جلب جميع التنبيهات الهامة (وثائق، صيانة، زيت)
   const criticalAlerts = useMemo(() => {
     if (!currentCar) return [];
     try {
       const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
-      return (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 3); // عرض 3 تنبيهات كحد أقصى
+      return (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 3); 
     } catch (e) {
       return [];
     }
   }, [currentCar, t, lang]);
 
+  // ✅ 2. إصلاح: إضافة الإيرادات إلى "آخر العمليات"
   const recentActivity = useMemo(() => {
     if (!currentCar) return [];
     const fuel = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: 'fuel' }));
     const maintenance = (dbService.getMaintenance() || []).filter(m => m.carId === currentCar.id).map(m => ({ ...m, type: 'maintenance' }));
     const expenses = (dbService.getExpenses() || []).filter(e => e.carId === currentCar.id).map(e => ({ ...e, type: 'expense' }));
     
-    return [...fuel, ...maintenance, ...expenses]
+    // جلب الإيرادات وتوحيد اسم المبلغ إلى cost ليعمل مع الواجهة
+    const incomes = (dbService.getIncomes() || [])
+      .filter(i => i.carId === currentCar.id)
+      .map(i => ({ ...i, type: 'income', cost: i.amount })); 
+    
+    return [...fuel, ...maintenance, ...expenses, ...incomes]
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 4);
   }, [currentCar]);
@@ -131,7 +136,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ✅ التنبيهات الهامة (تظهر بشكل احترافي) */}
+      {/* التنبيهات الهامة */}
       {criticalAlerts.length > 0 && (
         <div className="space-y-2 animate-fade-in">
           <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">تنبيهات تحتاج انتباهك</h3>
@@ -170,15 +175,37 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* بطاقات الإحصائيات */}
+      {/* ✅ 3. بطاقات الإحصائيات (مع إضافة الإيرادات وصافي الربح) */}
       <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
-          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
-          <p className="text-lg sm:text-xl font-extrabold text-[var(--text)] truncate">
-            {totals.total.toLocaleString()} <span className="text-[10px] sm:text-xs font-normal">{currency}</span>
+        
+        {/* إجمالي الإيرادات */}
+        <div className="bg-[var(--surface)] border border-green-500/20 p-3 sm:p-4 rounded-2xl">
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي الإيرادات</p>
+          <p className="text-lg sm:text-xl font-extrabold text-green-500 truncate">
+            {totals.income?.toLocaleString() || 0} <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
           </p>
         </div>
-        
+
+        {/* إجمالي المصاريف */}
+        <div className="bg-[var(--surface)] border border-red-500/20 p-3 sm:p-4 rounded-2xl">
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
+          <p className="text-lg sm:text-xl font-extrabold text-red-500 truncate">
+            {totals.total?.toLocaleString() || 0} <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
+          </p>
+        </div>
+
+        {/* صافي الربح (بطاقة عريضة) */}
+        <div className={`col-span-2 border p-3 sm:p-4 rounded-2xl flex justify-between items-center ${totals.net >= 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+            <div>
+                <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">صافي الربح</p>
+                <p className={`text-xl sm:text-2xl font-extrabold flex items-center gap-1 ${totals.net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {totals.net?.toLocaleString() || 0} <span className="text-xs font-normal">{currency}</span>
+                </p>
+            </div>
+            <TrendingUp size={32} className={totals.net >= 0 ? 'text-green-500/20' : 'text-red-500/20'} />
+        </div>
+
+        {/* عداد السيارة */}
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">عداد السيارة</p>
           {isEditingOdo ? (
@@ -209,14 +236,12 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="col-span-2 bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl flex justify-between items-center">
-            <div>
-                <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">متوسط استهلاك الوقود</p>
-                <p className="text-lg sm:text-xl font-extrabold text-green-500 flex items-center gap-1">
-                    {avgConsumption > 0 ? avgConsumption : '—'} <span className="text-[10px] sm:text-xs font-normal">L/100km</span>
-                </p>
-            </div>
-            <Activity size={28} className="text-green-500/20" />
+        {/* متوسط الاستهلاك */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
+            <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">متوسط الاستهلاك</p>
+            <p className="text-lg sm:text-xl font-extrabold text-yellow-500 flex items-center gap-1">
+                {avgConsumption > 0 ? avgConsumption : '—'} <span className="text-[10px] sm:text-xs font-normal">L/100km</span>
+            </p>
         </div>
       </div>
 
@@ -234,23 +259,28 @@ export default function Dashboard() {
              <div className="p-6 text-center text-xs text-[var(--text-muted)]">لا توجد عمليات مسجلة بعد.</div>
           ) : (
             recentActivity.map((activity, index) => {
+              // ✅ إضافة التعامل مع الإيرادات في القائمة
               const isFuel = activity.type === 'fuel';
               const isMaint = activity.type === 'maintenance';
-              const Icon = isFuel ? Fuel : isMaint ? Wrench : Wallet;
-              const color = isFuel ? 'text-blue-500' : isMaint ? 'text-yellow-500' : 'text-purple-500';
-              const bg = isFuel ? 'bg-blue-500/10' : isMaint ? 'bg-yellow-500/10' : 'bg-purple-500/10';
+              const isIncome = activity.type === 'income';
+              
+              const Icon = isFuel ? Fuel : isMaint ? Wrench : isIncome ? TrendingUp : Wallet;
+              const color = isFuel ? 'text-blue-500' : isMaint ? 'text-yellow-500' : isIncome ? 'text-green-500' : 'text-purple-500';
+              const bg = isFuel ? 'bg-blue-500/10' : isMaint ? 'bg-yellow-500/10' : isIncome ? 'bg-green-500/10' : 'bg-purple-500/10';
 
               return (
                 <div key={index} className={`flex items-center justify-between p-3 ${index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''}`}>
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <div className={`p-2 rounded-lg ${bg} ${color} flex-shrink-0`}><Icon size={16} /></div>
                     <div className="min-w-0">
-                      <p className="text-[11px] sm:text-xs font-bold text-[var(--text)] truncate">{isFuel ? 'تعبئة وقود' : isMaint ? 'صيانة' : 'مصروف'}</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-[var(--text)] truncate">
+                        {isFuel ? 'تعبئة وقود' : isMaint ? 'صيانة' : isIncome ? 'إيراد' : 'مصروف'}
+                      </p>
                       <p className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">{activity.date || 'غير محدد'}</p>
                     </div>
                   </div>
-                  <p className="text-xs sm:text-sm font-bold text-[var(--text)] flex-shrink-0 ml-2">
-                    {Number(activity.cost || 0).toLocaleString()} <span className="text-[9px] sm:text-[10px] font-normal">{currency}</span>
+                  <p className={`text-xs sm:text-sm font-bold flex-shrink-0 ml-2 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>
+                    {isIncome ? '+' : ''}{Number(activity.cost || 0).toLocaleString()} <span className="text-[9px] sm:text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
                 </div>
               );
