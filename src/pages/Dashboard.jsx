@@ -1,22 +1,27 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
-  AlertTriangle, ChevronLeft, CalendarDays, Gauge, Activity
+  ChevronLeft, Pencil, Check, X, Gauge
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { currentCar, t, currency } = useContext(AppContext);
+  // ✅ تأكد من وجود updateCar في AppContext لديك
+  const { currentCar, updateCar, t, currency } = useContext(AppContext);
 
-  // 1. حساب الإحصائيات بأمان تام (استخدام ?. لمنع الانهيار)
+  // حالة تعديل العداد السريع
+  const [isEditingOdo, setIsEditingOdo] = useState(false);
+  const [newOdo, setNewOdo] = useState('');
+
+  // حساب الإحصائيات
   const totals = useMemo(() => {
     if (!currentCar) return { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
     return dbService.getTotals(currentCar.id) || { fuel: 0, maintenance: 0, expenses: 0, total: 0 };
   }, [currentCar]);
 
-  // 2. جلب آخر العمليات
+  // جلب آخر العمليات
   const recentActivity = useMemo(() => {
     if (!currentCar) return [];
     const fuel = (dbService.getFuel() || []).filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: 'fuel' }));
@@ -25,13 +30,20 @@ export default function Dashboard() {
     
     return [...fuel, ...maintenance, ...expenses]
       .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 4); // آخر 4 عمليات فقط
+      .slice(0, 4);
   }, [currentCar]);
 
-  if (!currentCar) return null; // حماية
+  if (!currentCar) return null;
 
-  // الحصول على التاريخ الحالي
   const today = new Date().toLocaleDateString('ar-MA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // دالة حفظ العداد الجديد
+  const handleSaveOdometer = () => {
+    if (newOdo && Number(newOdo) >= 0) {
+      updateCar(currentCar.id, { ...currentCar, odometer: Number(newOdo) });
+      setIsEditingOdo(false);
+    }
+  };
 
   return (
     <div className="space-y-5 pb-24 px-4 pt-4">
@@ -46,9 +58,7 @@ export default function Dashboard() {
 
       {/* 2. بطاقة السيارة الحالية */}
       <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
-        <div className="absolute top-0 right-0 p-4 opacity-5">
-          <Car size={100} />
-        </div>
+        <div className="absolute top-0 right-0 p-4 opacity-5"><Car size={100} /></div>
         
         <p className="text-xs text-blue-300 font-bold mb-3">السيارة الحالية</p>
         
@@ -76,7 +86,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 3. الإجراءات السريعة (المربعات الأربعة) */}
+      {/* 3. الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 transition-colors">
           <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-2"><Fuel size={20} /></div>
@@ -102,11 +112,36 @@ export default function Dashboard() {
           <p className="text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
           <p className="text-xl font-extrabold text-[var(--text)]">{totals.total.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
         </div>
+        
+        {/* ✅ بطاقة العداد التفاعلية */}
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
           <p className="text-[11px] text-[var(--text-muted)] font-bold mb-1">عداد السيارة</p>
-          <p className="text-xl font-extrabold text-blue-500 flex items-center gap-1">
-            {Number(currentCar.odometer || 0).toLocaleString()} <span className="text-xs font-normal">KM</span>
-          </p>
+          {isEditingOdo ? (
+            <div className="flex items-center gap-1 mt-1">
+              <input 
+                type="number" 
+                value={newOdo} 
+                onChange={(e) => setNewOdo(e.target.value)}
+                placeholder={currentCar.odometer || 0}
+                className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none"
+                autoFocus
+              />
+              <button onClick={handleSaveOdometer} className="text-green-500 p-1 bg-green-500/10 rounded"><Check size={14} /></button>
+              <button onClick={() => setIsEditingOdo(false)} className="text-red-500 p-1 bg-red-500/10 rounded"><X size={14} /></button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xl font-extrabold text-blue-500 flex items-center gap-1">
+                {Number(currentCar.odometer || 0).toLocaleString()} <span className="text-xs font-normal">KM</span>
+              </p>
+              <button 
+                onClick={() => { setNewOdo(currentCar.odometer || ''); setIsEditingOdo(true); }}
+                className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors"
+              >
+                <Pencil size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -133,26 +168,19 @@ export default function Dashboard() {
               return (
                 <div key={index} className={`flex items-center justify-between p-3 ${index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${bg} ${color}`}>
-                      <Icon size={16} />
-                    </div>
+                    <div className={`p-2 rounded-lg ${bg} ${color}`}><Icon size={16} /></div>
                     <div>
-                      <p className="text-xs font-bold text-[var(--text)]">
-                        {isFuel ? 'تعبئة وقود' : isMaint ? (activity.type || 'صيانة') : (activity.type || 'مصروف')}
-                      </p>
+                      <p className="text-xs font-bold text-[var(--text)]">{isFuel ? 'تعبئة وقود' : isMaint ? 'صيانة' : 'مصروف'}</p>
                       <p className="text-[10px] text-[var(--text-muted)]">{activity.date}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-[var(--text)]">
-                    {Number(activity.cost || 0).toLocaleString()} <span className="text-[10px] font-normal">{currency}</span>
-                  </p>
+                  <p className="text-sm font-bold text-[var(--text)]">{Number(activity.cost || 0).toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
                 </div>
               );
             })
           )}
         </div>
       </div>
-
     </div>
   );
 }
