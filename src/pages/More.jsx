@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Car, FileText, Bell, Settings, Info, Database, 
   PieChart, Clock, Tag, ShieldAlert, ChevronLeft, ChevronRight,
-  MapPin, TrendingUp // ✅ إضافة: أيقونة الإيرادات
+  MapPin, TrendingUp
 } from 'lucide-react';
 
 // ✅ مكون مساعد (خارج الدالة الرئيسية لتحسين الأداء)
@@ -45,10 +45,10 @@ export default function More() {
         <MenuRow icon={FileText} label={t('documents') || 'الوثائق'} path="/documents" color="text-purple-500" />
         <MenuRow icon={Bell} label={t('reminders') || 'التذكيرات'} path="/reminders" color="text-yellow-500" />
         
-        {/* ✅ إضافة: زر الإيرادات (الميزة الجديدة) */}
         <MenuRow icon={TrendingUp} label={t('income') || 'الإيرادات'} path="/income" color="text-green-500" />
         
-        <MenuRow icon={MapPin} label="محطات الوقود" path="/fuel-stations" color="text-red-500" />
+        {/* ✅ إصلاح: استخدام الترجمة بدلاً من النص الثابت */}
+        <MenuRow icon={MapPin} label={t('fuelStations') || 'محطات الوقود'} path="/fuel-stations" color="text-red-500" />
       </div>
 
       {/* قسم التحليلات */}
@@ -58,7 +58,9 @@ export default function More() {
         </h2>
         <MenuRow icon={PieChart} label={t('reports') || 'التقارير'} path="/reports" color="text-green-500" />
         <MenuRow icon={Clock} label={t('timeline') || 'سجل السيارة'} path="/timeline" color="text-orange-500" />
-        <MenuRow icon={Tag} label="تقييم السيارة" path="/valuation" color="text-teal-500" />
+        
+        {/* ✅ إصلاح: استخدام الترجمة بدلاً من النص الثابت */}
+        <MenuRow icon={Tag} label={t('valuation') || 'تقييم السيارة'} path="/valuation" color="text-teal-500" />
       </div>
 
       {/* قسم النظام */}
