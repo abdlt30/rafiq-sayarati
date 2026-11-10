@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
+import { dbService } from '../services/dbService'; // ✅ ضروري لحذف بيانات السيارة المرتبطة
 
 export const AppContext = createContext();
 
@@ -42,28 +43,16 @@ const translations = {
     exportData: 'تصدير البيانات (JSON)', importData: 'استيراد البيانات',
     exportSuccess: 'تم تصدير البيانات بنجاح!', confirmImport: 'تحذير: سيتم استبدال جميع بياناتك الحالية. هل أنت متأكد؟',
     importSuccess: 'تم استيراد البيانات بنجاح! سيتم إعادة التشغيل.', importError: 'خطأ: الملف غير صالح أو تالف.',
-
-    // مفاتيح الصفحات الجديدة
     notifications: 'مركز التنبيهات', inbox: 'التنبيهات', reports: 'التقارير', resale: 'تقييم السيارة', timeline: 'سجل السيارة',
     unread: 'جديد', markAllRead: 'تحديد الكل كمقروء', clearAll: 'مسح الكل', noNotifications: 'لا توجد تنبيهات حالياً.',
     monthlyExpenses: 'المصاريف الشهرية', estimatedValue: 'القيمة التقديرية', printReport: 'طباعة التقرير', shareReport: 'مشاركة التقرير',
-    
-    // مفاتيح صفحة الإعدادات الجديدة
     preferences: 'التفضيلات الإقليمية', privacyAndSecurity: 'الخصوصية والأمان', version: 'الإصدار',
     selectCurrency: 'اختر العملة', searchCurrency: 'ابحث عن عملة...',
     privacyText: 'جميع بياناتك محفوظة على هاتفك فقط. نحن لا نجمع أي بيانات شخصية. عند تفعيل المزامنة السحابية، ستكون بياناتك مشفرة وآمنة.',
     noResults: 'لا توجد نتائج',
-    
-    // مفاتيح صفحة المزيد
     management: 'الإدارة', insights: 'التحليلات', system: 'النظام',
-
-    // ✅ المفاتيح الجديدة المضافة
-    avgConsumption: 'متوسط الاستهلاك',
-    totalLiters: 'إجمالي اللترات',
-    externalNotifications: 'الإشعارات الخارجية',
-    defaultTypes: 'أنواع افتراضية',
-
-    // مفاتيح أسماء العملات
+    avgConsumption: 'متوسط الاستهلاك', totalLiters: 'إجمالي اللترات',
+    externalNotifications: 'الإشعارات الخارجية', defaultTypes: 'أنواع افتراضية',
     currency_MAD: 'درهم مغربي', currency_SAR: 'ريال سعودي', currency_AED: 'درهم إماراتي', 
     currency_EGP: 'جنيه مصري', currency_QAR: 'ريال قطري', currency_KWD: 'دينار كويتي', 
     currency_BHD: 'دينار بحريني', currency_OMR: 'ريال عماني', currency_JOD: 'دينار أردني', 
@@ -108,28 +97,16 @@ const translations = {
     exportData: 'Export Data (JSON)', importData: 'Import Data',
     exportSuccess: 'Data exported successfully!', confirmImport: 'Warning: This will overwrite your current data. Are you sure?',
     importSuccess: 'Data imported successfully! Reloading...', importError: 'Error: Invalid or corrupted file.',
-
-    // New pages keys
     notifications: 'Notifications', inbox: 'Inbox', reports: 'Reports', resale: 'Resale Value', timeline: 'Timeline',
     unread: 'New', markAllRead: 'Mark all read', clearAll: 'Clear all', noNotifications: 'No notifications yet.',
     monthlyExpenses: 'Monthly Expenses', estimatedValue: 'Estimated Value', printReport: 'Print Report', shareReport: 'Share Report',
-
-    // New settings keys
     preferences: 'Regional Preferences', privacyAndSecurity: 'Privacy & Security', version: 'Version',
     selectCurrency: 'Select Currency', searchCurrency: 'Search for a currency...',
     privacyText: 'All your data is stored locally on your phone. We do not collect any personal data. When cloud sync is enabled, your data will be encrypted and secure.',
     noResults: 'No results found',
-    
-    // New More page keys
     management: 'Management', insights: 'Insights', system: 'System',
-
-    // ✅ New keys added
-    avgConsumption: 'Avg Consumption',
-    totalLiters: 'Total Liters',
-    externalNotifications: 'External Notifications',
-    defaultTypes: 'Default Types',
-
-    // Currency keys
+    avgConsumption: 'Avg Consumption', totalLiters: 'Total Liters',
+    externalNotifications: 'External Notifications', defaultTypes: 'Default Types',
     currency_MAD: 'Moroccan Dirham', currency_SAR: 'Saudi Riyal', currency_AED: 'UAE Dirham', 
     currency_EGP: 'Egyptian Pound', currency_QAR: 'Qatari Riyal', currency_KWD: 'Kuwaiti Dinar', 
     currency_BHD: 'Bahraini Dinar', currency_OMR: 'Omani Rial', currency_JOD: 'Jordanian Dinar', 
@@ -174,28 +151,16 @@ const translations = {
     exportData: 'Exporter les données (JSON)', importData: 'Importer des données',
     exportSuccess: 'Données exportées avec succès!', confirmImport: 'Attention : Cela écrasera vos données actuelles. Êtes-vous sûr ?',
     importSuccess: 'Données importées avec succès ! Redémarrage...', importError: 'Erreur : Fichier invalide ou corrompu.',
-
-    // Nouvelles pages
     notifications: 'Notifications', inbox: 'Boîte', reports: 'Rapports', resale: 'Revente', timeline: 'Historique',
     unread: 'Nouveau', markAllRead: 'Tout lire', clearAll: 'Effacer', noNotifications: 'Aucune notification.',
     monthlyExpenses: 'Dépenses mensuelles', estimatedValue: 'Valeur estimée', printReport: 'Imprimer', shareReport: 'Partager',
-
-    // Nouvelles clés de paramètres
     preferences: 'Préférences Régionales', privacyAndSecurity: 'Confidentialité & Sécurité', version: 'Version',
     selectCurrency: 'Choisir la devise', searchCurrency: 'Rechercher une devise...',
     privacyText: 'Toutes vos données sont stockées localement sur votre téléphone. Nous ne collectons aucune donnée personnelle. Lorsque la synchronisation cloud est activée, vos données seront cryptées et sécurisées.',
     noResults: 'Aucun résultat trouvé',
-    
-    // Nouvelles clés de la page Plus
     management: 'Gestion', insights: 'Analyses', system: 'Système',
-
-    // ✅ Nouvelles clés ajoutées
-    avgConsumption: 'Consommation Moy.',
-    totalLiters: 'Total Litres',
-    externalNotifications: 'Notifications Externes',
-    defaultTypes: 'Types par défaut',
-
-    // Clés de devises
+    avgConsumption: 'Consommation Moy.', totalLiters: 'Total Litres',
+    externalNotifications: 'Notifications Externes', defaultTypes: 'Types par défaut',
     currency_MAD: 'Dirham Marocain', currency_SAR: 'Riyal Saoudien', currency_AED: 'Dirham des Émirats', 
     currency_EGP: 'Livre Égyptienne', currency_QAR: 'Riyal Qatari', currency_KWD: 'Dinar Koweïtien', 
     currency_BHD: 'Dinar Bahreïni', currency_OMR: 'Rial Omani', currency_JOD: 'Dinar Jordanien', 
@@ -205,6 +170,24 @@ const translations = {
 };
 
 export const AppProvider = ({ children }) => {
+  
+  // ✅ 1. إضافة حالة المستخدم (user) لحفظ الاسم
+  const [user, setUserState] = useState(() => {
+    try {
+      const savedName = localStorage.getItem('user_name');
+      return savedName ? { name: savedName } : null;
+    } catch (e) { return null; }
+  });
+
+  const setUser = (userData) => {
+    setUserState(userData);
+    if (userData && userData.name) {
+      localStorage.setItem('user_name', userData.name);
+    } else {
+      localStorage.removeItem('user_name');
+    }
+  };
+
   const [currentCar, setCurrentCar] = useState(() => {
     try {
       const saved = localStorage.getItem('savedCar');
@@ -254,13 +237,16 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const updateCar = (updatedCarData) => {
+  // ✅ 2. إصلاح دالة التحديث لتستقبل (carId, updatedData) وتتوافق مع الداشبورد
+  const updateCar = (carId, updatedData) => {
     try {
-      const updatedVehicles = vehicles.map(v => v.id === updatedCarData.id ? updatedCarData : v);
+      const updatedVehicles = vehicles.map(v => v.id === carId ? { ...v, ...updatedData } : v);
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      if (currentCar?.id === updatedCarData.id) {
-        localStorage.setItem('savedCar', JSON.stringify(updatedCarData));
-        setCurrentCar(updatedCarData);
+      
+      if (currentCar?.id === carId) {
+        const newCurrentCar = { ...currentCar, ...updatedData };
+        localStorage.setItem('savedCar', JSON.stringify(newCurrentCar));
+        setCurrentCar(newCurrentCar);
       }
       setVehicles(updatedVehicles);
     } catch (error) {
@@ -269,10 +255,16 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // ✅ 3. إصلاح دالة الحذف لحذف البيانات المرتبطة (وقود، صيانة...) لتوفير المساحة
   const deleteCar = (id) => {
     try {
+      if (dbService && dbService.deleteCarData) {
+        dbService.deleteCarData(id); // حذف البيانات المرتبطة
+      }
+
       const updatedVehicles = vehicles.filter(v => v.id !== id);
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
+      
       if (currentCar?.id === id) {
         const nextCar = updatedVehicles.length > 0 ? updatedVehicles[0] : null;
         setCurrentCar(nextCar);
@@ -295,10 +287,12 @@ export const AppProvider = ({ children }) => {
 
   const t = (key) => translations[lang]?.[key] || key;
 
+  // ✅ 4. تصدير user و setUser لباقي التطبيق
   return (
     <AppContext.Provider value={{ 
       currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, 
-      isLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t 
+      isLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
+      user, setUser 
     }}>
       {children}
     </AppContext.Provider>
