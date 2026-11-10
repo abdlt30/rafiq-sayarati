@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { FileText, Plus, Shield, Trash2, X, AlertTriangle, CheckCircle } from 'lucide-react'; 
+import { FileText, Plus, Shield, Trash2, X, AlertTriangle, CheckCircle, Camera } from 'lucide-react'; 
 import ConfirmModal from '../components/ui/ConfirmModal';
 
 export default function Documents() {
@@ -9,24 +9,35 @@ export default function Documents() {
   const [documents, setDocuments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   
-  // حفظ "المفتاح" وليس النص المترجم
-  const [formData, setFormData] = useState({ type: 'insurance', endDate: '' });
+  // ✅ إضافة حقل الصورة إلى حالة النموذج
+  const [formData, setFormData] = useState({ type: 'insurance', endDate: '', image: null });
   const [deleteId, setDeleteId] = useState(null);
 
   const loadData = () => {
     if (currentCar) {
-      // ✅ إصلاح حرج: إضافة ?. و || [] لمنع انهيار التطبيق إذا كانت قاعدة البيانات فارغة
       const allDocs = dbService.getDocuments() || [];
       const carDocs = allDocs
         .filter(d => d.carId === currentCar.id)
-        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate)); // الأقرب انتهاءً أولاً
+        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
       setDocuments(carDocs);
     } else {
-      setDocuments([]); // تصفير القائمة إذا لم تكن هناك سيارة
+      setDocuments([]); 
     }
   };
 
   useEffect(() => { loadData(); }, [currentCar]);
+
+  // ✅ دالة تحويل الصورة إلى Base64 ليمكن حفظها في LocalStorage
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -36,17 +47,18 @@ export default function Documents() {
       const newRecord = dbService.addDocument({ 
         carId: currentCar.id, 
         type: formData.type, 
-        endDate: formData.endDate 
+        endDate: formData.endDate,
+        image: formData.image // ✅ حفظ الصورة مع الوثيقة
       });
 
       if (newRecord) {
         setShowForm(false);
-        setFormData({ type: 'insurance', endDate: '' });
-        loadData(); // إعادة تحميل البيانات لتظهر فوراً
+        setFormData({ type: 'insurance', endDate: '', image: null }); // تصفير الحقول
+        loadData(); 
       }
     } catch (error) {
       console.error("خطأ في حفظ الوثيقة:", error);
-      alert("حدث خطأ أثناء محاولة الحفظ.");
+      alert("حدث خطأ أثناء محاولة الحفظ. قد تكون مساحة التخزين ممتلئة.");
     }
   };
 
@@ -60,8 +72,6 @@ export default function Documents() {
 
   const getStatus = (endDate) => {
     if(!endDate) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800', icon: FileText };
-    
-    // حساب الفرق بالأيام
     const diffDays = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
@@ -87,7 +97,7 @@ export default function Documents() {
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
         <button 
           onClick={() => setShowForm(!showForm)} 
-          className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform flex items-center justify-center"
+          className={`p-3 rounded-full text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center ${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[var(--primary)] hover:bg-blue-600'}`}
         >
           {showForm ? <X size={24} /> : <Plus size={24} />}
         </button>
@@ -96,6 +106,7 @@ export default function Documents() {
       {/* نموذج الإضافة */}
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
+          
           <div>
             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentType') || 'نوع الوثيقة'}</label>
             <select 
@@ -120,7 +131,28 @@ export default function Documents() {
               />
           </div>
 
-          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">
+          {/* ✅ حقل رفع الصورة */}
+          <div>
+            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentImage') || 'صورة الوثيقة (اختياري)'}</label>
+            <label className="flex flex-col items-center justify-center w-full h-32 bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--primary)]/50 transition-colors overflow-hidden relative">
+              {formData.image ? (
+                <>
+                  <img src={formData.image} alt="Preview" className="w-full h-full object-contain" />
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <span className="text-white text-xs font-bold">تغيير الصورة</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center text-[var(--text-muted)]">
+                  <Camera size={28} className="mb-2" />
+                  <span className="text-xs font-bold">اضغط لإضافة صورة</span>
+                </div>
+              )}
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            </label>
+          </div>
+
+          <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all shadow-lg shadow-blue-500/20">
             {t('save') || 'حفظ الوثيقة'}
           </button>
         </form>
@@ -141,22 +173,35 @@ export default function Documents() {
             const StatusIcon = status.icon;
             
             return (
-              <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
+              <div key={doc.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
+                
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-xl ${status.bg} ${status.color}`}>
-                    <StatusIcon size={20} />
-                  </div>
+                  {/* ✅ عرض الصورة المصغرة إذا كانت موجودة */}
+                  {doc.image ? (
+                    <div className="w-12 h-12 rounded-xl border border-[var(--border)] overflow-hidden flex-shrink-0">
+                      <img src={doc.image} alt="doc" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${status.bg} ${status.color}`}>
+                      <StatusIcon size={24} />
+                    </div>
+                  )}
+                  
                   <div>
-                    <p className="font-bold text-[var(--text)] text-lg">{t(doc.type) || doc.type}</p>
-                    <p className={`text-xs font-bold mt-0.5 ${status.color}`}>{status.label}</p>
+                    <p className="font-bold text-[var(--text)] text-base">{t(doc.type) || doc.type}</p>
+                    <p className={`text-[11px] font-bold mt-0.5 ${status.color}`}>{status.label}</p>
                   </div>
                 </div>
                 
                 <div className="flex flex-col items-end gap-2">
-                  <p className="text-xs text-[var(--text-muted)] font-medium">
-                    {t('endsOn') || 'ينتهي في'}: <span className="font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-0.5 rounded">{formatDate(doc.endDate)}</span>
+                  <p className="text-[10px] text-[var(--text-muted)] font-medium">
+                    {t('endsOn') || 'ينتهي في'}: <br/>
+                    <span className="font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-0.5 rounded inline-block mt-0.5">{formatDate(doc.endDate)}</span>
                   </p>
-                  <button onClick={() => setDeleteId(doc.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
+                  <button 
+                    onClick={() => setDeleteId(doc.id)} 
+                    className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
+                  >
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -171,7 +216,9 @@ export default function Documents() {
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
-        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟'}
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟ لا يمكن التراجع عن هذا الإجراء.'}
+        variant="danger"
+        confirmText="نعم، احذف"
       />
     </div>
   );
