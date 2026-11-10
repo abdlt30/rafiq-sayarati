@@ -4,16 +4,19 @@ import { dbService } from '../services/dbService';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
-  ChevronLeft, Pencil, Check, X, Gauge
+  ChevronLeft, Pencil, Check, X, Bell, Settings
 } from 'lucide-react';
 
 export default function Dashboard() {
-  // ✅ تأكد من وجود updateCar في AppContext لديك
-  const { currentCar, updateCar, t, currency } = useContext(AppContext);
+  // ✅ جلب بيانات المستخدم (user) من الـ Context
+  const { currentCar, updateCar, t, currency, user } = useContext(AppContext);
 
   // حالة تعديل العداد السريع
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
+
+  // استخراج الاسم (إذا لم يكن موجوداً نستخدم "عزيزي")
+  const userName = user?.name || user?.username || 'عزيزي'; 
 
   // حساب الإحصائيات
   const totals = useMemo(() => {
@@ -37,7 +40,6 @@ export default function Dashboard() {
 
   const today = new Date().toLocaleDateString('ar-MA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // دالة حفظ العداد الجديد
   const handleSaveOdometer = () => {
     if (newOdo && Number(newOdo) >= 0) {
       updateCar(currentCar.id, { ...currentCar, odometer: Number(newOdo) });
@@ -48,74 +50,92 @@ export default function Dashboard() {
   return (
     <div className="space-y-5 pb-24 px-4 pt-4">
       
-      {/* 1. الترحيب والتاريخ */}
-      <div className="flex justify-between items-center mb-2">
-        <div>
-          <h1 className="text-2xl font-extrabold text-[var(--text)]">مرحباً 👋</h1>
-          <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold">{today}</p>
+      {/* ✅ 1. الشريط العلوي المحدث (الترحيب بالاسم + الأزرار) */}
+      <div className="flex justify-between items-start mb-2 gap-3">
+        <div className="min-w-0 flex-1">
+          {/* truncate يمنع الاسم الطويل من تخريب الشاشة */}
+          <h1 className="text-2xl font-extrabold text-[var(--text)] truncate">
+            مرحباً، {userName} 👋
+          </h1>
+          <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
+        </div>
+        
+        {/* أزرار التنبيهات والإعدادات */}
+        <div className="flex gap-2 flex-shrink-0">
+          <Link to="/notifications" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative">
+            <Bell size={18} />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--surface)]"></span>
+          </Link>
+          <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors">
+            <Settings size={18} />
+          </Link>
         </div>
       </div>
 
-      {/* 2. بطاقة السيارة الحالية */}
+      {/* 2. بطاقة السيارة الحالية (متناسقة مع كل الشاشات) */}
       <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
         <div className="absolute top-0 right-0 p-4 opacity-5"><Car size={100} /></div>
         
         <p className="text-xs text-blue-300 font-bold mb-3">السيارة الحالية</p>
         
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="w-20 h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 relative z-10">
+          {/* حجم الصورة مصغر ليناسب الشاشات الصغيرة */}
+          <div className="w-16 h-16 sm:w-20 sm:h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
              {currentCar.image ? (
                <img src={currentCar.image} alt="car" className="w-full h-full object-cover" />
              ) : (
-               <Car size={32} className="text-white/50" />
+               <Car size={28} className="text-white/50" />
              )}
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-white leading-tight">{currentCar.make} {currentCar.model}</h2>
-            <p className="text-sm font-mono text-blue-200 mt-1 bg-blue-500/20 px-2 py-0.5 rounded inline-block">{currentCar.plate || 'بدون لوحة'}</p>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-white leading-tight truncate">{currentCar.make} {currentCar.model}</h2>
+            <p className="text-[11px] sm:text-sm font-mono text-blue-200 mt-1 bg-blue-500/20 px-2 py-0.5 rounded inline-block truncate max-w-full">
+              {currentCar.plate || 'بدون لوحة'}
+            </p>
           </div>
         </div>
 
         <div className="flex gap-2 mt-4 relative z-10">
-          <Link to="/vehicles" className="flex-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 rounded-xl text-center backdrop-blur-md transition-colors flex items-center justify-center gap-1">
+          <Link to="/vehicles" className="flex-1 bg-white/10 hover:bg-white/20 text-white text-[11px] sm:text-xs font-bold py-2.5 rounded-xl text-center backdrop-blur-md transition-colors">
             تغيير السيارة
           </Link>
-          <Link to="/add-vehicle" className="flex-1 bg-[var(--primary)] hover:bg-blue-600 text-white text-xs font-bold py-2.5 rounded-xl text-center shadow-lg transition-colors flex items-center justify-center gap-1">
+          <Link to="/add-vehicle" className="flex-1 bg-[var(--primary)] hover:bg-blue-600 text-white text-[11px] sm:text-xs font-bold py-2.5 rounded-xl text-center shadow-lg transition-colors">
             إضافة سيارة +
           </Link>
         </div>
       </div>
 
-      {/* 3. الإجراءات السريعة */}
-      <div className="grid grid-cols-4 gap-2">
-        <Link to="/fuel" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 transition-colors">
-          <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-2"><Fuel size={20} /></div>
-          <span className="text-[10px] font-bold text-[var(--text)]">وقود</span>
+      {/* 3. الإجراءات السريعة (تتناسب مع عروض الشاشات المختلفة) */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        <Link to="/fuel" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 transition-colors">
+          <div className="p-1.5 sm:p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1 sm:mb-2"><Fuel size={18} /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">وقود</span>
         </Link>
-        <Link to="/maintenance" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 transition-colors">
-          <div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-2"><Wrench size={20} /></div>
-          <span className="text-[10px] font-bold text-[var(--text)]">صيانة</span>
+        <Link to="/maintenance" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 transition-colors">
+          <div className="p-1.5 sm:p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-1 sm:mb-2"><Wrench size={18} /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">صيانة</span>
         </Link>
-        <Link to="/expenses" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 transition-colors">
-          <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-2"><Wallet size={20} /></div>
-          <span className="text-[10px] font-bold text-[var(--text)]">مصاريف</span>
+        <Link to="/expenses" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 transition-colors">
+          <div className="p-1.5 sm:p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-1 sm:mb-2"><Wallet size={18} /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">مصاريف</span>
         </Link>
-        <Link to="/documents" className="flex flex-col items-center justify-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 transition-colors">
-          <div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-2"><FileText size={20} /></div>
-          <span className="text-[10px] font-bold text-[var(--text)]">وثائق</span>
+        <Link to="/documents" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 transition-colors">
+          <div className="p-1.5 sm:p-2 bg-green-500/10 text-green-500 rounded-lg mb-1 sm:mb-2"><FileText size={18} /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">وثائق</span>
         </Link>
       </div>
 
       {/* 4. بطاقات الإحصائيات */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <p className="text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
-          <p className="text-xl font-extrabold text-[var(--text)]">{totals.total.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
+          <p className="text-lg sm:text-xl font-extrabold text-[var(--text)] truncate">
+            {totals.total.toLocaleString()} <span className="text-[10px] sm:text-xs font-normal">{currency}</span>
+          </p>
         </div>
         
-        {/* ✅ بطاقة العداد التفاعلية */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <p className="text-[11px] text-[var(--text-muted)] font-bold mb-1">عداد السيارة</p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">عداد السيارة</p>
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1">
               <input 
@@ -131,12 +151,12 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex items-center justify-between mt-1">
-              <p className="text-xl font-extrabold text-blue-500 flex items-center gap-1">
-                {Number(currentCar.odometer || 0).toLocaleString()} <span className="text-xs font-normal">KM</span>
+              <p className="text-lg sm:text-xl font-extrabold text-blue-500 flex items-center gap-1 truncate">
+                {Number(currentCar.odometer || 0).toLocaleString()} <span className="text-[10px] sm:text-xs font-normal">KM</span>
               </p>
               <button 
                 onClick={() => { setNewOdo(currentCar.odometer || ''); setIsEditingOdo(true); }}
-                className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors"
+                className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors flex-shrink-0"
               >
                 <Pencil size={14} />
               </button>
@@ -167,14 +187,16 @@ export default function Dashboard() {
 
               return (
                 <div key={index} className={`flex items-center justify-between p-3 ${index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''}`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${bg} ${color}`}><Icon size={16} /></div>
-                    <div>
-                      <p className="text-xs font-bold text-[var(--text)]">{isFuel ? 'تعبئة وقود' : isMaint ? 'صيانة' : 'مصروف'}</p>
-                      <p className="text-[10px] text-[var(--text-muted)]">{activity.date}</p>
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg ${bg} ${color} flex-shrink-0`}><Icon size={16} /></div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] sm:text-xs font-bold text-[var(--text)] truncate">{isFuel ? 'تعبئة وقود' : isMaint ? 'صيانة' : 'مصروف'}</p>
+                      <p className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">{activity.date}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-[var(--text)]">{Number(activity.cost || 0).toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
+                  <p className="text-xs sm:text-sm font-bold text-[var(--text)] flex-shrink-0 ml-2">
+                    {Number(activity.cost || 0).toLocaleString()} <span className="text-[9px] sm:text-[10px] font-normal">{currency}</span>
+                  </p>
                 </div>
               );
             })
