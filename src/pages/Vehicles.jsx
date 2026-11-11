@@ -1,6 +1,6 @@
-import { useContext, useState, useMemo } from 'react';
+import { useContext, useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Car, Plus, CheckCircle, Edit2, Trash2, Zap, Truck } from 'lucide-react';
+import { Car, Plus, CheckCircle, Edit2, Trash2, Zap, Truck, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
@@ -11,7 +11,7 @@ const safeNumber = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/* ✅ عداد السيارة الآمن */
+/* ✅ عداد السيارة الآمن (يدعم الحقل القديم currentOdometer) */
 const getOdometer = (car) => {
   const fromCurrent = car?.currentOdometer;
   const fromOdo = car?.odometer;
@@ -27,10 +27,9 @@ const getOdometer = (car) => {
   return 0;
 };
 
-/* ✅ أيقونة/لون حسب نوع المحرك */
+/* ✅ أيقونة حسب نوع المحرك */
 const getPowertrainIcon = (powertrain) => {
-  if (powertrain === 'ev') return Zap;
-  if (powertrain === 'hybrid' || powertrain === 'phev') return Zap;
+  if (powertrain === 'ev' || powertrain === 'hybrid' || powertrain === 'phev') return Zap;
   return Car;
 };
 
@@ -39,15 +38,23 @@ export default function Vehicles() {
   const navigate = useNavigate();
   
   const [deleteId, setDeleteId] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const toastTimeoutRef = useRef(null);
 
-  /* ✅ عدد السجلات المرتبطة (لعرضه في تأكيد الحذف) */
-  const deleteStats = useMemo(() => {
-    if (!deleteId) return null;
-    // 💡 هذا يتطلب dbService
-    // للتبسيط، نتركها لاحقاً أو نعرض فقط السيارة
-    return null;
-  }, [deleteId]);
+  /* ===================== Toast ===================== */
+  const showToast = useCallback((message, type = 'error') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ show: true, message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  }, []);
 
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+  }, []);
+
+  /* ===================== Handlers ===================== */
   const handleDeleteClick = (e, id) => {
     e.stopPropagation(); 
     setDeleteId(id); 
@@ -55,22 +62,35 @@ export default function Vehicles() {
 
   const handleConfirmDelete = () => {
     if (!deleteId) return;
-    const ok = deleteCar(deleteId);
-    if (!ok) {
-      // في حالة الفشل، نُغلق المودال على أي حال لكن بـ console.warn
-      console.warn('deleteCar returned false');
+    try {
+      const ok = deleteCar(deleteId);
+      if (!ok) {
+        showToast(t('errorSaving') || 'فشل حذف السيارة. تحقق من المساحة.', 'error');
+      } else {
+        showToast(t('deleteSuccess') || 'تم حذف السيارة بنجاح.', 'success');
+      }
+    } catch (err) {
+      console.error('delete failed:', err);
+      showToast(t('errorSaving') || 'تعذر حذف السيارة.', 'error');
+    } finally {
+      setDeleteId(null);
     }
-    setDeleteId(null); 
   };
 
   const handleSelectCar = (car) => {
     const ok = selectCar(car);
-    if (ok !== false) {
-      navigate('/');
+    if (ok !== false) navigate('/');
+  };
+
+  const handleKeyDown = (e, car) => {
+    // ✅ Space يمرر الصفحة افتراضياً — منع ذلك
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      handleSelectCar(car);
     }
   };
 
-  /* ✅ رسالة تأكيد الحذف مع fallback */
+  /* ===================== رسالة تأكيد الحذف ===================== */
   const deleteMessage = useMemo(() => {
     const msg = t('confirmDeleteCarMsg');
     return msg === 'confirmDeleteCarMsg' 
@@ -81,18 +101,28 @@ export default function Vehicles() {
   return (
     <div className="space-y-4 pb-24 px-4 pt-6 relative min-h-screen">
       
+      {/* ✅ Toast (جديد - لتغذية راجعة عند الحذف) */}
+      {toast.show && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${
+          toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
+          <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
+        </div>
+      )}
+
       {/* الشريط العلوي */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[var(--primary)]/10 rounded-2xl">
-            <Car size={24} className="text-[var(--primary)]" />
+            <Car size={24} className="text-[var(--primary)]" aria-hidden="true" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-[var(--text)]">
-              {t('vehicles') || 'سياراتي'}
+              {t('vehicles')}
             </h1>
             <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-              {t('manageFleet') || 'إدارة أسطول سياراتك'}
+              {t('manageFleet')}
             </p>
           </div>
         </div>
@@ -100,35 +130,35 @@ export default function Vehicles() {
         <button 
           type="button"
           onClick={() => navigate('/add-vehicle')} 
-          aria-label={t('add') || 'إضافة سيارة'}
+          aria-label={t('add')}
           className="flex items-center gap-1.5 bg-[var(--primary)] text-white px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-600 active:scale-95 transition-all text-sm font-bold"
         >
-          <Plus size={18} /> {t('add') || 'إضافة'}
+          <Plus size={18} aria-hidden="true" /> {t('add')}
         </button>
       </div>
 
       {vehicles.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-5 bg-[var(--surface-2)] rounded-full mb-4">
-            <Car size={48} className="opacity-30" />
+            <Car size={48} className="opacity-30" aria-hidden="true" />
           </div>
           <p className="font-bold text-lg">
-            {t('noVehiclesAdded') || 'لا توجد سيارات مضافة.'}
+            {t('noVehiclesAdded')}
           </p>
           <p className="text-sm mt-1 mb-6 text-center max-w-[250px]">
-            {t('addFirstCarHint') || 'أضف سيارتك الأولى لتبدأ في تتبع مصاريفك وصياناتك.'}
+            {t('addFirstCarHint')}
           </p>
           <button 
             type="button"
             onClick={() => navigate('/add-vehicle')} 
             className="text-white font-bold text-sm bg-[var(--primary)] px-6 py-3 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"
           >
-            {t('addFirstCar') || 'إضافة سيارتك الأولى'}
+            {t('addFirstCar')}
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
-          {vehicles.map(car => {
+        <div className="space-y-3" role="list" aria-label={t('vehicles')}>
+          {vehicles.map((car, index) => {
             // ✅ مقارنة String آمنة
             const isActive = String(currentCar?.id || '') === String(car.id || '');
             const odometerValue = getOdometer(car);
@@ -148,32 +178,42 @@ export default function Vehicles() {
             const isElectric = car.powertrain === 'ev';
             const isTruck = car.category === 'truck';
 
+            // ✅ key محصّن ضد التصادم (id + index كـ fallback)
+            const key = car.id ? String(car.id) : `fallback-${index}-${car.make}-${car.model}`;
+
             return (
               <div 
-                key={String(car.id) || `car-${car.make}-${car.model}`}
+                key={key}
                 onClick={() => handleSelectCar(car)}
+                onKeyDown={(e) => handleKeyDown(e, car)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectCar(car); }}
-                className={`relative p-4 rounded-3xl border flex items-center gap-4 cursor-pointer transition-all duration-300 active:scale-[0.98] ${
+                aria-current={isActive ? 'true' : undefined}
+                aria-label={title}
+                className={`relative p-4 rounded-3xl border flex items-center gap-4 cursor-pointer transition-all duration-300 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] ${
                   isActive 
                     ? 'border-[var(--primary)] bg-gradient-to-br from-[var(--primary)]/10 to-transparent shadow-md shadow-blue-500/10' 
                     : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--text-muted)]/50'
                 }`}
               >
                 {/* صورة السيارة */}
-                <div className={`w-20 h-16 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border ${isActive ? 'border-[var(--primary)]/30 bg-[var(--primary)]/10' : 'border-[var(--border)] bg-[var(--surface-2)]'}`}>
+                <div className={`w-20 h-16 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border ${
+                  isActive 
+                    ? 'border-[var(--primary)]/30 bg-[var(--primary)]/10' 
+                    : 'border-[var(--border)] bg-[var(--surface-2)]'
+                }`}>
                   {car.image ? (
                     <img 
                       src={car.image} 
-                      alt={`${title} - car`} 
+                      alt={`${title}`} 
                       className="w-full h-full object-cover"
-                      onError={(e) => { e.target.style.display = 'none'; }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   ) : (
                     <PowertrainIcon 
                       size={28} 
                       className={isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] opacity-50'} 
+                      aria-hidden="true"
                     />
                   )}
                 </div>
@@ -203,7 +243,7 @@ export default function Vehicles() {
                         )}
                         {isTruck && (
                           <span className="text-[10px] bg-orange-500/10 text-orange-500 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
-                            <Truck size={9} /> {t('truckCategory') || 'شاحنة'}
+                            <Truck size={9} aria-hidden="true" /> {t('truckCategory')}
                           </span>
                         )}
                       </div>
@@ -211,18 +251,18 @@ export default function Vehicles() {
                     
                     {isActive && (
                       <div className="flex items-center gap-1 bg-[var(--primary)]/10 px-2 py-1 rounded-lg flex-shrink-0">
-                        <CheckCircle className="text-[var(--primary)]" size={14} />
+                        <CheckCircle className="text-[var(--primary)]" size={14} aria-hidden="true" />
                         <span className="text-[10px] font-bold text-[var(--primary)]">
-                          {t('active') || 'نشطة'}
+                          {t('active')}
                         </span>
                       </div>
                     )}
                   </div>
                   
                   <div className="flex justify-between items-end mt-3">
-                    {/* العداد */}
+                    {/* العداد - مع وحدة مترجمة */}
                     <span className="text-xs font-bold text-[var(--text)] bg-[var(--surface-2)] px-2.5 py-1 rounded-md border border-[var(--border)]">
-                      {odometerValue.toLocaleString()} KM
+                      {odometerValue.toLocaleString()} {t('km')}
                     </span>
                     
                     {/* أزرار التحكم */}
@@ -230,18 +270,18 @@ export default function Vehicles() {
                       <button 
                         type="button"
                         onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} 
-                        aria-label={t('editCar') || 'تعديل السيارة'}
+                        aria-label={t('editCar')}
                         className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500/20 active:scale-90 transition-all"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={16} aria-hidden="true" />
                       </button>
                       <button 
                         type="button"
                         onClick={(e) => handleDeleteClick(e, car.id)} 
-                        aria-label={t('confirmDeleteCar') || 'حذف السيارة'}
+                        aria-label={t('deleteCar') || t('confirmDeleteCar')}
                         className="p-2 text-red-500 bg-red-500/10 rounded-xl hover:bg-red-500/20 active:scale-90 transition-all"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={16} aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -257,10 +297,11 @@ export default function Vehicles() {
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleConfirmDelete} 
-        title={t('confirmDeleteCar') || 'تأكيد حذف السيارة'}
+        title={t('confirmDeleteCar')}
         message={deleteMessage}
-        confirmText={t('confirmDeleteCarBtn') || 'نعم، احذف السيارة'}
-        cancelText={t('cancel') || 'تراجع'}
+        variant="danger"
+        confirmText={t('confirmDeleteCarBtn') || t('confirmDeleteBtn')}
+        cancelText={t('cancel')}
       />
     </div>
   );
