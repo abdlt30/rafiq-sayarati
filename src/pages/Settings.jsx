@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Moon, Sun, Globe, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, 
   ShieldCheck, Database, BellRing, CheckCircle, XCircle, 
-  Download, Upload, AlertCircle, Info, Trash2, FileJson
+  Download, Upload, AlertCircle, Info, Trash2, X // ✅ إضافة أيقونة X
 } from 'lucide-react';
 import CurrencySelector from '../components/ui/CustomSelect'; 
 import { pushService } from '../services/pushService';
@@ -12,7 +12,6 @@ import { pushService } from '../services/pushService';
 const APP_VERSION = '1.0.0';
 const BACKUP_VERSION = 1;
 
-// ✅ البيانات المشمولة في النسخ الاحتياطي
 const BACKUP_KEYS = {
   vehicles: 'vehicles',
   savedCar: 'savedCar',
@@ -32,7 +31,6 @@ const BACKUP_KEYS = {
 
 const ARRAY_KEYS = ['vehicles', 'fuel', 'expenses', 'maintenance', 'documents', 'reminders', 'incomes', 'customTypes'];
 
-/* ✅ قراءة boolean آمنة */
 const safeBoolFromStorage = (key, fallback = true) => {
   try {
     const raw = localStorage.getItem(key);
@@ -44,7 +42,6 @@ const safeBoolFromStorage = (key, fallback = true) => {
   }
 };
 
-/* ✅ قراءة permission آمنة */
 const readPushPermission = () => {
   try {
     if (typeof Notification === 'undefined') return 'unsupported';
@@ -64,7 +61,7 @@ export default function Settings() {
   );
   const [pushPermission, setPushPermission] = useState(readPushPermission);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [importConfirm, setImportConfirm] = useState(null); // { fileName, parsed }
+  const [importConfirm, setImportConfirm] = useState(null);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [lastBackup, setLastBackup] = useState(() => {
     try { return localStorage.getItem('lastBackupDate') || null; } catch { return null; }
@@ -73,7 +70,6 @@ export default function Settings() {
   const toastTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
@@ -86,7 +82,6 @@ export default function Settings() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   }, []);
 
-  /* ===================== حفظ الإشعارات ===================== */
   useEffect(() => {
     try {
       localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
@@ -95,7 +90,6 @@ export default function Settings() {
     }
   }, [notificationsEnabled]);
 
-  /* ===================== إعادة قراءة إذن الإشعارات عند العودة ===================== */
   useEffect(() => {
     const refresh = () => {
       const current = readPushPermission();
@@ -110,7 +104,6 @@ export default function Settings() {
     };
   }, []);
 
-  /* ===================== تفعيل Push ===================== */
   const handleEnablePush = async () => {
     try {
       if (!pushService || typeof pushService.requestPermission !== 'function') {
@@ -132,16 +125,11 @@ export default function Settings() {
     }
   };
 
-  /* ===================== زر الرجوع بذكاء ===================== */
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/');
   };
 
-  /* ===================== النسخ الاحتياطي: التصدير ===================== */
   const handleExport = () => {
     try {
       const data = {};
@@ -192,7 +180,6 @@ export default function Settings() {
     }
   };
 
-  /* ===================== النسخ الاحتياطي: الاستيراد ===================== */
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -201,7 +188,6 @@ export default function Settings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // ✅ حد أقصى 10 MB
     if (file.size > 10 * 1024 * 1024) {
       showToast(t('importError') || 'الملف كبير جداً أو تالف.', 'error');
       e.target.value = null;
@@ -217,7 +203,6 @@ export default function Settings() {
       try {
         const parsed = JSON.parse(ev.target.result);
 
-        // ✅ تحقق هيكلي
         if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
           showToast(t('importError') || 'ملف غير صالح.', 'error');
           return;
@@ -242,24 +227,18 @@ export default function Settings() {
     try {
       const { data } = importConfirm.parsed;
 
+      // ✅ إصلاح أمني: التحقق من نوع البيانات قبل الحفظ
       Object.entries(BACKUP_KEYS).forEach(([key, storageKey]) => {
         if (!(key in data)) return;
         const value = data[key];
 
         if (ARRAY_KEYS.includes(key)) {
-          if (Array.isArray(value)) {
-            localStorage.setItem(storageKey, JSON.stringify(value));
-          }
+          if (Array.isArray(value)) localStorage.setItem(storageKey, JSON.stringify(value));
         } else if (key === 'savedCar') {
-          if (value === null) {
-            localStorage.removeItem(storageKey);
-          } else if (typeof value === 'object') {
-            localStorage.setItem(storageKey, JSON.stringify(value));
-          }
+          if (value === null) localStorage.removeItem(storageKey);
+          else if (typeof value === 'object') localStorage.setItem(storageKey, JSON.stringify(value));
         } else if (key === 'notificationsEnabled') {
-          if (typeof value === 'boolean') {
-            localStorage.setItem(storageKey, JSON.stringify(value));
-          }
+          if (typeof value === 'boolean') localStorage.setItem(storageKey, JSON.stringify(value));
         } else if (typeof value === 'string') {
           localStorage.setItem(storageKey, value);
         }
@@ -267,7 +246,12 @@ export default function Settings() {
 
       bumpDataVersion?.();
       showToast(t('importSuccess') || 'تم الاستيراد! سيتم إعادة التشغيل.', 'success');
-      setTimeout(() => window.location.reload(), 1200);
+      
+      // ✅ إعادة تحميل آمنة (Soft Reload)
+      setTimeout(() => {
+        navigate('/', { replace: true });
+        window.location.reload(); // مطلوب فقط لتحديث state الـ Context
+      }, 1500);
     } catch (err) {
       console.error('Import failed:', err);
       showToast(t('importError') || 'تعذر الاستيراد.', 'error');
@@ -276,13 +260,15 @@ export default function Settings() {
     }
   };
 
-  /* ===================== إعادة تعيين التطبيق ===================== */
   const handleResetAll = () => {
     try {
       Object.values(BACKUP_KEYS).forEach(k => localStorage.removeItem(k));
       localStorage.removeItem('lastBackupDate');
       showToast(t('resetSuccess') || 'تم مسح جميع البيانات.', 'success');
-      setTimeout(() => window.location.reload(), 1000);
+      setTimeout(() => {
+        navigate('/', { replace: true });
+        window.location.reload();
+      }, 1000);
     } catch (err) {
       console.error('Reset failed:', err);
       showToast(t('errorSaving') || 'تعذر المسح.', 'error');
@@ -306,7 +292,7 @@ export default function Settings() {
   return (
     <div className="space-y-3 pb-24 px-4 pt-2">
 
-      {/* Toast */}
+      {/* ✅ إصلاح: استخدام أيقونة X بدلاً من × */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
@@ -317,12 +303,11 @@ export default function Settings() {
             aria-label="إغلاق"
             className="ml-2 opacity-70 hover:opacity-100"
           >
-            ×
+            <X size={16} />
           </button>
         </div>
       )}
 
-      {/* الشريط العلوي */}
       <div className="flex items-center gap-4 mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-50">
         <button 
           type="button"
@@ -461,7 +446,7 @@ export default function Settings() {
         )}
       </div>
 
-      {/* 4. النسخ الاحتياطي (جديد) */}
+      {/* 4. النسخ الاحتياطي */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-3">
           <Database size={18} className="text-[var(--primary)]" />
@@ -536,7 +521,7 @@ export default function Settings() {
         </button>
       </div>
 
-      {/* Modal: تأكيد الاستيراد */}
+      {/* Modals (Import & Reset) */}
       {importConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] shadow-2xl">
@@ -566,7 +551,6 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Modal: تأكيد إعادة التعيين */}
       {resetConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-red-500/30 shadow-2xl">
