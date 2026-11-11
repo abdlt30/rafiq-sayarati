@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect, useCallback } from 'react';
+import { useState, useContext, useEffect } from 'react'; // ✅ إزالة useCallback
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
@@ -10,20 +10,20 @@ const EMPTY_CAR = {
   make: '', model: '', plate: '', odometer: '', 
   year: '', color: '', image: '',
   powertrain: 'ice',
-  fuelType: 'petrol',      // ✅ جديد: petrol/diesel
+  fuelType: 'petrol',
   batteryCapacity: '',
-  category: 'car'          // ✅ جديد: car/truck/van
+  category: 'car'
 };
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;       // 5MB قبل الضغط
-const MAX_IMAGE_DIM = 800;                     // بعد الضغط
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;       
+const MAX_IMAGE_DIM = 800;                     
 const MAX_MAKE_LEN = 50;
 const MAX_MODEL_LEN = 50;
 const MAX_PLATE_LEN = 20;
-const MAX_ODO = 10_000_000;                    // 10M km (أكثر من كافٍ)
-const MIN_BATTERY = 5;                         // kWh
-const MAX_BATTERY = 250;                       // kWh (أكبر من أي EV حالي)
-const MIN_YEAR = 1886;                         // أول سيارة في التاريخ
+const MAX_ODO = 10_000_000;                    
+const MIN_BATTERY = 5;                         
+const MAX_BATTERY = 250;                       
+const MIN_YEAR = 1886;                         
 
 export default function AddVehicle() {
   const { addNewCar, updateCar, vehicles, t, bumpDataVersion } = useContext(AppContext); 
@@ -36,7 +36,6 @@ export default function AddVehicle() {
   const [error, setError] = useState('');
   const [car, setCar] = useState(EMPTY_CAR);
 
-  /* ✅ خيارات كاملة */
   const powertrainOptions = [
     { value: 'ice', label: t('ice') || 'بنزين / ديزل' },
     { value: 'ev', label: t('ev') || 'كهربائية' },
@@ -55,7 +54,6 @@ export default function AddVehicle() {
     { value: 'van', label: t('vanCategory') || 'فان / نقل خفيف' }
   ];
 
-  /* ✅ منطق العرض حسب النوع */
   const needsBattery = car.powertrain === 'ev' || car.powertrain === 'hybrid' || car.powertrain === 'phev';
   const needsFuelType = car.powertrain === 'ice' || car.powertrain === 'hybrid' || car.powertrain === 'phev';
 
@@ -118,14 +116,12 @@ export default function AddVehicle() {
     const file = input.files?.[0];
     if (!file) return;
 
-    // ✅ تحقق MIME
     if (!file.type.startsWith('image/')) {
       setError(t('invalidFileType') || 'الرجاء اختيار ملف صورة صالح.');
       input.value = null;
       return;
     }
 
-    // ✅ حد أقصى أولي
     if (file.size > MAX_IMAGE_SIZE) {
       setError(t('imageTooLarge') || 'حجم الصورة كبير جداً. الحد 5 ميجابايت.');
       input.value = null;
@@ -135,12 +131,13 @@ export default function AddVehicle() {
     try {
       const compressed = await compressImage(file);
       setCar(prev => ({ ...prev, image: compressed }));
-      setError('');
+      // ✅ لا نمسح رسالة الخطأ القديمة إلا إذا كانت تخص الصورة
+      if (error.includes('صورة') || error.includes('image')) setError('');
     } catch (err) {
       console.error('image compress failed:', err);
       setError(t('imageProcessingFailed') || 'تعذر معالجة الصورة. جرّب صورة أخرى.');
     } finally {
-      input.value = null; // ✅ يسمح برفع نفس الملف مرة أخرى
+      input.value = null;
     }
   };
 
@@ -156,7 +153,6 @@ export default function AddVehicle() {
       return t('fieldTooLong') || 'اسم الماركة أو الموديل طويل جداً.';
     }
 
-    // ✅ العداد: فراغ = مرفوض، وإلا يجب أن يكون صحيحاً في النطاق
     const odoRaw = String(car.odometer ?? '').trim();
     if (odoRaw === '') {
       return t('fillRequiredFields') || 'الرجاء إدخال العداد.';
@@ -169,7 +165,6 @@ export default function AddVehicle() {
       return t('invalidOdometer') || 'العداد يجب أن يكون عدداً صحيحاً.';
     }
 
-    // ✅ السنة: اختيارية، لكن إن وُجدت يجب أن تكون معقولة
     const yearRaw = String(car.year ?? '').trim();
     if (yearRaw !== '') {
       const yearNum = Number(yearRaw);
@@ -179,7 +174,6 @@ export default function AddVehicle() {
       }
     }
 
-    // ✅ سعة البطارية: إن وُجدت
     const battRaw = String(car.batteryCapacity ?? '').trim();
     if (needsBattery && battRaw !== '') {
       const battNum = Number(battRaw);
@@ -188,12 +182,11 @@ export default function AddVehicle() {
       }
     }
 
-    // ✅ رقم اللوحة اختياري، لكن إن وُجد بحد أقصى
     if ((car.plate || '').length > MAX_PLATE_LEN) {
       return t('fieldTooLong') || 'رقم اللوحة طويل جداً.';
     }
 
-    return null; // لا أخطاء
+    return null;
   };
 
   /* ===================== الحفظ ===================== */
@@ -207,12 +200,13 @@ export default function AddVehicle() {
       return;
     }
 
-    // ✅ بناء البيانات المُطبَّعة (نُخزّن أرقاماً لا نصوصاً)
-    const odoNum = Number(car.odometer);
-    const yearNum = car.year !== '' ? Number(car.year) : null;
-    const battNum = (needsBattery && car.batteryCapacity !== '') 
-      ? Number(car.batteryCapacity) 
-      : null;
+    // ✅ إصلاح تطبيع البيانات: استخدام trim() قبل التحويل
+    const odoNum = Number(String(car.odometer).trim());
+    const yearStr = String(car.year ?? '').trim();
+    const yearNum = yearStr !== '' ? Number(yearStr) : null;
+    
+    const battStr = String(car.batteryCapacity ?? '').trim();
+    const battNum = (needsBattery && battStr !== '') ? Number(battStr) : null;
 
     const carData = {
       make: car.make.trim(),
@@ -231,11 +225,15 @@ export default function AddVehicle() {
     setIsSaving(true);
     try {
       if (isEditing) {
-        updateCar(editId, carData);
+        // ✅ إصلاح: التحقق من نجاح التعديل
+        const ok = updateCar(editId, carData);
+        if (ok === false) {
+          setError(t('errorSaving') || 'فشل حفظ التعديلات. تحقق من المساحة.');
+          return;
+        }
         bumpDataVersion();
         navigate('/vehicles');
       } else {
-        // ✅ AppContext.addNewCar يُرجع boolean
         const ok = addNewCar(carData);
         if (!ok) {
           setError(t('errorSaving') || 'فشل الحفظ. قد تكون مساحة التخزين ممتلئة.');
@@ -260,9 +258,12 @@ export default function AddVehicle() {
         </h2>
       </div>
 
-      {/* ✅ عرض الخطأ الموحد */}
+      {/* ✅ إصلاح A11y: إضافة role="alert" لإعلان الأخطاء لقارئ الشاشة */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-3 rounded-xl text-sm font-bold mb-4">
+        <div 
+          role="alert"
+          className="bg-red-500/10 border border-red-500/30 text-red-500 p-3 rounded-xl text-sm font-bold mb-4 animate-fade-in"
+        >
           {error}
         </div>
       )}
@@ -275,8 +276,8 @@ export default function AddVehicle() {
               <button 
                 type="button" 
                 onClick={() => setCar({...car, image: ''})} 
-                aria-label="حذف الصورة"
-                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm"
+                aria-label={t('deleteImage') || 'حذف الصورة'}
+                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm active:scale-90 transition-transform"
               >
                 <X size={14} />
               </button>
@@ -325,7 +326,6 @@ export default function AddVehicle() {
           />
         </div>
 
-        {/* ✅ نوع الفئة (جديد) */}
         <div className="mt-2">
           <OptionPicker 
             label={t('vehicleCategory') || 'فئة السيارة'} 
@@ -335,7 +335,6 @@ export default function AddVehicle() {
           />
         </div>
 
-        {/* ✅ نوع المحرك (مع PHEV) */}
         <div className="mt-2">
           <OptionPicker 
             label={t('powertrain') || 'نوع المحرك'} 
@@ -345,7 +344,6 @@ export default function AddVehicle() {
           />
         </div>
 
-        {/* ✅ نوع الوقود (للـ ICE والهجين) */}
         {needsFuelType && (
           <div className="mt-2 animate-fade-in">
             <OptionPicker 
@@ -357,7 +355,6 @@ export default function AddVehicle() {
           </div>
         )}
 
-        {/* ✅ سعة البطارية (EV/Hybrid/PHEV) */}
         {needsBattery && (
           <div className="mt-2 animate-fade-in">
             <Input 
