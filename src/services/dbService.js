@@ -47,15 +47,16 @@ const getFuelAmount = (r) => {
 };
 
 // ==========================================
-// ✅ مصنع التخزين
+// ✅ مصنع التخزين (مع readSafe مركزية)
 // ==========================================
-const createLocalStore = (storageKey) => ({
-  get: () => {
+const createLocalStore = (storageKey) => {
+  
+  // ✅ دالة داخلية مركزية: تضمن إرجاع مصفوفة دائماً
+  const readSafe = () => {
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw === null) return [];
       const parsed = JSON.parse(raw);
-      // ✅ تحقق أن البيانات مصفوفة (تحصين ضد التلاعب)
       if (!Array.isArray(parsed)) {
         console.warn(`Corrupt data in ${storageKey} — expected array, resetting`);
         return [];
@@ -65,81 +66,88 @@ const createLocalStore = (storageKey) => ({
       console.error(`Error reading ${storageKey}:`, e);
       return [];
     }
-  },
+  };
 
-  add: (record) => {
-    try {
-      if (!record || typeof record !== 'object') {
-        console.warn(`Invalid record for ${storageKey}`);
+  return {
+    get: readSafe,
+
+    add: (record) => {
+      try {
+        if (!record || typeof record !== 'object') {
+          console.warn(`Invalid record for ${storageKey}`);
+          return null;
+        }
+        // ✅ إصلاح حرج: استخدام readSafe بدلاً من JSON.parse مباشرة
+        const records = readSafe();
+        const newRecord = { 
+          ...record, 
+          id: generateId(), 
+          createdAt: new Date().toISOString() 
+        };
+        localStorage.setItem(storageKey, JSON.stringify([newRecord, ...records]));
+        return newRecord;
+      } catch (e) {
+        console.error(`Error adding to ${storageKey}:`, e);
+        if (e.name === 'QuotaExceededError' || String(e).includes('quota')) {
+          const err = new Error('quota_exceeded');
+          err.name = 'QuotaExceededError';
+          throw err;
+        }
         return null;
       }
-      const records = JSON.parse(localStorage.getItem(storageKey)) || [];
-      const newRecord = { 
-        ...record, 
-        id: generateId(), 
-        createdAt: new Date().toISOString() 
-      };
-      localStorage.setItem(storageKey, JSON.stringify([newRecord, ...records]));
-      return newRecord;
-    } catch (e) {
-      console.error(`Error adding to ${storageKey}:`, e);
-      // ✅ نرمي خطأ محدد للـ quota ليعالجه المستدعي
-      if (e.name === 'QuotaExceededError' || String(e).includes('quota')) {
-        const err = new Error('quota_exceeded');
-        err.name = 'QuotaExceededError';
-        throw err;
-      }
-      return null;
-    }
-  },
+    },
 
-  update: (id, updates) => {
-    try {
-      if (!id || !updates || typeof updates !== 'object') return [];
-      
-      const records = JSON.parse(localStorage.getItem(storageKey)) || [];
-      if (!records.some(r => r.id === id)) {
-        console.warn(`Record ${id} not found in ${storageKey}`);
-        return records;
-      }
+    update: (id, updates) => {
+      try {
+        if (!id || !updates || typeof updates !== 'object') {
+          return readSafe(); // ✅ إرجاع البيانات الأصلية بدل []
+        }
+        
+        // ✅ إصلاح حرج: استخدام readSafe
+        const records = readSafe();
+        if (!records.some(r => r.id === id)) {
+          console.warn(`Record ${id} not found in ${storageKey}`);
+          return records;
+        }
 
-      const updated = records.map(r => {
-        if (r.id !== id) return r;
-        // ✅ ID و createdAt غير قابلين للتعديل (يُعاد فرضهما بعد الـ spread)
-        return { 
-          ...r, 
-          ...updates, 
-          id: r.id, 
-          createdAt: r.createdAt,
-          updatedAt: new Date().toISOString() 
-        };
-      });
-      localStorage.setItem(storageKey, JSON.stringify(updated));
-      return updated;
-    } catch (e) {
-      console.error(`Error updating ${storageKey}:`, e);
-      if (e.name === 'QuotaExceededError') {
-        const err = new Error('quota_exceeded');
-        err.name = 'QuotaExceededError';
-        throw err;
+        const updated = records.map(r => {
+          if (r.id !== id) return r;
+          return { 
+            ...r, 
+            ...updates, 
+            id: r.id, 
+            createdAt: r.createdAt,
+            updatedAt: new Date().toISOString() 
+          };
+        });
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        return updated;
+      } catch (e) {
+        console.error(`Error updating ${storageKey}:`, e);
+        if (e.name === 'QuotaExceededError') {
+          const err = new Error('quota_exceeded');
+          err.name = 'QuotaExceededError';
+          throw err;
+        }
+        return readSafe(); // ✅ إصلاح: إرجاع البيانات الأصلية بدل []
       }
-      return [];
-    }
-  },
+    },
 
-  delete: (id) => {
-    try {
-      if (!id) return [];
-      const records = JSON.parse(localStorage.getItem(storageKey)) || [];
-      const updated = records.filter(r => r.id !== id);
-      localStorage.setItem(storageKey, JSON.stringify(updated));
-      return updated;
-    } catch (e) {
-      console.error(`Error deleting from ${storageKey}:`, e);
-      return [];
-    }
-  },
-});
+    delete: (id) => {
+      try {
+        if (!id) return readSafe(); // ✅ إصلاح
+        // ✅ إصلاح حرج: استخدام readSafe
+        const records = readSafe();
+        const updated = records.filter(r => r.id !== id);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        return updated;
+      } catch (e) {
+        console.error(`Error deleting from ${storageKey}:`, e);
+        return readSafe(); // ✅ إصلاح
+      }
+    },
+  };
+};
 
 // ==========================================
 // إنشاء كائنات الخدمة
@@ -209,7 +217,6 @@ export const dbService = {
     try {
       const parsed = JSON.parse(localStorage.getItem(KEYS.CUSTOM_MAINTENANCE));
       if (!Array.isArray(parsed)) return [];
-      // ✅ تطبيع: نصوص فقط، بلا فراغات
       return parsed.filter(t => typeof t === 'string' && t.trim() !== '');
     } catch (e) {
       console.error("Error reading custom types:", e);
@@ -224,13 +231,11 @@ export const dbService = {
 
       const types = dbService.getCustomTypes();
       
-      // ✅ سقف حماية localStorage
       if (types.length >= MAX_CUSTOM_TYPES) {
         console.warn(`Max custom types (${MAX_CUSTOM_TYPES}) reached`);
         return types;
       }
 
-      // ✅ منع التكرار (case-insensitive)
       const exists = types.some(t => t.toLowerCase() === trimmed.toLowerCase());
       if (exists) return types;
 
@@ -265,14 +270,10 @@ export const dbService = {
     const expenses = filterByCar(expenseStore.get(), carId);
     const incomes = filterByCar(incomeStore.get(), carId);
 
-    // ✅ safeNumber يحمي من NaN/Infinity
     const totalFuel = fuel.reduce((s, r) => s + safeNumber(r.cost), 0);
     const totalMaint = maintenance.reduce((s, r) => s + safeNumber(r.cost), 0);
     const totalExp = expenses.reduce((s, r) => s + safeNumber(r.cost), 0);
 
-    // ✅ totalLiters = بنزين فقط (توافق عكسي)
-    // ✅ totalKwh = كهرباء فقط (جديد لدعم EV)
-    // ✅ يستخدم amount ?? liters
     let totalLiters = 0;
     let totalKwh = 0;
     fuel.forEach(r => {
@@ -294,8 +295,8 @@ export const dbService = {
       maintenance: totalMaint, 
       expenses: totalExp, 
       total: totalExpensesCombined, 
-      totalLiters,      // بنزين فقط (L)
-      totalKwh,         // كهرباء فقط (kWh) — جديد
+      totalLiters,
+      totalKwh,
       income: totalIncome,
       net: netProfit
     };
