@@ -16,21 +16,32 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // هذا السطر سيطبع الخطأ الحقيقي في كونسول المتصفح لسهولة اكتشافه
+    // في بيئة الإنتاج (Production)، يجب إرسال هذا الخطأ إلى خدمة مثل Sentry أو Firebase Crashlytics
+    // بدلاً من طباعته في الكونسول فقط.
     console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-red-900 text-white flex flex-col items-center justify-center p-6 text-center">
-          <h1 className="text-2xl font-bold mb-4">عذراً، حدث خطأ!</h1>
-          <div className="bg-black/30 p-4 rounded-xl w-full max-w-lg overflow-auto text-sm font-mono mb-6" dir="ltr">
-            {this.state.error.toString()}
-          </div>
+        <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center p-6 text-center">
+          <div className="text-6xl mb-4">🚧</div>
+          <h1 className="text-2xl font-bold mb-2">عذراً، حدث خطأ غير متوقع</h1>
+          <p className="text-[var(--text-muted)] mb-6 text-sm">
+            واجه التطبيق مشكلة أثناء العمل. يرجى إعادة المحاولة.
+          </p>
+          
+          {/* ✅ الإصلاح الأمني: عرض تفاصيل الخطأ فقط في بيئة التطوير وليس للمستخدم النهائي */}
+          {import.meta.env.DEV && this.state.error && (
+            <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl w-full max-w-lg overflow-auto text-xs font-mono mb-6 text-left" dir="ltr">
+              <p className="font-bold text-red-500 mb-2">Developer Error Details (Hidden in Production):</p>
+              {this.state.error.toString()}
+            </div>
+          )}
+          
           <button 
             onClick={() => window.location.reload()} 
-            className="px-6 py-3 bg-white text-red-900 font-bold rounded-xl hover:bg-gray-100 transition-colors"
+            className="px-6 py-3 bg-[var(--primary)] text-white font-bold rounded-xl hover:bg-blue-600 transition-colors shadow-lg active:scale-95"
           >
             إعادة المحاولة
           </button>
