@@ -1,51 +1,162 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { FileText, Plus, Trash2, X, AlertTriangle, CheckCircle, Camera } from 'lucide-react'; 
+import { FileText, Plus, Trash2, X, AlertTriangle, CheckCircle, Camera, AlertCircle } from 'lucide-react'; 
 import ConfirmModal from '../components/ui/ConfirmModal';
 
+const EMPTY_FORM = { type: 'insurance', endDate: '', image: null };
+const VALID_TYPES = ['insurance', 'technicalInspection', 'license'];
+const MAX_FILE_SIZE = 1.5 * 1024 * 1024;   // 1.5 MB قبل الضغط
+const MAX_DIMENSION = 1200;                // أعرض بُعد بعد الضغط
+const COMPRESS_QUALITY = 0.7;              // جودة JPEG
+const MAX_DOCS_PER_CAR = 20;               // حماية localStorage
+
 export default function Documents() {
-  const { currentCar, t, lang } = useContext(AppContext);
+  const { currentCar, t, lang, dataVersion, bumpDataVersion } = useContext(AppContext);
+  
   const [documents, setDocuments] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  
-  const [formData, setFormData] = useState({ type: 'insurance', endDate: '', image: null });
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  const loadData = () => {
-    if (currentCar) {
-      const allDocs = dbService.getDocuments() || [];
-      const carDocs = allDocs
-        .filter(d => d.carId === currentCar.id)
-        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
-      setDocuments(carDocs);
-    } else {
-      setDocuments([]); 
-    }
+  const toastTimeoutRef = useRef(null);
+
+  /* ===================== Toast ===================== */
+  const showToast = useCallback((message, type = 'error') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ show: true, message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  }, []);
+
+  const dismissToast = () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ show: false, message: '', type: 'success' });
   };
 
-  useEffect(() => { loadData(); }, [currentCar]);
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+  }, []);
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 1.5 * 1024 * 1024) {
-        alert('حجم الصورة كبير جداً! يرجى اختيار صورة أصغر من 1.5 ميجابايت لتجنب امتلاء مساحة التخزين.');
-        e.target.value = null; 
+  /* ===================== Load Data ===================== */
+  const loadData = useCallback(() => {
+    try {
+      if (!currentCar) {
+        setDocuments([]);
         return;
       }
+      const allDocs = dbService.getDocuments() || [];
+      // ✅ ترتيب مستقر بـ localeCompare
+      const carDocs = allDocs
+        .filter(d => d.carId === currentCar.id)
+        .sort((a, b) => (a.endDate || '').localeCompare(b.endDate || ''));
+      setDocuments(carDocs);
+    } catch (e) {
+      console.error('loadData failed:', e);
+      setDocuments([]);
+    }
+  }, [currentCar]);
+
+  useEffect(() => { loadData(); }, [loadData, dataVersion]);
+
+  /* ===================== ✅ ضغط الصور (Canvas) ===================== */
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result });
+      reader.onerror = () => reject(new Error('read_failed'));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('image_load_failed'));
+        img.onload = () => {
+          try {
+            let w = img.width;
+            let h = img.height;
+            // ✅ تصغير إذا تجاوز الحد
+            if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
+              if (w > h) { h = Math.round((h * MAX_DIMENSION) / w); w = MAX_DIMENSION; }
+              else { w = Math.round((w * MAX_DIMENSION) / h); h = MAX_DIMENSION; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error('canvas_failed'));
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', COMPRESS_QUALITY));
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
+    });
+  };
+
+  /* ===================== رفع صورة ===================== */
+  const handleImageUpload = async (e) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    // ✅ تحقق من نوع الملف (MIME + بداية الاسم)
+    if (!file.type.startsWith('image/')) {
+      showToast(t('invalidFileType') || 'الرجاء اختيار ملف صورة صالح.', 'error');
+      input.value = null;
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(t('imageTooLarge') || 'حجم الصورة كبير جداً. الحد الأقصى 1.5 ميجابايت.', 'error');
+      input.value = null;
+      return;
+    }
+
+    setIsProcessingImage(true);
+    try {
+      const compressed = await compressImage(file);
+      setFormData(prev => ({ ...prev, image: compressed }));
+    } catch (err) {
+      console.error('image processing failed:', err);
+      showToast(t('imageProcessingFailed') || 'تعذر معالجة الصورة. حاول مرة أخرى.', 'error');
+    } finally {
+      setIsProcessingImage(false);
+      input.value = null;
     }
   };
 
+  /* ===================== حفظ ===================== */
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentCar) return;
-    
+
+    // ✅ سقف الوثائق (حماية localStorage)
+    if (documents.length >= MAX_DOCS_PER_CAR) {
+      return showToast(
+        t('maxDocumentsReached') || `الحد الأقصى ${MAX_DOCS_PER_CAR} وثيقة. احذف وثيقة قديمة أولاً.`,
+        'error'
+      );
+    }
+
+    const isBlank = (v) => v === '' || v === undefined || v === null;
+    if (isBlank(formData.endDate) || isBlank(formData.type)) {
+      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة الحقول المطلوبة.', 'error');
+    }
+
+    // ✅ تحقق من النوع
+    if (!VALID_TYPES.includes(formData.type)) {
+      return showToast(t('errorSaving') || 'نوع الوثيقة غير صالح.', 'error');
+    }
+
+    // ✅ تحقق من صحة التاريخ
+    const parsed = new Date(formData.endDate + 'T00:00:00');
+    if (isNaN(parsed.getTime())) {
+      return showToast(t('invalidDate') || 'تاريخ غير صالح.', 'error');
+    }
+
     try {
       const newRecord = dbService.addDocument({ 
         carId: currentCar.id, 
@@ -56,48 +167,115 @@ export default function Documents() {
 
       if (newRecord) {
         setShowForm(false);
-        setFormData({ type: 'insurance', endDate: '', image: null }); 
-        loadData(); 
+        setFormData(EMPTY_FORM);
+        loadData();
+        bumpDataVersion(); // ✅ يُحدّث Dashboard
+        showToast(t('saveSuccess') || 'تم حفظ الوثيقة!', 'success');
       }
     } catch (error) {
       console.error("خطأ في حفظ الوثيقة:", error);
-      alert("حدث خطأ أثناء محاولة الحفظ. قد تكون مساحة التخزين ممتلئة.");
+      // ✅ رسالة دقيقة حسب نوع الخطأ
+      const isQuota = error?.name === 'QuotaExceededError' || String(error).includes('quota');
+      showToast(
+        isQuota 
+          ? (t('storageFull') || 'مساحة التخزين ممتلئة. احذف بيانات قديمة.')
+          : (t('errorSaving') || 'حدث خطأ أثناء الحفظ.'),
+        'error'
+      );
     }
   };
 
+  /* ===================== حذف ===================== */
   const handleDelete = () => {
-    if(deleteId) {
+    if (!deleteId) return;
+    try {
       dbService.deleteDocument(deleteId);
+      bumpDataVersion();
       setDeleteId(null);
       loadData();
+    } catch (e) {
+      console.error('deleteDocument failed:', e);
+      setDeleteId(null);
+      showToast(t('errorSaving') || 'حدث خطأ أثناء الحذف.', 'error');
     }
   };
 
-  const getStatus = (endDate) => {
-    if(!endDate) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800', icon: FileText };
-    const diffDays = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
-    
+  /* ===================== ✅ حساب الحالة (مُصلَح رياضياً) ===================== */
+  const getStatus = useCallback((endDate) => {
+    if (!endDate) {
+      return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800', icon: FileText };
+    }
+
+    // ✅ تطبيع كلا الطرفين لمنتصف الليل المحلي (يمنع أخطاء UTC)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate + 'T00:00:00');
+    end.setHours(0, 0, 0, 0);
+
+    if (isNaN(end.getTime())) {
+      return { label: '—', color: 'text-slate-400', bg: 'bg-slate-800', icon: FileText };
+    }
+
+    // ✅ Math.round (لأن الطرفين منتصف ليل) — أدق من Math.ceil
+    const diffDays = Math.round((end - today) / (1000 * 60 * 60 * 24));
+
     if (diffDays < 0) {
       return { label: t('expired') || 'منتهية', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
     }
+    if (diffDays === 0) {
+      return { label: t('expiresToday') || 'تنتهي اليوم', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
+    }
     if (diffDays <= 30) {
-      return { label: `${t('expiringSoon') || 'تنتهي قريباً'} (${diffDays} ${t('days') || 'يوم'})`, color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: AlertTriangle };
+      return {
+        label: `${t('expiringSoon') || 'تنتهي قريباً'} (${diffDays} ${t('days') || 'يوم'})`,
+        color: 'text-yellow-500',
+        bg: 'bg-yellow-500/10',
+        icon: AlertTriangle
+      };
     }
     return { label: t('valid') || 'صالح', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle };
-  };
+  }, [t]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
-    return new Date(dateString).toLocaleDateString(localeMap[lang] || 'ar-MA', { year: 'numeric', month: 'short', day: 'numeric' });
+    const d = new Date(dateString + 'T00:00:00');
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleDateString(localeMap[lang] || 'ar-MA', { year: 'numeric', month: 'short', day: 'numeric' });
   };
+
+  const deleteMessage = useMemo(() => {
+    const msg = t('confirmDeleteMsg');
+    return msg === 'confirmDeleteMsg' 
+      ? 'هل أنت متأكد من حذف هذه الوثيقة؟ لا يمكن التراجع.' 
+      : msg;
+  }, [t]);
 
   return (
     <div className="space-y-4 pb-24 px-4 min-h-screen">
+      
+      {/* ✅ الإشعار العائم */}
+      {toast.show && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-bold">{toast.message}</span>
+          <button 
+            type="button"
+            onClick={dismissToast} 
+            aria-label="إغلاق"
+            className="ml-2 opacity-70 hover:opacity-100"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
         <button 
+          type="button"
           onClick={() => setShowForm(!showForm)} 
+          aria-label={showForm ? 'إلغاء' : 'إضافة وثيقة'}
           className={`p-3 rounded-full text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center ${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-[var(--primary)] hover:bg-blue-600'}`}
         >
           {showForm ? <X size={24} /> : <Plus size={24} />}
@@ -105,7 +283,7 @@ export default function Documents() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
+        <form onSubmit={handleSubmit} noValidate className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] space-y-4 shadow-lg animate-fade-in mb-6">
           <div>
             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentType') || 'نوع الوثيقة'}</label>
             <select 
@@ -120,38 +298,50 @@ export default function Documents() {
           </div>
           
           <div>
-             <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'تاريخ الانتهاء'}</label>
-             <input 
-                type="date" 
-                required 
-                value={formData.endDate} 
-                onChange={e => setFormData({...formData, endDate: e.target.value})} 
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" 
-              />
+            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate') || 'تاريخ الانتهاء'}</label>
+            <input 
+              type="date" 
+              value={formData.endDate} 
+              onChange={e => setFormData({...formData, endDate: e.target.value})} 
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" 
+            />
           </div>
 
           <div>
-            <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('documentImage') || 'صورة الوثيقة (اختياري)'}</label>
-            <label className="flex flex-col items-center justify-center w-full h-32 bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--primary)]/50 transition-colors overflow-hidden relative">
+            <label className="text-xs text-[var(--text-muted)] mb-1 block">
+              {t('documentImage') || 'صورة الوثيقة'} ({t('optional') || 'اختياري'})
+            </label>
+            <label className={`flex flex-col items-center justify-center w-full h-32 bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--primary)]/50 transition-colors overflow-hidden relative ${isProcessingImage ? 'opacity-50 pointer-events-none' : ''}`}>
               {formData.image ? (
                 <>
                   <img src={formData.image} alt="Preview" className="w-full h-full object-contain" />
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-white text-xs font-bold">تغيير الصورة</span>
+                    <span className="text-white text-xs font-bold">{t('changeImage') || 'تغيير الصورة'}</span>
                   </div>
                 </>
               ) : (
                 <div className="flex flex-col items-center text-[var(--text-muted)]">
                   <Camera size={28} className="mb-2" />
-                  <span className="text-xs font-bold">اضغط لإضافة صورة</span>
+                  <span className="text-xs font-bold">
+                    {isProcessingImage 
+                      ? (t('processing') || 'جاري المعالجة...') 
+                      : (t('tapToAddImage') || 'اضغط لإضافة صورة')}
+                  </span>
+                  <span className="text-[10px] opacity-60 mt-1">JPEG/PNG · Max 1.5MB</span>
                 </div>
               )}
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageUpload}
+                disabled={isProcessingImage}
+              />
             </label>
           </div>
 
           <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all shadow-lg shadow-blue-500/20">
-            {t('save') || 'حفظ الوثيقة'}
+            {t('saveDocument') || 'حفظ الوثيقة'}
           </button>
         </form>
       )}
@@ -189,12 +379,16 @@ export default function Documents() {
                 </div>
                 
                 <div className="flex flex-col items-end gap-2">
-                  <p className="text-[10px] text-[var(--text-muted)] font-medium">
+                  <p className="text-[10px] text-[var(--text-muted)] font-medium text-end">
                     {t('endsOn') || 'ينتهي في'}: <br/>
-                    <span className="font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-0.5 rounded inline-block mt-0.5">{formatDate(doc.endDate)}</span>
+                    <span className="font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-0.5 rounded inline-block mt-0.5">
+                      {formatDate(doc.endDate)}
+                    </span>
                   </p>
                   <button 
+                    type="button"
                     onClick={() => setDeleteId(doc.id)} 
+                    aria-label="حذف الوثيقة"
                     className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
                   >
                     <Trash2 size={16} />
@@ -211,9 +405,9 @@ export default function Documents() {
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
-        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟ لا يمكن التراجع عن هذا الإجراء.'}
+        message={deleteMessage}
         variant="danger"
-        confirmText="نعم، احذف"
+        confirmText={t('confirmDeleteBtn') || 'نعم، احذف'}
       />
     </div>
   );
