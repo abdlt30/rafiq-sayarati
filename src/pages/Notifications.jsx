@@ -1,7 +1,7 @@
 import { useContext, useMemo, useState, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { notificationService } from '../services/notificationService'; 
-import { Bell, AlertTriangle, Info, Trash2, Check, ShieldAlert, Sparkles } from 'lucide-react';
+import { AlertTriangle, Info, Trash2, Check, ShieldAlert, Sparkles } from 'lucide-react'; // ✅ إزالة Bell
 import { Link } from 'react-router-dom';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
@@ -9,7 +9,20 @@ const READ_IDS_KEY = 'read_notifications';
 const DISMISSED_IDS_KEY = 'dismissed_notifications';
 const MAX_TRACKED_IDS = 200;
 
-/* ✅ قراءة آمنة لمصفوفة ids من localStorage */
+/* ✅ دالة مساعدة خارجية (تحسين أداء) */
+const getStyle = (severity) => {
+  switch (severity) {
+    case 'critical':
+      return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-500', icon: AlertTriangle };
+    case 'warning':
+      return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-500', icon: ShieldAlert };
+    case 'success':
+      return { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-500', icon: Sparkles };
+    default:
+      return { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-500', icon: Info };
+  }
+};
+
 const safeIdsFromStorage = (key) => {
   try {
     const raw = localStorage.getItem(key);
@@ -23,7 +36,6 @@ const safeIdsFromStorage = (key) => {
   }
 };
 
-/* ✅ حفظ آمن مع تحديد السعة (FIFO) */
 const saveIds = (key, ids) => {
   try {
     const unique = [...new Set(ids)].slice(-MAX_TRACKED_IDS);
@@ -41,7 +53,10 @@ export default function Notifications() {
   const [readIds, setReadIds] = useState(() => safeIdsFromStorage(READ_IDS_KEY));
   const [dismissedIds, setDismissedIds] = useState(() => safeIdsFromStorage(DISMISSED_IDS_KEY));
 
-  /* ✅ useMemo بدل useState + useEffect (render واحد) */
+  /* ✅ تحسين: استخدام Set للبحث السريع O(1) */
+  const readSet = useMemo(() => new Set(readIds), [readIds]);
+  const dismissedSet = useMemo(() => new Set(dismissedIds), [dismissedIds]);
+
   const notifications = useMemo(() => {
     if (!currentCar) return [];
     try {
@@ -53,28 +68,20 @@ export default function Notifications() {
     }
   }, [currentCar, t, lang, dataVersion]);
 
-  /* ✅ استبعاد التنبيهات الممسوحة (المخفية الدائم) */
   const visibleNotifications = useMemo(() => {
     if (dismissedIds.length === 0) return notifications;
-    const dismissedSet = new Set(dismissedIds);
     return notifications.filter(n => !dismissedSet.has(n.id));
-  }, [notifications, dismissedIds]);
+  }, [notifications, dismissedSet, dismissedIds.length]);
 
-  /* ✅ عدّاد التنبيهات غير المقروءة (من الظاهرة فقط) */
   const unreadCount = useMemo(() => {
-    if (visibleNotifications.length === 0) return 0;
-    const readSet = new Set(readIds);
     return visibleNotifications.filter(n => !readSet.has(n.id)).length;
-  }, [visibleNotifications, readIds]);
+  }, [visibleNotifications, readSet]);
 
   /* ===================== الإجراءات ===================== */
   const markAsRead = useCallback((id) => {
-    if (!id) return;
-    setReadIds(prev => {
-      if (prev.includes(id)) return prev;
-      return saveIds(READ_IDS_KEY, [...prev, id]);
-    });
-  }, []);
+    if (!id || readSet.has(id)) return;
+    setReadIds(prev => saveIds(READ_IDS_KEY, [...prev, id]));
+  }, [readSet]);
 
   const markAllRead = useCallback(() => {
     if (visibleNotifications.length === 0) return;
@@ -91,20 +98,6 @@ export default function Notifications() {
     setDismissedIds(prev => saveIds(DISMISSED_IDS_KEY, [...prev, ...allIds]));
     setShowClearModal(false);
   }, [notifications]);
-
-  /* ===================== الأنماط حسب severity ===================== */
-  const getStyle = (severity) => {
-    switch (severity) {
-      case 'critical':
-        return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-500', icon: AlertTriangle };
-      case 'warning':
-        return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-500', icon: ShieldAlert };
-      case 'success':
-        return { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-500', icon: Sparkles };
-      default:
-        return { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-500', icon: Info };
-    }
-  };
 
   return (
     <div className="space-y-4 pb-24 px-4 min-h-screen">
@@ -129,7 +122,8 @@ export default function Notifications() {
                 onClick={markAllRead} 
                 aria-label={t('markAllRead') || 'تحديد الكل كمقروء'}
                 title={t('markAllRead') || 'تحديد الكل كمقروء'}
-                className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-green-500 transition-colors"
+                disabled={unreadCount === 0} // ✅ تعطيل إذا كانت كلها مقروءة
+                className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-green-500 disabled:opacity-50 disabled:hover:text-[var(--text-muted)] transition-colors"
               >
                 <Check size={18} />
               </button>
@@ -165,7 +159,7 @@ export default function Notifications() {
           {visibleNotifications.map((notif) => {
             const style = getStyle(notif.severity);
             const Icon = style.icon;
-            const isRead = readIds.includes(notif.id);
+            const isRead = readSet.has(notif.id); // ✅ استخدام Set
 
             return (
               <Link 
