@@ -104,8 +104,18 @@ export default function Reports() {
     return raw.filter(item => Number.isFinite(item.value) && item.value > 0);
   }, [totals, t]);
 
-  // ✅ تحسين منطقي: إذا كان الإجمالي > 0، فهناك بيانات
   const hasAnyData = totals.total > 0;
+
+  /* ✅ دالة تنسيق الأرقام للمحور Y (تدعم اللغات) */
+  const formatYAxis = (value) => {
+    if (value === 0) return '0';
+    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
+    return new Intl.NumberFormat(localeMap[lang] || 'ar-MA', {
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: 1
+    }).format(value);
+  };
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-4">
@@ -119,7 +129,7 @@ export default function Reports() {
           aria-label={t('pdfReport') || 'تقرير PDF'}
           className="bg-[var(--primary)] text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
         >
-          <Printer size={16} /> 
+          <Printer size={16} aria-hidden="true" /> 
           {t('pdfReport') || 'تقرير PDF'}
         </button>
       </div>
@@ -143,7 +153,7 @@ export default function Reports() {
 
       {!hasAnyData && (
         <div className="bg-[var(--surface)] border border-[var(--border)] p-6 rounded-2xl text-center">
-          <PieIcon className="text-[var(--text-muted)] mx-auto mb-3 opacity-40" size={48} />
+          <PieIcon className="text-[var(--text-muted)] mx-auto mb-3 opacity-40" size={48} aria-hidden="true" />
           <p className="text-sm text-[var(--text-muted)]">
             {t('noData') || 'لا توجد بيانات كافية لعرض التقارير.'}
           </p>
@@ -153,13 +163,32 @@ export default function Reports() {
       {hasAnyData && pieData.length > 0 && (
         <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm mb-4">
           <div className="flex items-center gap-2 mb-4">
-            <PieIcon className="text-[var(--primary)]" size={20} />
+            <PieIcon className="text-[var(--primary)]" size={20} aria-hidden="true" />
             <h2 className="font-bold text-[var(--text)]">
               {t('expenseDistribution') || 'توزيع المصاريف'}
             </h2>
           </div>
-          {/* ✅ إضافة aria-label للمخطط لتحسين الوصول */}
-          <div className="h-64 w-full" role="img" aria-label={t('expenseDistribution') || 'توزيع المصاريف'}>
+          
+          {/* ✅ الحل النهائي للوصول: جدول مخفي لقارئات الشاشة */}
+          <table className="sr-only">
+            <caption>{t('expenseDistribution') || 'توزيع المصاريف'}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('category') || 'الفئة'}</th>
+                <th scope="col">{t('amount') || 'المبلغ'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pieData.map((entry, index) => (
+                <tr key={index}>
+                  <td>{entry.name}</td>
+                  <td>{entry.value} {currency}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="h-64 w-full" aria-hidden="true">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -200,7 +229,7 @@ export default function Reports() {
 
       <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm">
         <div className="flex items-center gap-2 mb-6">
-          <BarChart3 className="text-green-500" size={20} />
+          <BarChart3 className="text-green-500" size={20} aria-hidden="true" />
           <h2 className="font-bold text-[var(--text)]">
             {t('monthlyExpenses') || 'المصاريف الشهرية'}
           </h2>
@@ -211,39 +240,57 @@ export default function Reports() {
             {t('noData') || 'لا توجد بيانات كافية لعرض المخطط.'}
           </p>
         ) : (
-          // ✅ إضافة aria-label للمخطط الشريطي
-          <div className="h-64 w-full" role="img" aria-label={t('monthlyExpenses') || 'المصاريف الشهرية'}>
-            <ResponsiveContainer width="100%" height="100%">
-              {/* ✅ إزالة left: -20 لمنع قص الأرقام الكبيرة */}
-              <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                  // ✅ إضافة tickFormatter لضمان عرض الأرقام بشكل مختصر (مثال: 1K)
-                  tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value}
-                />
-                <RechartsTooltip
-                  cursor={{ fill: 'var(--surface-2)' }}
-                  contentStyle={{
-                    borderRadius: '10px',
-                    border: 'none',
-                    backgroundColor: 'var(--surface-2)',
-                    color: 'var(--text)'
-                  }}
-                  formatter={(value) => `${Number(value).toLocaleString()} ${currency}`}
-                />
-                <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={30} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <>
+            {/* ✅ جدول مخفي للمخطط الشريطي */}
+            <table className="sr-only">
+              <caption>{t('monthlyExpenses') || 'المصاريف الشهرية'}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t('month') || 'الشهر'}</th>
+                  <th scope="col">{t('amount') || 'المبلغ'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyData.map((m, index) => (
+                  <tr key={index}>
+                    <td>{m.name}</td>
+                    <td>{m.total} {currency}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="h-64 w-full" aria-hidden="true">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                    tickFormatter={formatYAxis}
+                  />
+                  <RechartsTooltip
+                    cursor={{ fill: 'var(--surface-2)' }}
+                    contentStyle={{
+                      borderRadius: '10px',
+                      border: 'none',
+                      backgroundColor: 'var(--surface-2)',
+                      color: 'var(--text)'
+                    }}
+                    formatter={(value) => `${Number(value).toLocaleString()} ${currency}`}
+                  />
+                  <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={30} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </>
         )}
       </div>
     </div>
