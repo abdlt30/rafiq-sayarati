@@ -30,7 +30,8 @@ import Timeline from './pages/Timeline';
 import About from './pages/About'; 
 import Valuation from './pages/Valuation'; 
 import FuelStations from './pages/FuelStations'; 
-import ReportPrint from './pages/ReportPrint'; // ✅ إضافة: استيراد صفحة تقرير الطباعة
+import ReportPrint from './pages/ReportPrint'; 
+import PrintData from './pages/PrintData'; // ✅ إضافة: استيراد صفحة الطباعة المباشرة
 
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
@@ -81,7 +82,8 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/valuation" element={<Valuation />} />
             <Route path="/fuel-stations" element={<FuelStations />} /> 
-            <Route path="/report-print" element={<ReportPrint />} /> {/* ✅ إضافة: مسار تقرير الطباعة */}
+            <Route path="/report-print" element={<ReportPrint />} />
+            <Route path="/print-data" element={<PrintData />} /> {/* ✅ إضافة: مسار صفحة الطباعة المباشرة */}
           </Route>
         </Route>
         
