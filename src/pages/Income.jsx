@@ -56,8 +56,9 @@ export default function Income() {
         return;
       }
       const allIncomes = dbService.getIncomes() || [];
-      const carIncomes = allIncomes.filter(r => r.carId === currentCar.id);
-      // ✅ ترتيب مستقر بـ localeCompare
+      // ✅ إصلاح: استخدام String() لضمان التطابق
+      const carIncomes = allIncomes.filter(r => String(r.carId) === String(currentCar.id));
+      
       const sorted = [...carIncomes].sort((a, b) =>
         (b.date || '').localeCompare(a.date || '')
       );
@@ -82,10 +83,10 @@ export default function Income() {
     }
 
     if (!validTypes.has(formData.type)) {
-      return showToast(t('errorSaving') || 'نوع الإيراد غير صالح.', 'error');
+      // ✅ إصلاح: استخدام مفتاح ترجمة بدلاً من الكود الميت
+      return showToast(t('invalidIncomeType') || 'نوع الإيراد غير صالح.', 'error');
     }
 
-    // ✅ تحقق رياضي صارم
     const amountNum = Number(formData.amount);
     if (!Number.isFinite(amountNum) || amountNum < 0) {
       return showToast(t('invalidNumbers') || 'الرجاء إدخال مبلغ صحيح.', 'error');
@@ -95,7 +96,6 @@ export default function Income() {
       return showToast(t('invalidNumbers') || 'المبلغ كبير جداً.', 'error');
     }
 
-    // ✅ تطبيع الملاحظات (trim + حد أقصى)
     const notesValue = (formData.notes || '').trim().slice(0, MAX_NOTES_LENGTH);
 
     const data = { 
@@ -113,7 +113,7 @@ export default function Income() {
         dbService.addIncome(data);
       }
       loadData();
-      bumpDataVersion(); // ✅ يُحدّث Dashboard
+      bumpDataVersion();
       closeModal();
       showToast(t('saveSuccess') || 'تم الحفظ بنجاح!', 'success');
     } catch (error) {
@@ -166,7 +166,7 @@ export default function Income() {
     setFormData(EMPTY_FORM);
   };
 
-  /* ✅ الإجمالي memoized + حماية NaN */
+  /* ===================== Computed ===================== */
   const total = useMemo(() => {
     return records.reduce((sum, r) => {
       const v = Number(r.amount);
@@ -174,7 +174,6 @@ export default function Income() {
     }, 0);
   }, [records]);
 
-  /* ✅ رسالة الحذف مع fallback */
   const deleteMessage = useMemo(() => {
     const msg = t('confirmDeleteMsg');
     return msg === 'confirmDeleteMsg' 
@@ -191,7 +190,6 @@ export default function Income() {
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* ✅ الإشعار العائم */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
@@ -207,12 +205,10 @@ export default function Income() {
         </div>
       )}
 
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('income') || 'الإيرادات'}</h1>
       </div>
 
-      {/* بطاقة الإجمالي */}
       <div className="bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20 p-4 rounded-2xl mb-2">
         <span className="text-xs text-[var(--text-muted)] block mb-1">{t('totalIncome') || 'إجمالي الإيرادات'}</span>
         <span className="text-2xl font-extrabold text-green-500">
@@ -220,7 +216,6 @@ export default function Income() {
         </span>
       </div>
 
-      {/* القائمة */}
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4"><TrendingUp size={48} className="opacity-40" /></div>
@@ -271,7 +266,6 @@ export default function Income() {
         </div>
       )}
 
-      {/* الزر العائم - مع إصلاح rtl:auto → rtl:right-auto */}
       <button 
         type="button"
         onClick={openAddModal} 
@@ -281,7 +275,6 @@ export default function Income() {
         <Plus size={28} />
       </button>
 
-      {/* نافذة الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
@@ -292,7 +285,6 @@ export default function Income() {
         confirmText={t('confirmDeleteBtn') || 'نعم، احذف'} 
       />
 
-      {/* نافذة الإضافة/التعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} noValidate className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
