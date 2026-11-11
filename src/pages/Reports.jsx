@@ -18,7 +18,7 @@ export default function Reports() {
   const { currentCar, currency, t, lang, dataVersion } = useContext(AppContext);
   const navigate = useNavigate();
 
-  /* ===================== 1. الإجماليات (مُحصَّنة) ===================== */
+  /* ===================== 1. الإجماليات ===================== */
   const totals = useMemo(() => {
     if (!currentCar) return { ...EMPTY_TOTALS };
     try {
@@ -37,7 +37,7 @@ export default function Reports() {
     }
   }, [currentCar, dataVersion]);
 
-  /* ===================== 2. البيانات الشهرية (مُصلَحة) ===================== */
+  /* ===================== 2. البيانات الشهرية ===================== */
   const monthlyData = useMemo(() => {
     if (!currentCar) return [];
 
@@ -59,13 +59,12 @@ export default function Reports() {
       allRecords.forEach(record => {
         if (!record.date) return;
 
-        // ✅ إصلاح UTC: force local midnight عبر T00:00:00
         const dateStr = String(record.date).includes('T')
           ? record.date
           : `${record.date}T00:00:00`;
 
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return; // ✅ تجاهل التواريخ التالفة
+        if (isNaN(date.getTime())) return;
 
         const monthIndex = date.getMonth();
         const year = date.getFullYear();
@@ -79,7 +78,6 @@ export default function Reports() {
           };
         }
 
-        // ✅ safeNumber + رفض السالب و Infinity
         const cost = Number(record.cost);
         if (Number.isFinite(cost) && cost >= 0) {
           monthsMap[key].total += cost;
@@ -96,7 +94,7 @@ export default function Reports() {
     }
   }, [currentCar, lang, dataVersion]);
 
-  /* ===================== 3. Pie Data (memoized + مُحصَّنة) ===================== */
+  /* ===================== 3. Pie Data ===================== */
   const pieData = useMemo(() => {
     const raw = [
       { name: t('fuel') || 'الوقود', value: totals.fuel, color: '#3b82f6' },
@@ -106,12 +104,12 @@ export default function Reports() {
     return raw.filter(item => Number.isFinite(item.value) && item.value > 0);
   }, [totals, t]);
 
-  const hasAnyData = totals.total > 0 || totals.fuel > 0 || totals.maintenance > 0 || totals.expenses > 0;
+  // ✅ تحسين منطقي: إذا كان الإجمالي > 0، فهناك بيانات
+  const hasAnyData = totals.total > 0;
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-4">
       
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('reports') || 'التقارير'}</h1>
         
@@ -126,7 +124,6 @@ export default function Reports() {
         </button>
       </div>
 
-      {/* بطاقات الإجمالي */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
           <p className="text-xs text-[var(--text-muted)] mb-1">{t('totalExpenses') || 'إجمالي المصاريف'}</p>
@@ -144,7 +141,6 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* ✅ حالة لا يوجد بيانات */}
       {!hasAnyData && (
         <div className="bg-[var(--surface)] border border-[var(--border)] p-6 rounded-2xl text-center">
           <PieIcon className="text-[var(--text-muted)] mx-auto mb-3 opacity-40" size={48} />
@@ -154,7 +150,6 @@ export default function Reports() {
         </div>
       )}
 
-      {/* المخطط الدائري */}
       {hasAnyData && pieData.length > 0 && (
         <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm mb-4">
           <div className="flex items-center gap-2 mb-4">
@@ -163,7 +158,8 @@ export default function Reports() {
               {t('expenseDistribution') || 'توزيع المصاريف'}
             </h2>
           </div>
-          <div className="h-64 w-full">
+          {/* ✅ إضافة aria-label للمخطط لتحسين الوصول */}
+          <div className="h-64 w-full" role="img" aria-label={t('expenseDistribution') || 'توزيع المصاريف'}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -202,7 +198,6 @@ export default function Reports() {
         </div>
       )}
 
-      {/* المخطط الشريطي */}
       <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl shadow-sm">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="text-green-500" size={20} />
@@ -216,9 +211,11 @@ export default function Reports() {
             {t('noData') || 'لا توجد بيانات كافية لعرض المخطط.'}
           </p>
         ) : (
-          <div className="h-64 w-full">
+          // ✅ إضافة aria-label للمخطط الشريطي
+          <div className="h-64 w-full" role="img" aria-label={t('monthlyExpenses') || 'المصاريف الشهرية'}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+              {/* ✅ إزالة left: -20 لمنع قص الأرقام الكبيرة */}
+              <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                 <XAxis
                   dataKey="name"
@@ -230,6 +227,8 @@ export default function Reports() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                  // ✅ إضافة tickFormatter لضمان عرض الأرقام بشكل مختصر (مثال: 1K)
+                  tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value}
                 />
                 <RechartsTooltip
                   cursor={{ fill: 'var(--surface-2)' }}
