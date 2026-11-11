@@ -4,8 +4,6 @@ import { dbService } from '../services/dbService';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Printer, FileText } from 'lucide-react';
 
-const MS_PER_DAY = 86400000;
-
 /* ✅ يرفض NaN/Infinity/-Infinity */
 const safeNumber = (v) => {
   if (v === null || v === undefined || v === '') return 0;
@@ -44,11 +42,20 @@ export default function ReportPrint() {
   const carOdometerNum = safeNumber(currentCar?.odometer);
   const carPlate = (currentCar?.plate || '').trim();
 
+  /* ✅ دالة تنسيق التاريخ (محلية للتقرير) */
+  const formatDate = (dateString) => {
+    if (!dateString) return '—';
+    const dateStr = String(dateString).includes('T') ? dateString : `${dateString}T00:00:00`;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateString;
+    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
+    return d.toLocaleDateString(localeMap[lang] || 'ar-MA', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
   /* ===================== جمع البيانات (مُحصَّن) ===================== */
   const data = useMemo(() => {
     if (!currentCar) return { fuel: [], maintenance: [], expenses: [], incomes: [] };
 
-    // ✅ تطبيع منتصف ليل محلي
     const normalizeDate = (s) => {
       if (!s) return null;
       const str = String(s).includes('T') ? s : `${s}T00:00:00`;
@@ -58,7 +65,6 @@ export default function ReportPrint() {
       return d;
     };
 
-    // ✅ now ثابت داخل الحساب (لا closure قديم)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -97,7 +103,7 @@ export default function ReportPrint() {
     }
   }, [currentCar, period, dataVersion]);
 
-  /* ===================== الإجماليات (مُحصَّنة) ===================== */
+  /* ===================== الإجماليات ===================== */
   const totals = useMemo(() => {
     const sum = (arr, key) => arr.reduce((s, r) => s + safeNumber(r?.[key]), 0);
     const fuel = sum(data.fuel, 'cost');
@@ -119,25 +125,14 @@ export default function ReportPrint() {
   /* ===================== ترجمة نوع الصيانة ===================== */
   const getMaintenanceTypeLabel = (type) => {
     if (!type) return '—';
-    // ✅ المحاولة الأولى: الترجمة المباشرة
     const direct = t(type);
     if (direct && direct !== type) return direct;
-    // ✅ احتياطي: الخريطة القديمة
-    const map = {
-      oilChange: t('oilChange'),
-      tires: t('tires'),
-      brakes: t('brakes'),
-      battery: t('battery'),
-      airFilter: t('airFilter'),
-      fullInspection: t('fullInspection'),
-      other: t('otherMaintenance'),
-    };
-    return map[type] || type;
+    return type;
   };
 
   if (!currentCar) return null;
 
-  const today = new Date().toLocaleDateString(
+  const todayStr = new Date().toLocaleDateString(
     lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US',
     { year: 'numeric', month: 'long', day: 'numeric' }
   );
@@ -145,7 +140,6 @@ export default function ReportPrint() {
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const hasAnyData = data.fuel.length > 0 || data.maintenance.length > 0 || data.expenses.length > 0 || data.incomes.length > 0;
 
-  /* ✅ طباعة آمنة */
   const handlePrint = () => {
     try {
       window.print();
@@ -157,7 +151,7 @@ export default function ReportPrint() {
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       
-      {/* شريط التحكم */}
+      {/* شريط التحكم (مخفي عند الطباعة) */}
       <div className="no-print sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--border)] px-4 py-3">
         <div className="flex items-center justify-between gap-3 mb-3">
           <Link
@@ -222,7 +216,7 @@ export default function ReportPrint() {
             <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
               {t('issueDate') || 'تاريخ الإصدار'}
             </p>
-            <p className="text-sm font-black text-gray-900">{today}</p>
+            <p className="text-sm font-black text-gray-900">{todayStr}</p>
           </div>
         </div>
 
@@ -244,7 +238,7 @@ export default function ReportPrint() {
             )}
             {carOdometerNum > 0 && (
               <p className="text-sm text-gray-700">
-                {t('odometer') || 'العداد'}: <span className="font-bold">{carOdometerNum.toLocaleString()} KM</span>
+                {t('odometer') || 'العداد'}: <span className="font-bold">{carOdometerNum.toLocaleString()} {t('km') || 'KM'}</span>
               </p>
             )}
           </div>
@@ -306,9 +300,9 @@ export default function ReportPrint() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th className="p-3 text-start font-bold text-gray-700">{t('category') || 'الفئة'}</th>
-                      <th className="p-3 text-start font-bold text-gray-700">{t('amount') || 'المبلغ'}</th>
-                      <th className="p-3 text-start font-bold text-gray-700">{t('percentage') || 'النسبة'}</th>
+                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('category') || 'الفئة'}</th>
+                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('amount') || 'المبلغ'}</th>
+                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('percentage') || 'النسبة'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -348,10 +342,10 @@ export default function ReportPrint() {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th className="p-2 text-start">{t('date') || 'التاريخ'}</th>
-                      <th className="p-2 text-start">{t('odometer') || 'العداد'}</th>
-                      <th className="p-2 text-start">{t('amount') || 'الكمية'}</th>
-                      <th className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('odometer') || 'العداد'}</th>
+                      <th scope="col" className="p-2 text-start">{t('amount') || 'الكمية'}</th>
+                      <th scope="col" className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -362,7 +356,7 @@ export default function ReportPrint() {
                       const cost = safeNumber(f.cost);
                       return (
                         <tr key={f.id} className="border-b border-gray-200">
-                          <td className="p-2">{f.date || '—'}</td>
+                          <td className="p-2">{formatDate(f.date)}</td>
                           <td className="p-2">{odo > 0 ? odo.toLocaleString() : '—'}</td>
                           <td className="p-2">{amount > 0 ? `${amount} ${unit}` : '—'}</td>
                           <td className="p-2 font-bold" dir="ltr">{cost.toLocaleString()} {currency}</td>
@@ -383,9 +377,9 @@ export default function ReportPrint() {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th className="p-2 text-start">{t('date') || 'التاريخ'}</th>
-                      <th className="p-2 text-start">{t('maintenanceType') || 'النوع'}</th>
-                      <th className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('maintenanceType') || 'النوع'}</th>
+                      <th scope="col" className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -393,9 +387,71 @@ export default function ReportPrint() {
                       const cost = safeNumber(m.cost);
                       return (
                         <tr key={m.id} className="border-b border-gray-200">
-                          <td className="p-2">{m.date || '—'}</td>
+                          <td className="p-2">{formatDate(m.date)}</td>
                           <td className="p-2">{getMaintenanceTypeLabel(m.type)}</td>
                           <td className="p-2 font-bold" dir="ltr">{cost.toLocaleString()} {currency}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* ✅ سجل المصاريف الأخرى */}
+            {data.expenses.length > 0 && (
+              <div className="mb-8 page-break">
+                <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-blue-600`}>
+                  {t('otherExpensesLog') || 'سجل المصاريف الأخرى'} ({data.expenses.length})
+                </h2>
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 border-b-2 border-gray-300">
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('expenseType') || 'النوع'}</th>
+                      <th scope="col" className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.expenses.map(e => {
+                      const cost = safeNumber(e.cost);
+                      return (
+                        <tr key={e.id} className="border-b border-gray-200">
+                          <td className="p-2">{formatDate(e.date)}</td>
+                          <td className="p-2">{t(e.type) || e.type}</td>
+                          <td className="p-2 font-bold" dir="ltr">{cost.toLocaleString()} {currency}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* ✅ سجل الإيرادات */}
+            {data.incomes.length > 0 && (
+              <div className="mb-8 page-break">
+                <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-green-600`}>
+                  {t('incomeLog') || 'سجل الإيرادات'} ({data.incomes.length})
+                </h2>
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 border-b-2 border-gray-300">
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('incomeType') || 'النوع'}</th>
+                      <th scope="col" className="p-2 text-start">{t('notes') || 'ملاحظات'}</th>
+                      <th scope="col" className="p-2 text-start">{t('amount') || 'المبلغ'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.incomes.map(i => {
+                      const amount = safeNumber(i.amount);
+                      return (
+                        <tr key={i.id} className="border-b border-gray-200">
+                          <td className="p-2">{formatDate(i.date)}</td>
+                          <td className="p-2">{t(i.type) || i.type}</td>
+                          <td className="p-2">{i.notes || '—'}</td>
+                          <td className="p-2 font-bold text-green-600" dir="ltr">+ {amount.toLocaleString()} {currency}</td>
                         </tr>
                       );
                     })}
