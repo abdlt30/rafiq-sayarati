@@ -1,15 +1,20 @@
 import { useContext, useRef, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Download, Upload, ShieldCheck, AlertTriangle, CheckCircle, Database, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // ✅ ضروري للانتقال لصفحة PDF
+import { 
+  Download, Upload, ShieldCheck, AlertTriangle, CheckCircle, 
+  Database, ChevronRight, FileSpreadsheet, FileText, Printer 
+} from 'lucide-react'; // ✅ إضافة أيقونات التصدير
 
 export default function Backup() {
-  const { t, lang } = useContext(AppContext);
+  const { t, lang, currentCar, currency } = useContext(AppContext);
+  const navigate = useNavigate(); // ✅ دالة التنقل
   const fileInputRef = useRef(null);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [lastBackup, setLastBackup] = useState('');
 
-  // ✅ جلب تاريخ آخر نسخة احتياطية عند فتح الصفحة
+  // ✅ جلب تاريخ آخر نسخة احتياطية
   useEffect(() => {
     const savedDate = localStorage.getItem('last_backup_date');
     if (savedDate) {
@@ -18,8 +23,8 @@ export default function Backup() {
     }
   }, [lang]);
 
-  // ✅ 1. دالة التصدير (محدثة لحفظ التاريخ)
-  const exportData = () => {
+  // ✅ 1. تصدير JSON (نسخة احتياطية للنظام)
+  const exportJSON = () => {
     try {
       const data = {
         currentCar: JSON.parse(localStorage.getItem('savedCar')) || null,
@@ -46,23 +51,64 @@ export default function Backup() {
       a.href = url;
       a.download = `RafiqSayarati-Backup-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
-      
       URL.revokeObjectURL(url);
 
-      // ✅ حفظ تاريخ آخر نسخة احتياطية لتحديث الواجهة
       const now = new Date().toISOString();
       localStorage.setItem('last_backup_date', now);
       const locale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
       setLastBackup(new Date(now).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
 
-      setStatus({ type: 'success', message: t('exportSuccess') || 'تم تصدير البيانات بنجاح!' });
+      setStatus({ type: 'success', message: t('exportSuccess') || 'تم تصدير النسخة الاحتياطية بنجاح!' });
     } catch (error) {
       console.error("Export Error:", error);
       setStatus({ type: 'error', message: t('errorExport') || 'حدث خطأ أثناء تصدير البيانات.' });
     }
   };
 
-  // ✅ 2. دالة الاستيراد
+  // ✅ 2. تصدير Excel/CSV (جدول بيانات للمحاسب)
+  const exportCSV = () => {
+    if (!currentCar) return;
+    
+    try {
+      const fuel = dbService.getFuel().filter(f => f.carId === currentCar.id).map(f => ({ date: f.date, type: t('fuel'), amount: f.cost, odometer: f.odometer, notes: `${f.liters}L` }));
+      const maint = dbService.getMaintenance().filter(m => m.carId === currentCar.id).map(m => ({ date: m.date, type: m.type, amount: m.cost, odometer: m.nextKm || '', notes: '' }));
+      const exp = dbService.getExpenses().filter(e => e.carId === currentCar.id).map(e => ({ date: e.date, type: e.type, amount: e.cost, odometer: '', notes: '' }));
+      const inc = dbService.getIncomes().filter(i => i.carId === currentCar.id).map(i => ({ date: i.date, type: i.type, amount: i.amount, odometer: '', notes: i.notes || '' }));
+
+      const allData = [...fuel, ...maint, ...exp, ...inc].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const headers = [t('date') || 'التاريخ', t('type') || 'النوع', t('amount') || 'المبلغ', t('currency') || 'العملة', t('odometer') || 'العداد', t('notes') || 'ملاحظات'];
+      const csvRows = [headers.join(',')];
+
+      allData.forEach(row => {
+        const values = [
+          row.date,
+          `"${row.type}"`,
+          row.amount,
+          currency,
+          row.odometer,
+          `"${row.notes}"`
+        ];
+        csvRows.push(values.join(','));
+      });
+
+      const csvString = "\uFEFF" + csvRows.join('\n'); // \uFEFF لدعم اللغة العربية في الإكسيل
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `RafiqSayarati-Data-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setStatus({ type: 'success', message: t('excelSuccess') || 'تم تصدير جدول البيانات بنجاح!' });
+    } catch (error) {
+      console.error("CSV Error:", error);
+      setStatus({ type: 'error', message: 'حدث خطأ أثناء تصدير الجدول.' });
+    }
+  };
+
+  // ✅ 3. دالة الاستيراد
   const handleImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -111,34 +157,10 @@ export default function Backup() {
   return (
     <div className="space-y-4 pb-24 px-4 max-w-2xl mx-auto min-h-screen">
       
-      {/* الشريط العلوي الثابت */}
-      <div className="sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10 mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('backup') || 'النسخ الاحتياطي'}</h1>
+      {/* الشريط العلوي */}
+      <div className="sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10 mb-4">
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('backupAndExport') || 'النسخ الاحتياطي والتصدير'}</h1>
       </div>
-
-      {/* بطاقة الأمان (تصميم احترافي) */}
-      <div className="bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20 p-5 rounded-3xl flex flex-col items-center text-center space-y-3">
-        <div className="p-3 bg-green-500/20 rounded-full">
-          <ShieldCheck size={32} className="text-green-500" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-[var(--text)]">{t('dataProtection') || 'حماية البيانات'}</h2>
-          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs leading-relaxed">
-            {t('backupDesc') || 'بياناتك محفوظة محلياً على هاتفك. احتفظ بنسخة احتياطية لضمان عدم فقدانها عند تغيير الجهاز.'}
-          </p>
-        </div>
-      </div>
-
-      {/* حالة آخر نسخة احتياطية */}
-      {lastBackup && (
-        <div className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] p-3 rounded-xl">
-          <div className="flex items-center gap-2 text-sm text-[var(--text)]">
-            <Database size={16} className="text-[var(--primary)]" />
-            <span>{t('lastBackup') || 'آخر نسخة احتياطية:'}</span>
-          </div>
-          <span className="text-xs font-bold text-[var(--text-muted)]">{lastBackup}</span>
-        </div>
-      )}
 
       {/* رسائل الحالة */}
       {status.message && (
@@ -148,51 +170,93 @@ export default function Backup() {
         </div>
       )}
 
-      {/* الأزرار بتصميم احترافي (List Style) */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden mt-4">
+      {/* ==========================================
+          القسم الأول: مركز التصدير (للمحاسب والقراءة)
+         ========================================== */}
+      <div>
+        <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">{t('exportCenter') || 'مركز التصدير'}</h2>
         
-        {/* زر التصدير */}
-        <button 
-          onClick={exportData} 
-          className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors border-b border-[var(--border)] active:bg-[var(--surface-3)]"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
-              <Download size={18} />
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
+          {/* تصدير PDF */}
+          <button onClick={() => navigate('/report-print')} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors border-b border-[var(--border)] active:bg-[var(--surface-3)]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-500/10 text-red-500 rounded-lg"><FileText size={18} /></div>
+              <div className="text-start">
+                <p className="text-sm font-bold text-[var(--text)]">{t('pdfReport') || 'تقرير مالي (PDF)'}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">تقرير أنيق جاهز للطباعة أو المشاركة</p>
+              </div>
             </div>
-            <div className="text-start">
-              <p className="text-sm font-bold text-[var(--text)]">{t('exportDataBtn') || 'تصدير البيانات'}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">{t('exportDesc') || 'حفظ نسخة على هاتفك (JSON)'}</p>
-            </div>
-          </div>
-          <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
-        </button>
+            <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
+          </button>
 
-        {/* زر الاستيراد */}
-        <input type="file" accept=".json,application/json" ref={fileInputRef} onChange={handleImport} className="hidden" />
-        <button 
-          onClick={() => fileInputRef.current.click()} 
-          className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors active:bg-[var(--surface-3)]"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 text-orange-500 rounded-lg">
-              <Upload size={18} />
+          {/* تصدير Excel/CSV */}
+          <button onClick={exportCSV} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors border-b border-[var(--border)] active:bg-[var(--surface-3)]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/10 text-green-500 rounded-lg"><FileSpreadsheet size={18} /></div>
+              <div className="text-start">
+                <p className="text-sm font-bold text-[var(--text)]">{t('excelExport') || 'جدول بيانات (Excel)'}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">ملف CSV يفتح في الإكسيل وجوجل شيت</p>
+              </div>
             </div>
-            <div className="text-start">
-              <p className="text-sm font-bold text-[var(--text)]">{t('importDataBtn') || 'استيراد البيانات'}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">{t('importDesc') || 'استعادة نسخة سابقة من ملف'}</p>
+            <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
+          </button>
+
+          {/* طباعة */}
+          <button onClick={() => window.print()} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors active:bg-[var(--surface-3)]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg"><Printer size={18} /></div>
+              <div className="text-start">
+                <p className="text-sm font-bold text-[var(--text)]">{t('printData') || 'طباعة مباشرة'}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">طباعة القائمة الحالية عبر الطابعة</p>
+              </div>
             </div>
-          </div>
-          <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
-        </button>
+            <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
+          </button>
+        </div>
       </div>
 
-      {/* تحذير الاستيراد */}
-      <div className="flex items-start gap-3 p-3 bg-red-500/5 rounded-xl border border-red-500/10 mt-2">
-        <AlertTriangle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-        <p className="text-[11px] text-red-500/80 leading-relaxed">
-          {t('importWarning') || 'تنبيه: عملية الاستيراد ستقوم بمسح جميع البيانات الحالية واستبدالها بالبيانات الموجودة في الملف. يرجى التأكد قبل المتابعة.'}
-        </p>
+      {/* ==========================================
+          القسم الثاني: النسخ الاحتياطي (لنقل التطبيق)
+         ========================================== */}
+      <div className="mt-6">
+        <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">{t('systemBackup') || 'النسخة الاحتياطية للنظام'}</h2>
+
+        {lastBackup && (
+          <div className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] p-3 rounded-xl mb-2">
+            <div className="flex items-center gap-2 text-sm text-[var(--text)]">
+              <Database size={16} className="text-[var(--primary)]" />
+              <span>{t('lastBackup') || 'آخر نسخة احتياطية:'}</span>
+            </div>
+            <span className="text-xs font-bold text-[var(--text-muted)]">{lastBackup}</span>
+          </div>
+        )}
+
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
+          {/* تصدير JSON */}
+          <button onClick={exportJSON} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors border-b border-[var(--border)] active:bg-[var(--surface-3)]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg"><Download size={18} /></div>
+              <div className="text-start">
+                <p className="text-sm font-bold text-[var(--text)]">{t('exportDataBtn') || 'تصدير البيانات (JSON)'}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">حفظ نسخة على هاتفك لنقل التطبيق</p>
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
+          </button>
+
+          {/* استيراد JSON */}
+          <input type="file" accept=".json,application/json" ref={fileInputRef} onChange={handleImport} className="hidden" />
+          <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors active:bg-[var(--surface-3)]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-500/10 text-orange-500 rounded-lg"><Upload size={18} /></div>
+              <div className="text-start">
+                <p className="text-sm font-bold text-[var(--text)]">{t('importDataBtn') || 'استيراد البيانات'}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">استعادة نسخة سابقة (ملف JSON)</p>
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
+          </button>
+        </div>
       </div>
 
     </div>
