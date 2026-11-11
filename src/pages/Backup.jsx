@@ -4,17 +4,22 @@ import { dbService } from '../services/dbService';
 import { useNavigate } from 'react-router-dom'; 
 import { 
   Download, Upload, ShieldCheck, AlertTriangle, CheckCircle, 
-  Database, ChevronRight, FileSpreadsheet, FileText, Printer 
+  Database, ChevronRight, FileSpreadsheet, FileText, Printer, X 
 } from 'lucide-react'; 
 
 export default function Backup() {
   const { t, lang, currentCar, currency } = useContext(AppContext);
   const navigate = useNavigate(); 
   const fileInputRef = useRef(null);
-  const [status, setStatus] = useState({ type: '', message: '' });
+  const [toast, setToast] = useState({ show: false, type: '', message: '' });
   const [lastBackup, setLastBackup] = useState('');
 
-  // جلب تاريخ آخر نسخة احتياطية
+  // دالة مساعدة لإظهار الإشعار العائم
+  const showToast = (type, message) => {
+    setToast({ show: true, type, message });
+    setTimeout(() => setToast({ show: false, type: '', message: '' }), 3000); // يختفي بعد 3 ثواني
+  };
+
   useEffect(() => {
     const savedDate = localStorage.getItem('last_backup_date');
     if (savedDate) {
@@ -23,7 +28,7 @@ export default function Backup() {
     }
   }, [lang]);
 
-  // ✅ 1. تصدير JSON (نسخة احتياطية للنظام)
+  // ✅ 1. تصدير JSON (نسخة احتياطية)
   const exportJSON = () => {
     try {
       const data = {
@@ -48,8 +53,10 @@ export default function Backup() {
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
+      // ✅ إضافة الوقت للاسم لمنع تكرار رسالة المتصفح
+      const timeStamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
       a.href = url;
-      a.download = `RafiqSayarati-Backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `RafiqSayarati-Backup-${timeStamp}.json`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -58,19 +65,18 @@ export default function Backup() {
       const locale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
       setLastBackup(new Date(now).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
 
-      setStatus({ type: 'success', message: t('exportSuccess') || 'تم تصدير النسخة الاحتياطية بنجاح!' });
+      showToast('success', t('exportSuccess') || 'تم تصدير النسخة الاحتياطية بنجاح!');
     } catch (error) {
       console.error("Export Error:", error);
-      setStatus({ type: 'error', message: t('errorExport') || 'حدث خطأ أثناء تصدير البيانات.' });
+      showToast('error', t('errorExport') || 'حدث خطأ أثناء تصدير البيانات.');
     }
   };
 
-  // ✅ 2. تصدير Excel/CSV (تم إصلاح الترميز والترجمة)
+  // ✅ 2. تصدير Excel/CSV
   const exportCSV = () => {
     if (!currentCar) return;
     
     try {
-      // ترجمة الأنواع أثناء تجميع البيانات
       const fuel = dbService.getFuel().filter(f => f.carId === currentCar.id).map(f => ({ date: f.date, type: t('fuel') || 'الوقود', amount: f.cost, odometer: f.odometer, notes: `${f.liters}L` }));
       const maint = dbService.getMaintenance().filter(m => m.carId === currentCar.id).map(m => ({ date: m.date, type: t(m.type) || m.type, amount: m.cost, odometer: m.nextKm || '', notes: '' }));
       const exp = dbService.getExpenses().filter(e => e.carId === currentCar.id).map(e => ({ date: e.date, type: t(e.type) || e.type, amount: e.cost, odometer: '', notes: '' }));
@@ -100,20 +106,21 @@ export default function Backup() {
         csvRows.push(values.join(','));
       });
 
-      // ✅ إضافة BOM (\uFEFF) لضمان قراءة العربية في الإكسيل + استخدام \r\n
       const csvString = "\uFEFF" + csvRows.join('\r\n'); 
       const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
+      // ✅ إضافة الوقت للاسم
+      const timeStamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
       a.href = url;
-      a.download = `RafiqSayarati-Data-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `RafiqSayarati-Data-${timeStamp}.csv`;
       a.click();
       URL.revokeObjectURL(url);
 
-      setStatus({ type: 'success', message: t('excelSuccess') || 'تم تصدير جدول البيانات بنجاح!' });
+      showToast('success', t('excelSuccess') || 'تم تصدير جدول البيانات بنجاح!');
     } catch (error) {
       console.error("CSV Error:", error);
-      setStatus({ type: 'error', message: 'حدث خطأ أثناء تصدير الجدول.' });
+      showToast('error', 'حدث خطأ أثناء تصدير الجدول.');
     }
   };
 
@@ -156,7 +163,7 @@ export default function Backup() {
         }
       } catch (error) {
         console.error("Import Error:", error);
-        setStatus({ type: 'error', message: t('importError') || 'خطأ: الملف غير صالح أو تالف.' });
+        showToast('error', t('importError') || 'خطأ: الملف غير صالح أو تالف.');
       }
     };
     reader.readAsText(file);
@@ -164,20 +171,23 @@ export default function Backup() {
   };
 
   return (
-    <div className="space-y-4 pb-24 px-4 max-w-2xl mx-auto min-h-screen">
+    <div className="space-y-4 pb-24 px-4 max-w-2xl mx-auto min-h-screen relative">
       
+      {/* ✅ الإشعار العائم (Toast) */}
+      {toast.show && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+          <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
+          <button onClick={() => setToast({ show: false, type: '', message: '' })} className="ml-2 opacity-70 hover:opacity-100">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* الشريط العلوي */}
       <div className="sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10 mb-4">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('backupAndExport') || 'النسخ الاحتياطي والتصدير'}</h1>
       </div>
-
-      {/* رسائل الحالة */}
-      {status.message && (
-        <div className={`p-3 rounded-xl flex items-center gap-2 text-sm font-bold animate-fade-in ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-          {status.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-          {status.message}
-        </div>
-      )}
 
       {/* مركز التصدير */}
       <div>
@@ -208,7 +218,7 @@ export default function Backup() {
             <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
           </button>
 
-          {/* ✅ إصلاح: التوجه لصفحة طباعة مخصصة بدلاً من طباعة الواجهة */}
+          {/* طباعة */}
           <button onClick={() => navigate('/print-data')} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors active:bg-[var(--surface-3)]">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg"><Printer size={18} /></div>
