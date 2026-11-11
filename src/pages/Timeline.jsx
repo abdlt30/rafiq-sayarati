@@ -22,14 +22,13 @@ export default function Timeline() {
   const { currentCar, t, lang, currency, dataVersion } = useContext(AppContext); 
   const [filter, setFilter] = useState('all');
 
-  /* ===================== جمع الأحداث (useMemo بدل state) ===================== */
+  /* ===================== جمع الأحداث ===================== */
   const events = useMemo(() => {
     if (!currentCar) return [];
 
     try {
       const carIdStr = String(currentCar.id);
 
-      // ✅ عنوان الوقود: "تعبئة وقود" أو "شحن كهرباء" بدل "إضافة وقود"
       const getFuelTitle = (record) =>
         record.energyType === 'electricity'
           ? (t('chargingSession') || 'شحن كهرباء')
@@ -65,10 +64,9 @@ export default function Timeline() {
           ...i,
           type: 'income',
           title: t(INCOME_TITLE_MAP[i.type]) || i.type || t('income') || 'إيراد',
-          cost: i.amount, // ✅ توحيد الحقل
+          cost: i.amount, 
         }));
 
-      // ✅ ترتيب مستقر بـ localeCompare (يعمل مع ISO + يتجاهل المفقود)
       return [...fuel, ...maintenance, ...expenses, ...incomes].sort((a, b) =>
         String(b.date || '').localeCompare(String(a.date || ''))
       );
@@ -113,7 +111,6 @@ export default function Timeline() {
     return events.filter(e => e.type === filter);
   }, [events, filter]);
 
-  /* ✅ خيارات الفلترة */
   const filterOptions = [
     { id: 'all', label: t('all') || 'الكل' },
     { id: 'fuel', label: t('fuel') || 'الوقود' },
@@ -125,12 +122,10 @@ export default function Timeline() {
   return (
     <div className="space-y-4 pb-24 px-4 min-h-screen">
       
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('timeline') || 'سجل السيارة'}</h1>
       </div>
 
-      {/* أزرار الفلترة */}
       <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
         {filterOptions.map(f => (
           <button 
@@ -149,7 +144,6 @@ export default function Timeline() {
         ))}
       </div>
 
-      {/* الخط الزمني */}
       {filteredEvents.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
@@ -158,25 +152,30 @@ export default function Timeline() {
           <p>{t('noData') || 'لا توجد أحداث مسجلة في هذه الفئة.'}</p>
         </div>
       ) : (
-        <div className="relative border-r-2 border-[var(--border)] mr-4 pr-5 space-y-6 pb-4 mt-2">
+        /* ✅ إصلاح RTL/LTR: استخدام الخصائص المنطقية border-s و ms و ps */
+        <div 
+          className="relative border-s-2 border-[var(--border)] ms-4 ps-5 space-y-6 pb-4 mt-2"
+          role="list"
+        >
           {filteredEvents.map((event, index) => {
             const style = getEventStyle(event.type, event.energyType);
             const Icon = style.icon;
             const isIncome = event.type === 'income';
 
-            // ✅ أرقام آمنة
             const cost = safeNumber(event.cost);
             const odo = safeNumber(event.odometer);
 
-            // ✅ key مستقر بدل index
             const key = `${event.type}-${event.id || event.date || index}`;
 
             return (
-              <div key={key} className="relative">
+              <div key={key} className="relative" role="listitem">
                 
-                {/* أيقونة على الخط */}
-                <div className={`absolute -right-[31px] top-3 w-8 h-8 rounded-full flex items-center justify-center border-4 border-[var(--bg)] ${style.bg} ${style.color} z-10 shadow-sm`}>
-                  <Icon size={14} />
+                {/* ✅ إصلاح RTL/LTR: استخدام -start بدلاً من -right */}
+                <div 
+                  className={`absolute -start-[31px] top-3 w-8 h-8 rounded-full flex items-center justify-center border-4 border-[var(--bg)] ${style.bg} ${style.color} z-10 shadow-sm`}
+                >
+                  {/* ✅ إضافة aria-hidden للأيقونة الزخرفية */}
+                  <Icon size={14} aria-hidden="true" />
                 </div>
                 
                 <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl shadow-sm hover:border-[var(--primary)]/30 transition-colors">
@@ -186,10 +185,9 @@ export default function Timeline() {
                       <p className="text-[11px] text-[var(--text-muted)] font-medium mt-1">
                         {formatDate(event.date)}
                       </p>
-                      {/* ✅ العداد فقط للسجلات التي تملك عداداً موجباً */}
                       {odo > 0 && (
                         <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                          {odo.toLocaleString()} KM
+                          {odo.toLocaleString()} {t('km') || 'KM'}
                         </p>
                       )}
                     </div>
