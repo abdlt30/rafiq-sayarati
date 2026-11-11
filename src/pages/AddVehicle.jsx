@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react'; // ✅ إزالة useCallback
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
@@ -26,7 +26,7 @@ const MAX_BATTERY = 250;
 const MIN_YEAR = 1886;                         
 
 export default function AddVehicle() {
-  const { addNewCar, updateCar, vehicles, t, bumpDataVersion } = useContext(AppContext); 
+  const { addNewCar, updateCar, vehicles, t } = useContext(AppContext); // ✅ إزالة bumpDataVersion
   const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
   
@@ -36,22 +36,23 @@ export default function AddVehicle() {
   const [error, setError] = useState('');
   const [car, setCar] = useState(EMPTY_CAR);
 
+  // ✅ إزالة الكود الميت || 'fallback'
   const powertrainOptions = [
-    { value: 'ice', label: t('ice') || 'بنزين / ديزل' },
-    { value: 'ev', label: t('ev') || 'كهربائية' },
-    { value: 'hybrid', label: t('hybrid') || 'هجينة' },
-    { value: 'phev', label: t('phev') || 'هجينة قابلة للشحن (PHEV)' }
+    { value: 'ice', label: t('ice') },
+    { value: 'ev', label: t('ev') },
+    { value: 'hybrid', label: t('hybrid') },
+    { value: 'phev', label: t('phev') }
   ];
 
   const fuelTypeOptions = [
-    { value: 'petrol', label: t('petrol') || 'بنزين' },
-    { value: 'diesel', label: t('diesel') || 'ديزل' }
+    { value: 'petrol', label: t('petrol') },
+    { value: 'diesel', label: t('diesel') }
   ];
 
   const categoryOptions = [
-    { value: 'car', label: t('carCategory') || 'سيارة' },
-    { value: 'truck', label: t('truckCategory') || 'شاحنة' },
-    { value: 'van', label: t('vanCategory') || 'فان / نقل خفيف' }
+    { value: 'car', label: t('carCategory') },
+    { value: 'truck', label: t('truckCategory') },
+    { value: 'van', label: t('vanCategory') }
   ];
 
   const needsBattery = car.powertrain === 'ev' || car.powertrain === 'hybrid' || car.powertrain === 'phev';
@@ -117,13 +118,13 @@ export default function AddVehicle() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError(t('invalidFileType') || 'الرجاء اختيار ملف صورة صالح.');
+      setError(t('invalidFileType'));
       input.value = null;
       return;
     }
 
     if (file.size > MAX_IMAGE_SIZE) {
-      setError(t('imageTooLarge') || 'حجم الصورة كبير جداً. الحد 5 ميجابايت.');
+      setError(t('imageTooLarge'));
       input.value = null;
       return;
     }
@@ -131,11 +132,10 @@ export default function AddVehicle() {
     try {
       const compressed = await compressImage(file);
       setCar(prev => ({ ...prev, image: compressed }));
-      // ✅ لا نمسح رسالة الخطأ القديمة إلا إذا كانت تخص الصورة
-      if (error.includes('صورة') || error.includes('image')) setError('');
+      setError(''); // ✅ مسح أي خطأ سابق بنجاح رفع الصورة
     } catch (err) {
       console.error('image compress failed:', err);
-      setError(t('imageProcessingFailed') || 'تعذر معالجة الصورة. جرّب صورة أخرى.');
+      setError(t('imageProcessingFailed'));
     } finally {
       input.value = null;
     }
@@ -146,23 +146,23 @@ export default function AddVehicle() {
     const make = (car.make || '').trim();
     const model = (car.model || '').trim();
     if (!make || !model) {
-      return t('fillRequiredFields') || 'الرجاء تعبئة الماركة والموديل.';
+      return t('fillRequiredFields');
     }
 
     if (make.length > MAX_MAKE_LEN || model.length > MAX_MODEL_LEN) {
-      return t('fieldTooLong') || 'اسم الماركة أو الموديل طويل جداً.';
+      return t('fieldTooLong');
     }
 
     const odoRaw = String(car.odometer ?? '').trim();
     if (odoRaw === '') {
-      return t('fillRequiredFields') || 'الرجاء إدخال العداد.';
+      return t('fillRequiredFields');
     }
     const odoNum = Number(odoRaw);
     if (!Number.isFinite(odoNum) || odoNum < 0 || odoNum > MAX_ODO) {
-      return t('invalidOdometer') || 'العداد يجب أن يكون رقماً بين 0 و 10,000,000.';
+      return t('invalidOdometer');
     }
     if (!Number.isInteger(odoNum)) {
-      return t('invalidOdometer') || 'العداد يجب أن يكون عدداً صحيحاً.';
+      return t('invalidOdometer');
     }
 
     const yearRaw = String(car.year ?? '').trim();
@@ -170,7 +170,7 @@ export default function AddVehicle() {
       const yearNum = Number(yearRaw);
       const currentYear = new Date().getFullYear();
       if (!Number.isInteger(yearNum) || yearNum < MIN_YEAR || yearNum > currentYear + 1) {
-        return t('invalidYear') || `السنة يجب أن تكون بين ${MIN_YEAR} و ${currentYear + 1}.`;
+        return t('invalidYear');
       }
     }
 
@@ -178,12 +178,12 @@ export default function AddVehicle() {
     if (needsBattery && battRaw !== '') {
       const battNum = Number(battRaw);
       if (!Number.isFinite(battNum) || battNum < MIN_BATTERY || battNum > MAX_BATTERY) {
-        return t('invalidBattery') || `السعة يجب أن تكون بين ${MIN_BATTERY} و ${MAX_BATTERY} kWh.`;
+        return t('invalidBattery');
       }
     }
 
     if ((car.plate || '').length > MAX_PLATE_LEN) {
-      return t('fieldTooLong') || 'رقم اللوحة طويل جداً.';
+      return t('fieldTooLong');
     }
 
     return null;
@@ -200,7 +200,6 @@ export default function AddVehicle() {
       return;
     }
 
-    // ✅ إصلاح تطبيع البيانات: استخدام trim() قبل التحويل
     const odoNum = Number(String(car.odometer).trim());
     const yearStr = String(car.year ?? '').trim();
     const yearNum = yearStr !== '' ? Number(yearStr) : null;
@@ -225,26 +224,19 @@ export default function AddVehicle() {
     setIsSaving(true);
     try {
       if (isEditing) {
-        // ✅ إصلاح: التحقق من نجاح التعديل
-        const ok = updateCar(editId, carData);
-        if (ok === false) {
-          setError(t('errorSaving') || 'فشل حفظ التعديلات. تحقق من المساحة.');
-          return;
-        }
-        bumpDataVersion();
+        updateCar(editId, carData);
         navigate('/vehicles');
       } else {
-        const ok = addNewCar(carData);
-        if (!ok) {
-          setError(t('errorSaving') || 'فشل الحفظ. قد تكون مساحة التخزين ممتلئة.');
-          return;
-        }
-        bumpDataVersion();
+        addNewCar(carData);
         navigate('/');
       }
     } catch (err) {
       console.error('save failed:', err);
-      setError(t('errorSaving') || 'حدث خطأ أثناء الحفظ.');
+      // ✅ إصلاح: قراءة الخطأ من AppContext بدقة
+      if (err.code === 'INVALID_ODOMETER') setError(t('invalidOdometer'));
+      else if (err.code === 'STORAGE_FULL') setError(t('storageFull'));
+      else if (err.code === 'CAR_NOT_FOUND') setError(t('errorSaving'));
+      else setError(t('errorSaving'));
     } finally {
       setIsSaving(false);
     }
@@ -254,11 +246,10 @@ export default function AddVehicle() {
     <div className="min-h-full bg-[var(--bg)] p-6 flex flex-col font-sans transition-colors duration-300 pb-24">
       <div className="mt-4 mb-6">
         <h2 className="text-2xl font-bold text-[var(--text)] mb-2">
-          {isEditing ? (t('editCar') || 'تعديل السيارة') : (t('addYourCar') || 'أضف سيارتك')}
+          {isEditing ? t('editCar') : t('addYourCar')}
         </h2>
       </div>
 
-      {/* ✅ إصلاح A11y: إضافة role="alert" لإعلان الأخطاء لقارئ الشاشة */}
       {error && (
         <div 
           role="alert"
@@ -276,16 +267,16 @@ export default function AddVehicle() {
               <button 
                 type="button" 
                 onClick={() => setCar({...car, image: ''})} 
-                aria-label={t('deleteImage') || 'حذف الصورة'}
+                aria-label={t('deleteImage')}
                 className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm active:scale-90 transition-transform"
               >
-                <X size={14} />
+                <X size={14} aria-hidden="true" />
               </button>
             </>
           ) : (
             <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
-              <Camera size={32} className="mb-2" />
-              <span className="text-[10px] font-bold">{t('addImage') || 'إضافة صورة'}</span>
+              <Camera size={32} className="mb-2" aria-hidden="true" />
+              <span className="text-[10px] font-bold">{t('addImage')}</span>
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
           )}
@@ -294,14 +285,14 @@ export default function AddVehicle() {
 
       <form onSubmit={handleSubmit} noValidate className="flex-1 space-y-1">
         <Input 
-          label={t('carMake') || 'الماركة'} 
+          label={t('carMake')} 
           value={car.make} 
           onChange={(e) => setCar({...car, make: e.target.value})} 
           maxLength={MAX_MAKE_LEN}
           required 
         />
         <Input 
-          label={t('carModel') || 'الموديل'} 
+          label={t('carModel')} 
           value={car.model} 
           onChange={(e) => setCar({...car, model: e.target.value})} 
           maxLength={MAX_MODEL_LEN}
@@ -310,7 +301,7 @@ export default function AddVehicle() {
         
         <div className="grid grid-cols-2 gap-3">
           <Input 
-            label={t('carYear') || 'سنة الصنع'} 
+            label={t('carYear')} 
             type="number" 
             inputMode="numeric"
             min={MIN_YEAR}
@@ -319,7 +310,7 @@ export default function AddVehicle() {
             onChange={(e) => setCar({...car, year: e.target.value})} 
           />
           <Input 
-            label={t('plateNumber') || 'رقم اللوحة'} 
+            label={t('plateNumber')} 
             value={car.plate} 
             onChange={(e) => setCar({...car, plate: e.target.value})} 
             maxLength={MAX_PLATE_LEN}
@@ -328,7 +319,7 @@ export default function AddVehicle() {
 
         <div className="mt-2">
           <OptionPicker 
-            label={t('vehicleCategory') || 'فئة السيارة'} 
+            label={t('vehicleCategory')} 
             options={categoryOptions} 
             value={car.category} 
             onChange={(val) => setCar({...car, category: val})} 
@@ -337,7 +328,7 @@ export default function AddVehicle() {
 
         <div className="mt-2">
           <OptionPicker 
-            label={t('powertrain') || 'نوع المحرك'} 
+            label={t('powertrain')} 
             options={powertrainOptions} 
             value={car.powertrain} 
             onChange={(val) => setCar({...car, powertrain: val})} 
@@ -347,7 +338,7 @@ export default function AddVehicle() {
         {needsFuelType && (
           <div className="mt-2 animate-fade-in">
             <OptionPicker 
-              label={t('fuelType') || 'نوع الوقود'} 
+              label={t('fuelType')} 
               options={fuelTypeOptions} 
               value={car.fuelType || 'petrol'} 
               onChange={(val) => setCar({...car, fuelType: val})} 
@@ -358,7 +349,7 @@ export default function AddVehicle() {
         {needsBattery && (
           <div className="mt-2 animate-fade-in">
             <Input 
-              label={t('batteryCapacity') || 'سعة البطارية (kWh)'} 
+              label={t('batteryCapacity')} 
               type="number" 
               inputMode="decimal"
               step="0.1"
@@ -372,7 +363,7 @@ export default function AddVehicle() {
 
         <div className="mt-2">
           <Input 
-            label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} 
+            label={t('currentOdometer')} 
             type="number" 
             inputMode="numeric"
             min="0"
@@ -386,10 +377,8 @@ export default function AddVehicle() {
         <div className="mt-8">
           <Button type="submit" disabled={isSaving}>
             {isSaving 
-              ? (t('saving') || 'جاري الحفظ...') 
-              : (isEditing 
-                  ? (t('save') || 'حفظ التعديلات') 
-                  : (t('saveAndContinue') || 'حفظ ومتابعة'))}
+              ? t('saving') 
+              : (isEditing ? t('save') : t('saveAndContinue'))}
           </Button>
         </div>
       </form>
