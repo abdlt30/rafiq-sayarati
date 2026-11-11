@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useContext } from 'react'; // ✅ إضافة useContext
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { Navigation, AlertCircle, Loader, Fuel, RefreshCw } from 'lucide-react';
+import { AppContext } from '../context/AppContext'; // ✅ استدعاء الـ Context للترجمة
 
 /* =========================================================
    ✅ إعدادات الأيقونات
@@ -44,6 +45,8 @@ const fetchWithTimeout = async (url, options, timeoutMs) => {
 };
 
 export default function FuelStations() {
+  const { t, lang } = useContext(AppContext); // ✅ جلب الترجمة واللغة
+
   const [position, setPosition] = useState(null);
   const [stations, setStations] = useState([]);
   const [loadingLocation, setLoadingLocation] = useState(true);
@@ -68,8 +71,15 @@ export default function FuelStations() {
     setError(null);
     setEmptyMessage(null);
 
+    // ✅ حماية من المتصفحات التي تمنع الـ Geolocation على HTTP
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setError(t('geolocationInsecure') || 'خدمة تحديد الموقع تتطلب اتصالاً آمناً (HTTPS).');
+      setLoadingLocation(false);
+      return;
+    }
+
     if (!navigator.geolocation) {
-      setError('متصفح هاتفك لا يدعم خدمة تحديد الموقع.');
+      setError(t('locationNotSupported') || 'متصفح هاتفك لا يدعم خدمة تحديد الموقع.');
       setLoadingLocation(false);
       return;
     }
@@ -85,16 +95,16 @@ export default function FuelStations() {
         setLoadingLocation(false);
         switch (err.code) {
           case err.PERMISSION_DENIED:
-            setError('تم رفض الوصول للموقع. يرجى السماح للمتصفح بالوصول لموقعك من الإعدادات.');
+            setError(t('locationDenied') || 'تم رفض الوصول للموقع. يرجى السماح للمتصفح بالوصول لموقعك من الإعدادات.');
             break;
           case err.POSITION_UNAVAILABLE:
-            setError('تعذر تحديد موقعك. تأكد من تفعيل الـ GPS.');
+            setError(t('locationUnavailable') || 'تعذر تحديد موقعك. تأكد من تفعيل الـ GPS.');
             break;
           case err.TIMEOUT:
-            setError('استغرق تحديد الموقع وقتاً طويلاً. حاول مرة أخرى.');
+            setError(t('locationTimeout') || 'استغرق تحديد الموقع وقتاً طويلاً. حاول مرة أخرى.');
             break;
           default:
-            setError('حدث خطأ أثناء تحديد الموقع.');
+            setError(t('locationError') || 'حدث خطأ أثناء تحديد الموقع.');
         }
       },
       {
@@ -103,17 +113,15 @@ export default function FuelStations() {
         maximumAge: 60000,
       }
     );
-  }, []);
+  }, [t]);
 
   /* ===================== 2. جلب المحطات ===================== */
   const fetchStations = useCallback(async (lat, lon, { force = false } = {}) => {
-    // ✅ Debounce: منع الطلبات المتتالية
     const now = Date.now();
     if (!force && now - lastFetchRef.current < DEBOUNCE_MS) {
       return;
     }
 
-    // ✅ Cache: لا تعد الطلب إذا الموقع نفسه ومر أقل من 5 دقائق
     const cache = cacheRef.current;
     const samePosition =
       cache.position &&
@@ -128,7 +136,7 @@ export default function FuelStations() {
     setLoadingStations(true);
     setError(null);
     setEmptyMessage(null);
-    setStations([]); // ✅ مسح القديم
+    setStations([]);
 
     const query = `
       [out:json][timeout:15];
@@ -154,11 +162,10 @@ export default function FuelStations() {
         id: el.id,
         lat: el.lat,
         lon: el.lon,
-        name: el.tags?.name || el.tags?.brand || 'محطة وقود',
-        address: el.tags?.['addr:street'] || el.tags?.['addr:city'] || 'العنوان غير متوفر',
+        name: el.tags?.name || el.tags?.brand || (t('fuelStation') || 'محطة وقود'),
+        address: el.tags?.['addr:street'] || el.tags?.['addr:city'] || (t('addressUnavailable') || 'العنوان غير متوفر'),
       }));
 
-      // ✅ حفظ في cache
       cacheRef.current = {
         timestamp: now,
         position: [lat, lon],
@@ -168,25 +175,25 @@ export default function FuelStations() {
       setStations(foundStations);
 
       if (foundStations.length === 0) {
-        setEmptyMessage('لا توجد محطات وقود مسجلة في نطاق 5 كم حول موقعك.');
+        setEmptyMessage(t('noStationsFound') || 'لا توجد محطات وقود مسجلة في نطاق 5 كم حول موقعك.');
       }
     } catch (err) {
       if (!isMountedRef.current) return;
       console.error('Overpass fetch failed:', err);
 
       if (err.name === 'AbortError') {
-        setError('انتهت مهلة البحث. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
+        setError(t('searchTimeout') || 'انتهت مهلة البحث. تحقق من اتصالك بالإنترنت.');
       } else if (String(err).includes('429')) {
-        setError('خدمة محطات الوقود مشغولة. يرجى المحاولة بعد قليل.');
+        setError(t('searchBusy') || 'خدمة محطات الوقود مشغولة. يرجى المحاولة بعد قليل.');
       } else if (String(err).includes('504')) {
-        setError('خدمة محطات الوقود بطيئة. يرجى المحاولة بعد قليل.');
+        setError(t('searchSlow') || 'خدمة محطات الوقود بطيئة. يرجى المحاولة بعد قليل.');
       } else {
-        setError('تعذر الاتصال بقاعدة بيانات محطات الوقود. تحقق من الإنترنت.');
+        setError(t('searchFailed') || 'تعذر الاتصال بقاعدة بيانات محطات الوقود. تحقق من الإنترنت.');
       }
     } finally {
       if (isMountedRef.current) setLoadingStations(false);
     }
-  }, []);
+  }, [t]);
 
   /* ===================== 3. التهيئة ===================== */
   useEffect(() => {
@@ -213,12 +220,12 @@ export default function FuelStations() {
       
       {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">محطات الوقود القريبة</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('nearbyStations') || 'محطات الوقود القريبة'}</h1>
         <button
           type="button"
           onClick={handleRefresh}
           disabled={loadingLocation || loadingStations}
-          aria-label="تحديث البحث"
+          aria-label={t('refreshSearch') || 'تحديث البحث'}
           className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] disabled:opacity-50 transition-colors"
         >
           <RefreshCw size={18} className={loadingStations ? 'animate-spin' : ''} />
@@ -227,17 +234,24 @@ export default function FuelStations() {
 
       {/* حالة التحميل */}
       {(loadingLocation || loadingStations) && (
-        <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)] space-y-3">
+        <div 
+          className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)] space-y-3"
+          aria-live="polite"
+          role="status"
+        >
           <Loader className="animate-spin text-[var(--primary)]" size={32} />
           <p className="text-sm font-bold">
-            {loadingLocation ? 'جاري تحديد موقعك...' : 'جاري البحث عن محطات الوقود القريبة...'}
+            {loadingLocation ? (t('locating') || 'جاري تحديد موقعك...') : (t('searchingStations') || 'جاري البحث عن محطات...')}
           </p>
         </div>
       )}
 
       {/* حالة الخطأ */}
       {error && !loadingLocation && !loadingStations && (
-        <div className="bg-red-500/10 border border-red-500/50 p-6 rounded-2xl flex flex-col items-center text-center space-y-4">
+        <div 
+          className="bg-red-500/10 border border-red-500/50 p-6 rounded-2xl flex flex-col items-center text-center space-y-4"
+          role="alert"
+        >
           <AlertCircle className="text-red-500" size={48} />
           <p className="text-red-500 font-bold text-sm">{error}</p>
           <button
@@ -245,7 +259,7 @@ export default function FuelStations() {
             onClick={handleRefresh}
             className="bg-red-500 text-white px-6 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform"
           >
-            إعادة المحاولة
+            {t('retry') || 'إعادة المحاولة'}
           </button>
         </div>
       )}
@@ -261,7 +275,11 @@ export default function FuelStations() {
       {/* الخريطة */}
       {!loadingLocation && !loadingStations && position && !error && !emptyMessage && (
         <div className="space-y-4">
-          <div className="rounded-2xl overflow-hidden border border-[var(--border)] shadow-lg relative z-0">
+          <div 
+            className="rounded-2xl overflow-hidden border border-[var(--border)] shadow-lg relative z-0"
+            aria-label={t('mapView') || 'خريطة محطات الوقود'}
+            role="region"
+          >
             <MapContainer
               center={position}
               zoom={14}
@@ -274,13 +292,14 @@ export default function FuelStations() {
               />
               
               <Marker position={position}>
-                <Popup>موقعك الحالي</Popup>
+                <Popup>{t('yourLocation') || 'موقعك الحالي'}</Popup>
               </Marker>
 
               {stations.map(station => (
                 <Marker key={station.id} position={[station.lat, station.lon]} icon={stationIcon}>
                   <Popup>
-                    <div className="text-center font-sans" dir="rtl">
+                    {/* ✅ دعم اللغة ديناميكياً */}
+                    <div className="text-center font-sans" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
                       <strong className="text-orange-600 block text-sm mb-1">{station.name}</strong>
                       <span className="text-xs text-gray-600">{station.address}</span>
                     </div>
@@ -295,8 +314,8 @@ export default function FuelStations() {
               <Fuel size={18} className="text-orange-500" />
               <span className="text-sm font-bold">
                 {stations.length > 0
-                  ? `تم العثور على ${stations.length} محطة قريبة`
-                  : 'لا توجد محطات قريبة'}
+                  ? `${t('stationsFound') || 'تم العثور على'} ${stations.length} ${t('nearbyStationsCount') || 'محطة قريبة'}`
+                  : (t('noStationsNearby') || 'لا توجد محطات قريبة')}
               </span>
             </div>
             <button
@@ -304,7 +323,7 @@ export default function FuelStations() {
               onClick={handleRefresh}
               className="text-xs text-[var(--primary)] font-bold bg-[var(--primary)]/10 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
             >
-              تحديث البحث
+              {t('refreshSearch') || 'تحديث البحث'}
             </button>
           </div>
         </div>
@@ -312,7 +331,7 @@ export default function FuelStations() {
       
       <p className="text-center text-[10px] text-[var(--text-muted)] mt-2 flex items-center justify-center gap-1">
         <Navigation size={10} />
-        البيانات مقدمة من OpenStreetMap (Overpass API) — مجانية.
+        {t('osmCredit') || 'البيانات مقدمة من OpenStreetMap (Overpass API) — مجانية.'}
       </p>
     </div>
   );
