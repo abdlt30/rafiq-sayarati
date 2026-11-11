@@ -8,7 +8,7 @@ export default function ReportPrint() {
   const { currentCar, t, currency, lang } = useContext(AppContext);
   const [period, setPeriod] = useState('all'); 
 
-  // ✅ إصلاح 1: دالة لترجمة أنواع الصيانة
+  // دالة لترجمة أنواع الصيانة
   const getMaintenanceTypeLabel = (type) => {
     const map = {
       oilChange: t('oilChange') || 'تغيير زيت',
@@ -98,7 +98,7 @@ export default function ReportPrint() {
       {/* =========== التقرير القابل للطباعة =========== */}
       <div className="print-container bg-white text-black p-6 sm:p-10 mx-auto max-w-4xl my-4 shadow-2xl rounded-2xl" style={{ direction: dir }}>
         
-        {/* ✅ إصلاح 2: ترويسة احترافية */}
+        {/* الترويسة */}
         <div className="flex justify-between items-center border-b-4 border-blue-600 pb-6 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg">🚗</div>
@@ -120,7 +120,8 @@ export default function ReportPrint() {
             <p className="text-2xl font-black text-gray-900">{currentCar.make} {currentCar.model} <span className="text-gray-400 text-lg">({currentCar.year})</span></p>
           </div>
           <div className={dir === 'rtl' ? 'text-left' : 'text-right'}>
-            {currentCar.plate && <p className="text-sm text-gray-700 mb-1">{t('plateNumber') || 'اللوحة'}: <span className="font-mono font-bold bg-white px-2 py-1 border border-gray-300 rounded">{currentCar.plate}</span></p>}
+            {/* ✅ إصلاح: استخدام t('plate') بدلاً من t('plateNumber') */}
+            {currentCar.plate && <p className="text-sm text-gray-700 mb-1">{t('plate') || 'اللوحة'}: <span className="font-mono font-bold bg-white px-2 py-1 border border-gray-300 rounded">{currentCar.plate}</span></p>}
             {currentCar.odometer && <p className="text-sm text-gray-700">{t('odometer') || 'العداد'}: <span className="font-bold">{Number(currentCar.odometer).toLocaleString()} KM</span></p>}
           </div>
         </div>
@@ -204,7 +205,7 @@ export default function ReportPrint() {
           </div>
         )}
 
-        {/* سجل الصيانة (مع الترجمة الصحيحة) */}
+        {/* سجل الصيانة */}
         {data.maintenance.length > 0 && (
           <div className="mb-8 page-break">
             <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-blue-600`}>
@@ -222,7 +223,6 @@ export default function ReportPrint() {
                 {data.maintenance.map(m => (
                   <tr key={m.id} className="border-b border-gray-200">
                     <td className="p-2">{m.date}</td>
-                    {/* ✅ إصلاح 3: استخدام الترجمة الصحيحة */}
                     <td className="p-2">{getMaintenanceTypeLabel(m.type)}</td>
                     <td className="p-2 font-bold" dir="ltr">{Number(m.cost).toLocaleString()} {currency}</td>
                   </tr>
