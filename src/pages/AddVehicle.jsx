@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import OptionPicker from '../components/ui/OptionPicker';
 import { Camera, X } from 'lucide-react';
 
 export default function AddVehicle() {
@@ -12,29 +13,36 @@ export default function AddVehicle() {
   
   const editId = searchParams.get('id');
   const isEditing = Boolean(editId);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // ✅ إصلاح 1: توحيد اسم العداد ليكون odometer (مثل باقي التطبيق)
+  // ✅ إضافة حقول المحرك وسعة البطارية
   const [car, setCar] = useState({ 
     make: '', model: '', plate: '', odometer: '', 
-    year: '', color: '', image: '' 
+    year: '', color: '', image: '',
+    powertrain: 'ice', // القيمة الافتراضية: احتراق داخلي
+    batteryCapacity: '' // خاصة بالسيارات الكهربائية والهجينة
   });
 
-  const [isSaving, setIsSaving] = useState(false); // ✅ حماية من النقر المزدوج
+  const powertrainOptions = [
+    { value: 'ice', label: t('ice') || 'بنزين / ديزل' },
+    { value: 'ev', label: t('ev') || 'كهربائية' },
+    { value: 'hybrid', label: t('hybrid') || 'هجينة' }
+  ];
 
   useEffect(() => {
     if (isEditing && vehicles.length > 0) {
       const carToEdit = vehicles.find(v => String(v.id) === String(editId));
       if (carToEdit) {
-        // نضمن قراءة العداد سواء كان مسماه القديم أو الجديد
         setCar({
           ...carToEdit,
-          odometer: carToEdit.odometer || carToEdit.currentOdometer || ''
+          odometer: carToEdit.odometer || carToEdit.currentOdometer || '',
+          powertrain: carToEdit.powertrain || 'ice', // دعم السيارات القديمة
+          batteryCapacity: carToEdit.batteryCapacity || ''
         });
       }
     }
   }, [isEditing, editId, vehicles]);
 
-  // ✅ دالة ضغط الصورة (أمنية وممتازة جداً)
   const compressImage = (file, maxWidth = 600, maxHeight = 600) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -46,17 +54,10 @@ export default function AddVehicle() {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-
           if (width > height) {
-            if (width > maxWidth) {
-              height *= maxWidth / width;
-              width = maxWidth;
-            }
+            if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
           } else {
-            if (height > maxHeight) {
-              width *= maxHeight / height;
-              height = maxHeight;
-            }
+            if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
           }
           canvas.width = width;
           canvas.height = height;
@@ -88,17 +89,16 @@ export default function AddVehicle() {
       return alert(t('fillRequiredFields') || 'الرجاء تعبئة الحقول الأساسية');
     }
     
-    // تجهيز البيانات وتوحيد اسم العداد
     const carData = { 
       ...car, 
-      odometer: Number(car.odometer) 
+      odometer: Number(car.odometer),
+      batteryCapacity: car.batteryCapacity ? Number(car.batteryCapacity) : null
     };
-    delete carData.currentOdometer; // حذف الاسم القديم إن وجد
+    delete carData.currentOdometer;
 
     setIsSaving(true);
     try {
       if (isEditing) {
-        // ✅ إصلاح 2: استدعاء دالة التحديث بالشكل الصحيح (id, data)
         updateCar(editId, carData);
         navigate('/vehicles');
       } else {
@@ -118,9 +118,6 @@ export default function AddVehicle() {
         <h2 className="text-2xl font-bold text-[var(--text)] mb-2">
           {isEditing ? (t('editCar') || 'تعديل السيارة') : (t('addYourCar') || 'أضف سيارتك')}
         </h2>
-        <p className="text-[var(--text-muted)] text-sm">
-          {isEditing ? (t('editCarSubtitle') || 'قم بتحديث بيانات سيارتك.') : (t('addYourCarSubtitle') || 'أدخل بيانات سيارتك لنبدأ التتبع.')}
-        </p>
       </div>
 
       <div className="flex justify-center mb-8">
@@ -128,11 +125,7 @@ export default function AddVehicle() {
           {car.image ? (
             <>
               <img src={car.image} alt="Car" className="w-full h-full object-cover" />
-              <button 
-                type="button" 
-                onClick={() => setCar({...car, image: ''})}
-                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm"
-              >
+              <button type="button" onClick={() => setCar({...car, image: ''})} className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm">
                 <X size={14} />
               </button>
             </>
@@ -147,22 +140,42 @@ export default function AddVehicle() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 space-y-1">
-        <Input label={t('carMake') || 'الماركة (مثال: تويوتا)'} value={car.make} onChange={(e) => setCar({...car, make: e.target.value})} required />
-        <Input label={t('carModel') || 'الموديل (مثال: كورولا)'} value={car.model} onChange={(e) => setCar({...car, model: e.target.value})} required />
+        <Input label={t('carMake') || 'الماركة'} value={car.make} onChange={(e) => setCar({...car, make: e.target.value})} required />
+        <Input label={t('carModel') || 'الموديل'} value={car.model} onChange={(e) => setCar({...car, model: e.target.value})} required />
         
         <div className="grid grid-cols-2 gap-3">
-          {/* ✅ إصلاح 3: استخدام الترجمة للحقول */}
           <Input label={t('carYear') || 'سنة الصنع'} type="number" value={car.year || ''} onChange={(e) => setCar({...car, year: e.target.value})} />
-          <Input label={t('carColor') || 'اللون'} value={car.color || ''} onChange={(e) => setCar({...car, color: e.target.value})} />
+          <Input label={t('plateNumber') || 'رقم اللوحة'} value={car.plate} onChange={(e) => setCar({...car, plate: e.target.value})} />
         </div>
 
-        <Input label={t('plateNumber') || 'رقم اللوحة (اختياري)'} value={car.plate} onChange={(e) => setCar({...car, plate: e.target.value})} />
-        
-        {/* ✅ إصلاح 4: توحيد الاسم إلى odometer */}
-        <Input label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} type="number" value={car.odometer || ''} onChange={(e) => setCar({...car, odometer: e.target.value})} required />
+        {/* ✅ حقل نوع المحرك */}
+        <div className="mt-2">
+          <OptionPicker 
+            label={t('powertrain') || 'نوع المحرك'} 
+            options={powertrainOptions} 
+            value={car.powertrain} 
+            onChange={(val) => setCar({...car, powertrain: val})} 
+          />
+        </div>
+
+        {/* ✅ حقل سعة البطارية (يظهر فقط للكهربائية والهجينة) */}
+        {(car.powertrain === 'ev' || car.powertrain === 'hybrid') && (
+          <div className="mt-2 animate-fade-in">
+            <Input 
+              label={t('batteryCapacity') || 'سعة البطارية (kWh)'} 
+              type="number" 
+              step="0.1"
+              value={car.batteryCapacity || ''} 
+              onChange={(e) => setCar({...car, batteryCapacity: e.target.value})} 
+            />
+          </div>
+        )}
+
+        <div className="mt-2">
+          <Input label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} type="number" value={car.odometer} onChange={(e) => setCar({...car, odometer: e.target.value})} required />
+        </div>
         
         <div className="mt-8">
-          {/* ✅ إضافة حالة isSaving لتعطيل الزر أثناء الحفظ */}
           <Button type="submit" disabled={isSaving}>
             {isSaving ? 'جاري الحفظ...' : (isEditing ? (t('save') || 'حفظ التعديلات') : (t('saveAndContinue') || 'حفظ ومتابعة'))}
           </Button>
