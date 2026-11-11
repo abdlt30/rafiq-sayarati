@@ -1,22 +1,23 @@
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity, Zap, BatteryCharging, AlertCircle, CheckCircle } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal'; 
 import OptionPicker from '../components/ui/OptionPicker'; 
 
+const EMPTY_FORM = { date: '', odometer: '', energyType: 'gasoline', amount: '', cost: '' };
+
 export default function Fuel() {
-  const { currentCar, updateCar, t, currency } = useContext(AppContext); 
+  const { currentCar, updateCar, t, currency, dataVersion, bumpDataVersion } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null); 
-  
-  // ✅ حالة الإشعار العائم (Toast)
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const [formData, setFormData] = useState({ date: '', odometer: '', energyType: 'gasoline', amount: '', cost: '' });
+  const toastTimeoutRef = useRef(null);
 
   const powertrain = currentCar?.powertrain || 'ice'; 
   const isElectric = powertrain === 'ev';
@@ -27,66 +28,102 @@ export default function Fuel() {
     { value: 'electricity', label: t('electricity') || 'كهرباء (شحن)' }
   ];
 
-  // ✅ دالة إظهار الإشعار العائم
-  const showToast = (message, type = 'error') => {
+  // ✅ Toast آمن (يمسح المؤقت السابق + تنظيف عند unmount)
+  const showToast = useCallback((message, type = 'error') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  }, []);
+
+  const dismissToast = () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ show: false, message: '', type: 'success' });
   };
 
-  const loadData = () => {
-    if (currentCar) {
-      const allFuel = dbService.getFuel()?.filter(r => r.carId === currentCar.id) || [];
-      setRecords(allFuel.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    } else {
-      setRecords([]); 
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+  }, []);
+
+  // ✅ loadData محصّن ضد الأخطاء
+  const loadData = useCallback(() => {
+    try {
+      if (currentCar) {
+        const allFuel = dbService.getFuel()?.filter(r => r.carId === currentCar.id) || [];
+        setRecords([...allFuel].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)));
+      } else {
+        setRecords([]); 
+      }
+    } catch (e) {
+      console.error('loadData failed:', e);
+      setRecords([]);
     }
-  };
+  }, [currentCar]);
 
-  useEffect(() => { loadData(); }, [currentCar]);
+  useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
+  /* ===================== ✅ حساب الاستهلاك - مُصلَح ===================== */
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
-    const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
-    
-    const calculated = sortedByOdometer.map((record, index) => {
-      let consumption = null;
-      if (index > 0) {
-        const prevRecord = sortedByOdometer[index - 1];
-        const distance = Number(record.odometer) - Number(prevRecord.odometer);
-        
-        const currentEnergy = record.energyType || 'gasoline';
-        const prevEnergy = prevRecord.energyType || 'gasoline';
-        const currentAmount = Number(record.amount || record.liters || 0);
 
-        if (distance > 0 && currentAmount > 0 && currentEnergy === prevEnergy) {
-          consumption = ((currentAmount / distance) * 100).toFixed(1);
+    // ✅ FIX: تجميع حسب نوع الطاقة (يمنع مقارنة بنزين مع كهرباء في hybrid)
+    const groups = {};
+    records.forEach(r => {
+      const e = r.energyType || 'gasoline';
+      (groups[e] = groups[e] || []).push(r);
+    });
+
+    const consumptionById = {};
+    Object.values(groups).forEach(group => {
+      const sorted = [...group].sort((a, b) => Number(a.odometer) - Number(b.odometer));
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1];
+        const curr = sorted[i];
+        const distance = Number(curr.odometer) - Number(prev.odometer);
+        // ✅ دعم amount الجديد مع fallback للحقل القديم liters
+        const amount = Number(curr.amount ?? curr.liters) || 0;
+        if (Number.isFinite(distance) && distance > 0 && amount > 0) {
+          const c = (amount / distance) * 100;
+          if (Number.isFinite(c) && c > 0) {
+            consumptionById[curr.id] = c.toFixed(1);
+          }
         }
       }
-      return { ...record, consumption };
     });
-    return calculated.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return records
+      .map(r => ({ ...r, consumption: consumptionById[r.id] ?? null }))
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   }, [records]);
 
+  /* ===================== ✅ الحفظ ===================== */
   const handleSave = (e) => {
     e.preventDefault();
-    if (!currentCar) return; 
-    
-    // ✅ 1. التحقق اليدوي من امتلاء الحقول (بدلاً من رسالة المتصفح)
-    if (!formData.date || !formData.odometer || !formData.amount || !formData.cost) {
+    if (!currentCar) return;
+
+    const isBlank = (v) => v === '' || v === undefined || v === null;
+    if (!formData.date || isBlank(formData.odometer) || isBlank(formData.amount) || isBlank(formData.cost)) {
       return showToast(t('fillRequiredFields') || 'الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
     }
 
-    // ✅ 2. التحقق الرياضي والأمني من المدخلات
     const odoNum = Number(formData.odometer);
     const amountNum = Number(formData.amount);
     const costNum = Number(formData.cost);
 
-    if (isNaN(odoNum) || isNaN(amountNum) || isNaN(costNum) || odoNum <= 0 || amountNum <= 0 || costNum <= 0) {
+    // ✅ يسمح بـ 0 للعداد (سيارة جديدة) والتكلفة، ويرفض القيم غير المحدودة
+    if (!Number.isFinite(odoNum) || !Number.isFinite(amountNum) || !Number.isFinite(costNum) ||
+        odoNum < 0 || amountNum <= 0 || costNum < 0) {
       return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة أكبر من صفر.', 'error');
     }
 
-    if (odoNum < (currentCar.odometer || 0) && !editingId) {
-      return showToast(t('invalidOdometer') || 'العداد لا يمكن أن يكون أقل من العداد السابق.', 'error');
+    // ✅ تحقق أمني محسّن: العداد الجديد ≥ أعلى قيمة مسجّلة (السيارة أو سجلات الوقود)
+    if (!editingId) {
+      const maxFuelOdo = records.reduce((m, r) => Math.max(m, Number(r.odometer) || 0), 0);
+      const maxOdo = Math.max(Number(currentCar.odometer) || 0, maxFuelOdo);
+      if (odoNum < maxOdo) {
+        return showToast(t('invalidOdometer') || 'العداد لا يمكن أن يكون أقل من العداد السابق.', 'error');
+      }
     }
 
     let finalEnergyType = 'gasoline';
@@ -109,36 +146,46 @@ export default function Fuel() {
         dbService.addFuel(data);
       }
 
-      if (data.odometer > (currentCar.odometer || 0)) {
+      // ✅ إذا ارتفع العداد نُحدّث السيارة (يُبمب dataVersion داخلياً)، وإلا نُبمب يدوياً
+      if (data.odometer > (Number(currentCar.odometer) || 0)) {
         updateCar(currentCar.id, { odometer: data.odometer });
+      } else {
+        bumpDataVersion();
       }
 
       loadData(); 
       closeModal();
       showToast(t('saveSuccess') || 'تم حفظ البيانات بنجاح!', 'success');
-      
     } catch (error) {
       console.error("خطأ أثناء حفظ البيانات:", error);
       showToast(t('errorSaving') || "حدث خطأ أثناء الحفظ.", 'error');
     }
   };
 
+  /* ===================== ✅ الحذف ===================== */
   const handleDelete = () => {
-    if(deleteId) {
+    if (!deleteId) return;
+    try {
       dbService.deleteFuel(deleteId);
       loadData();
+      bumpDataVersion(); // ✅ يُحدّث Dashboard
       setDeleteId(null); 
+    } catch (e) {
+      console.error('deleteFuel failed:', e);
+      setDeleteId(null);
+      showToast(t('errorSaving') || 'حدث خطأ أثناء الحذف.', 'error');
     }
   };
 
+  /* ===================== Modals ===================== */
   const openEdit = (record) => {
     setEditingId(record.id);
     setFormData({ 
-      date: record.date, 
-      odometer: record.odometer, 
+      date: record.date || '', 
+      odometer: record.odometer != null ? String(record.odometer) : '', 
       energyType: record.energyType || (isElectric ? 'electricity' : 'gasoline'),
-      amount: record.amount || record.liters || '',
-      cost: record.cost 
+      amount: (record.amount ?? record.liters) != null ? String(record.amount ?? record.liters) : '',
+      cost: record.cost != null ? String(record.cost) : ''
     });
     setIsModalOpen(true);
   };
@@ -147,7 +194,7 @@ export default function Fuel() {
     setEditingId(null);
     setFormData({ 
       date: new Date().toISOString().split('T')[0], 
-      odometer: currentCar?.odometer || '', 
+      odometer: currentCar?.odometer != null ? String(currentCar.odometer) : '',
       energyType: isElectric ? 'electricity' : 'gasoline',
       amount: '', 
       cost: '' 
@@ -158,18 +205,23 @@ export default function Fuel() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ date: '', odometer: '', energyType: 'gasoline', amount: '', cost: '' });
+    setFormData(EMPTY_FORM);
   };
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* ✅ الإشعار العائم الاحترافي (Toast) */}
+      {/* ✅ الإشعار العائم */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
-          <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-70 hover:opacity-100">
+          <button 
+            type="button"
+            onClick={dismissToast} 
+            aria-label="إغلاق الإشعار"
+            className="ml-2 opacity-70 hover:opacity-100"
+          >
             <X size={16} />
           </button>
         </div>
@@ -193,7 +245,7 @@ export default function Fuel() {
           {recordsWithConsumption.map(record => {
             const isEnergyElectric = record.energyType === 'electricity';
             const unit = isEnergyElectric ? 'kWh' : 'L';
-            const amountToShow = record.amount || record.liters;
+            const amountToShow = record.amount ?? record.liters;
             
             return (
               <div key={record.id} className={`bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm transition-colors ${isEnergyElectric ? 'hover:border-green-500/30' : 'hover:border-blue-500/30'}`}>
@@ -225,8 +277,22 @@ export default function Fuel() {
                   </div>
                   
                   <div className="flex flex-col gap-1.5">
-                    <button onClick={() => openEdit(record)} className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"><Edit2 size={14} /></button>
-                    <button onClick={() => setDeleteId(record.id)} className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"><Trash2 size={14} /></button>
+                    <button 
+                      type="button"
+                      onClick={() => openEdit(record)} 
+                      aria-label="تعديل السجل"
+                      className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setDeleteId(record.id)} 
+                      aria-label="حذف السجل"
+                      className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
 
@@ -237,7 +303,9 @@ export default function Fuel() {
       )}
 
       <button 
+        type="button"
         onClick={openAddModal} 
+        aria-label="إضافة سجل جديد"
         className={`fixed bottom-24 right-6 rtl:left-6 rtl:auto w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 ${isElectric ? 'bg-green-500 shadow-green-500/40' : 'bg-[var(--primary)] shadow-blue-500/40'}`}
       >
         <Plus size={28} />
@@ -255,9 +323,13 @@ export default function Fuel() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          {/* ✅ إصلاح: إضافة noValidate لإيقاف رسائل المتصفح الافتراضية */}
           <form onSubmit={handleSave} noValidate className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
-            <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
+            <button 
+              type="button" 
+              onClick={closeModal} 
+              aria-label="إغلاق"
+              className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10"
+            >
               <X size={20} />
             </button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
