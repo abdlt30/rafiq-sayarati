@@ -133,6 +133,13 @@ const translations = {
     chargingLog: 'سجل الشحن',
     noChargingRecords: 'لا توجد سجلات شحن.',
     addCharging: 'إضافة شحن',
+    
+    // ✅ المفاتيح المضافة حديثاً للنماذج الديناميكية
+    energySource: 'مصدر الطاقة',
+    gasoline: 'بنزين',
+    electricity: 'كهرباء (شحن)',
+    batteryCheck: 'فحص البطارية',
+    softwareUpdate: 'تحديث برمجي',
 
     // مفاتيح أسماء العملات
     currency_MAD: 'درهم مغربي', currency_SAR: 'ريال سعودي', currency_AED: 'درهم إماراتي', 
@@ -269,6 +276,13 @@ const translations = {
     chargingLog: 'Charging Log',
     noChargingRecords: 'No charging records.',
     addCharging: 'Add Charging',
+    
+    // ✅ New Dynamic Form Keys
+    energySource: 'Energy Source',
+    gasoline: 'Gasoline',
+    electricity: 'Electricity (Charging)',
+    batteryCheck: 'Battery Check',
+    softwareUpdate: 'Software Update',
 
     // Currency keys
     currency_MAD: 'Moroccan Dirham', currency_SAR: 'Saudi Riyal', currency_AED: 'UAE Dirham', 
@@ -405,6 +419,13 @@ const translations = {
     chargingLog: 'Journal de Recharge',
     noChargingRecords: 'Aucun enregistrement de recharge.',
     addCharging: 'Ajouter Recharge',
+    
+    // ✅ Nouvelles clés de formulaire dynamique
+    energySource: 'Source d\'Énergie',
+    gasoline: 'Essence',
+    electricity: 'Électricité (Recharge)',
+    batteryCheck: 'Vérification de la Batterie',
+    softwareUpdate: 'Mise à Jour Logicielle',
 
     // Clés de devises
     currency_MAD: 'Dirham Marocain', currency_SAR: 'Riyal Saoudien', currency_AED: 'Dirham des Émirats', 
