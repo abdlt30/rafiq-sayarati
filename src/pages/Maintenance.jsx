@@ -6,28 +6,45 @@ import ConfirmModal from '../components/ui/ConfirmModal';
 import OptionPicker from '../components/ui/OptionPicker'; 
 
 export default function Maintenance() {
-  const { currentCar, t, currency, lang } = useContext(AppContext);
+  const { currentCar, t, currency } = useContext(AppContext);
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  
   const [formData, setFormData] = useState({ date: '', type: 'oilChange', cost: '', nextKm: '' });
   const [customTypes, setCustomTypes] = useState([]);
 
-  const defaultTypes = [
+  // ✅ تحديد نوع السيارة
+  const isElectric = currentCar?.powertrain === 'ev';
+  const isHybrid = currentCar?.powertrain === 'hybrid';
+
+  // ✅ القائمة الأساسية للسيارات العادية والهجينة
+  const iceTypes = [
     { value: 'oilChange', label: t('oilChange') || 'تغيير زيت' },
     { value: 'tires', label: t('tires') || 'إطارات' },
     { value: 'brakes', label: t('brakes') || 'فرامل' },
-    { value: 'battery', label: t('battery') || 'بطارية' },
+    { value: 'battery', label: t('battery') || 'بطارية 12V' },
     { value: 'airFilter', label: t('airFilter') || 'فلتر هواء' },
     { value: 'fullInspection', label: t('fullInspection') || 'فحص شامل' },
-    { value: 'other', label: t('other') || 'أخرى' }
+    { value: 'other', label: t('otherMaintenance') || 'أخرى' }
   ];
 
+  // ✅ القائمة الخاصة بالسيارات الكهربائية
+  const evTypes = [
+    { value: 'batteryCheck', label: t('batteryCheck') || 'فحص البطارية الرئيسية' },
+    { value: 'softwareUpdate', label: t('softwareUpdate') || 'تحديث برمجي' },
+    { value: 'tires', label: t('tires') || 'إطارات' },
+    { value: 'brakes', label: t('brakes') || 'فرامل' },
+    { value: 'fullInspection', label: t('fullInspection') || 'فحص شامل' },
+    { value: 'other', label: t('otherMaintenance') || 'أخرى' }
+  ];
+
+  // دمج الأنواع بناءً على السيارة
+  const baseTypes = isElectric ? evTypes : iceTypes;
+  
   const allTypes = [
-    ...defaultTypes,
+    ...baseTypes,
     ...customTypes.map(ct => ({ value: ct, label: ct }))
   ];
 
@@ -45,9 +62,7 @@ export default function Maintenance() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [currentCar]);
+  useEffect(() => { loadData(); }, [currentCar]);
 
   const handleAddCustomType = () => {
     const newType = window.prompt(t('enterCustomTypeName') || 'أدخل اسم نوع الصيانة الجديد:');
@@ -81,7 +96,6 @@ export default function Maintenance() {
       closeModal();
     } catch (error) {
       console.error("خطأ في حفظ الصيانة:", error);
-      // ✅ إصلاح: استخدام الترجمة للرسالة
       alert(t('errorSaving') || 'حدث خطأ أثناء الحفظ.');
     }
   };
@@ -98,7 +112,7 @@ export default function Maintenance() {
     setEditingId(null);
     setFormData({ 
       date: new Date().toISOString().split('T')[0], 
-      type: 'oilChange', 
+      type: isElectric ? 'batteryCheck' : 'oilChange', // القيمة الافتراضية حسب نوع السيارة
       cost: '', 
       nextKm: '' 
     });
@@ -107,7 +121,11 @@ export default function Maintenance() {
 
   const openEdit = (record) => {
     setEditingId(record.id);
-    const typeKeyMap = { 'تغيير زيت': 'oilChange', 'إطارات': 'tires', 'فرامل': 'brakes', 'بطارية': 'battery', 'فلتر هواء': 'airFilter', 'فحص شامل': 'fullInspection', 'أخرى': 'other' };
+    const typeKeyMap = { 
+      'تغيير زيت': 'oilChange', 'إطارات': 'tires', 'فرامل': 'brakes', 'بطارية': 'battery', 
+      'فلتر هواء': 'airFilter', 'فحص شامل': 'fullInspection', 'أخرى': 'other',
+      'فحص البطارية': 'batteryCheck', 'تحديث برمجي': 'softwareUpdate'
+    };
     const typeKey = typeKeyMap[record.type] || record.type;
     
     setFormData({ date: record.date, type: typeKey, cost: record.cost, nextKm: record.nextKm || '' });
@@ -117,18 +135,16 @@ export default function Maintenance() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ date: '', type: 'oilChange', cost: '', nextKm: '' });
+    setFormData({ date: '', type: isElectric ? 'batteryCheck' : 'oilChange', cost: '', nextKm: '' });
   };
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('maintenance') || 'الصيانة'}</h1>
       </div>
 
-      {/* قائمة السجلات */}
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
@@ -147,7 +163,7 @@ export default function Maintenance() {
                 </div>
                 <div>
                   <p className="font-bold text-[var(--text)] text-sm">
-                    {defaultTypes.find(dt => dt.value === record.type)?.label || record.type}
+                    {baseTypes.find(dt => dt.value === record.type)?.label || record.type}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date}</p>
                 </div>
@@ -178,26 +194,23 @@ export default function Maintenance() {
         </div>
       )}
 
-      {/* الزر العائم (FAB) */}
       <button 
         onClick={openAddModal} 
-        className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+        className="fixed bottom-24 right-6 rtl:left-6 rtl:auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus size={28} />
       </button>
 
-      {/* نافذة الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
-        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف سجل الصيانة هذا؟ لا يمكن التراجع عن هذا الإجراء.'}
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف سجل الصيانة هذا؟'}
         variant="danger" 
         confirmText={t('confirmDeleteBtn') || 'نعم، احذف'} 
       />
 
-      {/* نافذة الإضافة/التعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
@@ -231,13 +244,11 @@ export default function Maintenance() {
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
-                {/* ✅ إصلاح: إضافة inputMode="decimal" */}
                 <input type="number" inputMode="decimal" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('nextOdometer') || 'العداد للصيانة القادمة'} (KM)</label>
-                {/* ✅ إصلاح: إضافة inputMode="numeric" */}
                 <input type="number" inputMode="numeric" min="0" placeholder={t('optional') || 'اختياري'} value={formData.nextKm} onChange={e => setFormData({...formData, nextKm: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
