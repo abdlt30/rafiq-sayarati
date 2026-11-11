@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, AlertCircle, CheckCircle, Check } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal'; 
 import OptionPicker from '../components/ui/OptionPicker'; 
 
@@ -17,15 +17,19 @@ export default function Maintenance() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [customTypes, setCustomTypes] = useState([]);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  
+  // ✅ حالة جديدة لإضافة نوع مخصص بدون window.prompt
+  const [isAddingType, setIsAddingType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
 
   const toastTimeoutRef = useRef(null);
 
-  /* ✅ 1. تحديد نوع السيارة - يدعم PHEV */
+  /* ✅ 1. تحديد نوع السيارة */
   const isElectric = currentCar?.powertrain === 'ev';
   const isHybrid = currentCar?.powertrain === 'hybrid' || currentCar?.powertrain === 'phev';
   const isTruck = currentCar?.category === 'truck';
 
-  /* ✅ 2. قوائم الصيانة حسب نوع السيارة */
+  /* ✅ 2. قوائم الصيانة */
   const iceTypes = useMemo(() => [
     { value: 'oilChange', label: t('engineOil') || 'زيت المحرك' },
     { value: 'oilFilter', label: t('oilFilter') || 'فلتر الزيت' },
@@ -64,7 +68,7 @@ export default function Maintenance() {
     { value: 'engineHours', label: t('engineHours') || 'ساعات المحرك' }
   ], [t]);
 
-  /* ✅ 3. اختيار القائمة الأساسية حسب نوع السيارة */
+  /* ✅ 3. دمج القوائم حسب نوع السيارة */
   const baseTypes = useMemo(() => {
     if (isElectric) return evTypes;
     if (isHybrid) {
@@ -116,8 +120,10 @@ export default function Maintenance() {
         return;
       }
       const allMaintenance = dbService.getMaintenance() || [];
-      const carMaintenance = allMaintenance.filter(r => r.carId === currentCar.id);
-      // ✅ ترتيب مستقر باستخدام localeCompare (يعمل مع ISO dates)
+      
+      // ✅ إصلاح أمني: استخدام String() لضمان التطابق
+      const carMaintenance = allMaintenance.filter(r => String(r.carId) === String(currentCar.id));
+      
       const sorted = [...carMaintenance].sort((a, b) =>
         (b.date || '').localeCompare(a.date || '')
       );
@@ -134,15 +140,12 @@ export default function Maintenance() {
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
-  /* ===================== Add Custom Type ===================== */
-  const handleAddCustomType = () => {
-    const newType = window.prompt(t('enterCustomTypeName') || 'أدخل اسم نوع الصيانة الجديد:');
-    if (!newType) return;
+  /* ===================== ✅ إضافة نوع مخصص (بدون prompt) ===================== */
+  const handleConfirmAddType = () => {
+    const trimmed = newTypeName.trim();
+    if (!trimmed) return;
 
-    const trimmed = newType.trim();
-    if (trimmed === '') return;
-
-    // ✅ منع التكرار (case-insensitive)
+    // منع التكرار (case-insensitive)
     const exists = allTypes.some(t => t.label.toLowerCase() === trimmed.toLowerCase());
     if (exists) {
       showToast(t('typeAlreadyExists') || 'هذا النوع موجود بالفعل.', 'error');
@@ -153,6 +156,8 @@ export default function Maintenance() {
       const updatedTypes = dbService.addCustomType(trimmed);
       setCustomTypes(Array.isArray(updatedTypes) ? updatedTypes : []);
       setFormData(prev => ({ ...prev, type: trimmed }));
+      setIsAddingType(false);
+      setNewTypeName('');
     } catch (e) {
       console.error('addCustomType failed:', e);
       showToast(t('errorSaving') || 'حدث خطأ أثناء الإضافة.', 'error');
@@ -164,7 +169,6 @@ export default function Maintenance() {
     e.preventDefault();
     if (!currentCar) return;
 
-    // ✅ تحقق يدوي شامل
     const isBlank = (v) => v === '' || v === undefined || v === null;
     if (isBlank(formData.date) || isBlank(formData.type) || isBlank(formData.cost)) {
       return showToast(t('fillRequiredFields') || 'الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
@@ -175,14 +179,13 @@ export default function Maintenance() {
       return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة.', 'error');
     }
 
-    // ✅ nextKm: null إذا فارغ، وإلا يجب أن يكون صحيحاً موجباً
     let nextKmNum = null;
     if (!isBlank(formData.nextKm)) {
       const n = Number(formData.nextKm);
       if (!Number.isFinite(n) || n < 0) {
         return showToast(t('invalidNumbers') || 'الرجاء إدخال عداد صحيح للصيانة القادمة.', 'error');
       }
-      nextKmNum = Math.round(n); // ✅ عداد يجب أن يكون صحيحاً
+      nextKmNum = Math.round(n);
     }
 
     const data = { 
@@ -200,7 +203,7 @@ export default function Maintenance() {
         dbService.addMaintenance(data);
       }
       loadData();
-      bumpDataVersion(); // ✅ يُحدّث Dashboard
+      bumpDataVersion();
       closeModal();
       showToast(t('saveSuccess') || 'تم الحفظ بنجاح!', 'success');
     } catch (error) {
@@ -215,7 +218,7 @@ export default function Maintenance() {
     try {
       dbService.deleteMaintenance(deleteId);
       loadData();
-      bumpDataVersion(); // ✅ يُحدّث Dashboard
+      bumpDataVersion();
       setDeleteId(null);
     } catch (e) {
       console.error('deleteMaintenance failed:', e);
@@ -235,6 +238,8 @@ export default function Maintenance() {
       cost: '', 
       nextKm: '' 
     });
+    setIsAddingType(false);
+    setNewTypeName('');
     setIsModalOpen(true);
   };
 
@@ -246,6 +251,8 @@ export default function Maintenance() {
       cost: record.cost != null ? String(record.cost) : '', 
       nextKm: record.nextKm != null ? String(record.nextKm) : '' 
     });
+    setIsAddingType(false);
+    setNewTypeName('');
     setIsModalOpen(true);
   };
 
@@ -253,9 +260,10 @@ export default function Maintenance() {
     setIsModalOpen(false);
     setEditingId(null);
     setFormData(EMPTY_FORM);
+    setIsAddingType(false);
+    setNewTypeName('');
   };
 
-  /* ✅ رسالة الحذف — استخدام مفتاح موجود بدلاً من confirmDeleteMsg غير المُعرَّف */
   const deleteMessage = useMemo(() => {
     const msg = t('confirmDeleteMsg');
     return msg === 'confirmDeleteMsg' 
@@ -266,7 +274,7 @@ export default function Maintenance() {
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* ✅ الإشعار العائم */}
+      {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
@@ -315,7 +323,8 @@ export default function Maintenance() {
                   <p className="font-extrabold text-[var(--primary)] text-sm">
                     {Number(record.cost || 0).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
-                  {record.nextKm ? (
+                  {/* ✅ إصلاح منطقي: 0 كم لا يظهر */}
+                  {record.nextKm && Number(record.nextKm) > 0 ? (
                     <p className="text-[10px] text-[var(--text-muted)] flex items-center justify-end gap-1 mt-0.5">
                       <Gauge size={10} /> {Number(record.nextKm).toLocaleString()} KM
                     </p>
@@ -328,7 +337,7 @@ export default function Maintenance() {
                   <button 
                     type="button"
                     onClick={() => openEdit(record)} 
-                    aria-label="تعديل"
+                    aria-label={t('edit') || 'تعديل'}
                     className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"
                   >
                     <Edit2 size={14} />
@@ -336,7 +345,7 @@ export default function Maintenance() {
                   <button 
                     type="button"
                     onClick={() => setDeleteId(record.id)} 
-                    aria-label="حذف"
+                    aria-label={t('confirmDelete') || 'حذف'}
                     className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
                   >
                     <Trash2 size={14} />
@@ -349,11 +358,12 @@ export default function Maintenance() {
         </div>
       )}
 
+      {/* ✅ إصلاح rtl:auto إلى rtl:right-auto */}
       <button 
         type="button"
         onClick={openAddModal} 
-        aria-label="إضافة صيانة"
-        className="fixed bottom-24 right-6 rtl:left-6 rtl:auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+        aria-label={t('addMaintenance') || 'إضافة صيانة'}
+        className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus size={28} />
       </button>
@@ -397,20 +407,50 @@ export default function Maintenance() {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-[11px] font-bold text-[var(--text-muted)] block">{t('maintenanceType') || 'نوع الصيانة'}</label>
-                  <button 
-                    type="button" 
-                    onClick={handleAddCustomType} 
-                    className="text-xs text-[var(--primary)] flex items-center gap-1 hover:underline"
-                  >
-                    <Settings2 size={12} /> {t('addType') || 'إضافة نوع'}
-                  </button>
+                  {!isAddingType && (
+                    <button 
+                      type="button" 
+                      onClick={() => setIsAddingType(true)} 
+                      className="text-xs text-[var(--primary)] flex items-center gap-1 hover:underline"
+                    >
+                      <Settings2 size={12} /> {t('addType') || 'إضافة نوع'}
+                    </button>
+                  )}
                 </div>
                 
-                <OptionPicker 
-                  options={allTypes} 
-                  value={formData.type} 
-                  onChange={(val) => setFormData({...formData, type: val})} 
-                />
+                {/* ✅ استبدال window.prompt بحقل إدخال مدمج */}
+                {isAddingType ? (
+                  <div className="flex gap-2 mb-2">
+                    <input 
+                      type="text" 
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      placeholder={t('enterCustomTypeName') || 'اسم النوع الجديد...'}
+                      className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-2 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]"
+                      autoFocus
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleConfirmAddType}
+                      className="bg-green-500 text-white p-2 rounded-xl active:scale-90 transition-transform"
+                    >
+                      <Check size={18} />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => { setIsAddingType(false); setNewTypeName(''); }}
+                      className="bg-red-500/20 text-red-500 p-2 rounded-xl active:scale-90 transition-transform"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <OptionPicker 
+                    options={allTypes} 
+                    value={formData.type} 
+                    onChange={(val) => setFormData({...formData, type: val})} 
+                  />
+                )}
               </div>
 
               <div>
