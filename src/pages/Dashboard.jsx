@@ -30,7 +30,10 @@ export default function Dashboard() {
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
+  // ✅ ترجمة التحية
+  const greeting = user?.name 
+    ? (t('greetingUser', { name: user.name }) || `مرحباً، ${user.name} 👋`)
+    : (t('greetingGuest') || 'مرحباً بك 👋');
 
   /* ===================== الإحصائيات ===================== */
   const totals = useMemo(() => {
@@ -43,7 +46,7 @@ export default function Dashboard() {
     }
   }, [currentCar, dataVersion]);
 
-  /* ✅ متوسط الاستهلاك - يدعم amount + energyType + powertrain */
+  /* ✅ متوسط الاستهلاك */
   const avgConsumption = useMemo(() => {
     if (!currentCar) return { value: null, unit: 'L/100km' };
 
@@ -59,7 +62,6 @@ export default function Dashboard() {
 
       if (fuelRecords.length < 2) return { value: null, unit };
 
-      // ✅ تطبيع العداد كرقم صحيح موجب
       const normalized = fuelRecords
         .map(f => ({ ...f, _odo: safeNumber(f.odometer) }))
         .filter(f => f._odo > 0)
@@ -115,7 +117,6 @@ export default function Dashboard() {
       const expenses = filter(dbService.getExpenses()).map(e => ({ ...e, type: 'expense' }));
       const incomes = filter(dbService.getIncomes()).map(i => ({ ...i, type: 'income', cost: i.amount }));
 
-      // ✅ ترتيب مستقر بـ localeCompare
       return [...fuel, ...maintenance, ...expenses, ...incomes]
         .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
         .slice(0, 4);
@@ -127,7 +128,6 @@ export default function Dashboard() {
 
   if (!currentCar) return null;
 
-  /* ✅ اليوم - مع دعم الفرنسية */
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
   const today = new Date().toLocaleDateString(todayLocale, {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -136,39 +136,36 @@ export default function Dashboard() {
   /* ✅ حماية العداد */
   const handleSaveOdometer = useCallback(() => {
     const raw = String(newOdo).trim();
-    if (raw === '') return; // ✅ لا تسمح بمسح العداد
+    if (raw === '') return;
     const val = Number(raw);
     if (!Number.isFinite(val) || val < 0) return;
 
     const currentVal = safeNumber(currentCar.odometer);
-    if (val < currentVal && !window.confirm('العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟')) {
+    
+    // ✅ ترجمة رسالة التأكيد
+    if (val < currentVal && !window.confirm(t('confirmLowerOdometer') || 'العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟')) {
       return;
     }
 
     updateCar(currentCar.id, { odometer: val });
     setIsEditingOdo(false);
-  }, [newOdo, currentCar, updateCar]);
+  }, [newOdo, currentCar, updateCar, t]);
 
-  /* =========================================================
-     ✅ إصلاح حرج: توزيع الحذف حسب sourceTable
-     ========================================================= */
+  /* ✅ إتمام المهمة */
   const handleQuickDone = useCallback((e, alert) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!alert.recordId || !alert.sourceTable) return;
+    if (alert.sourceTable !== 'maintenance' && alert.sourceTable !== 'reminder') return;
 
-    // ✅ حماية إضافية: فقط maintenance و reminder
-    if (alert.sourceTable !== 'maintenance' && alert.sourceTable !== 'reminder') {
-      return;
-    }
+    const targetName = alert.sourceTable === 'maintenance'
+      ? (t('maintenanceRecord') || 'سجل الصيانة')
+      : (t('reminder') || 'التذكير');
 
-    const targetName =
-      alert.sourceTable === 'maintenance'
-        ? 'سجل الصيانة'
-        : 'التذكير';
-
+    // ✅ ترجمة رسالة التأكيد
     const confirmed = window.confirm(
+      t('confirmQuickDone', { title: alert.title, target: targetName }) || 
       `هل أنت متأكد من إتمام: ${alert.title}؟\nسيتم حذف ${targetName} نهائياً.`
     );
     if (!confirmed) return;
@@ -182,9 +179,8 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Quick done failed:', err);
     }
-  }, []);
+  }, [t]);
 
-  /* ✅ قيم آمنة للعرض */
   const netValue = safeNumber(totals.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals.income);
@@ -203,34 +199,34 @@ export default function Dashboard() {
         <div className="flex gap-2 flex-shrink-0">
           <Link
             to="/notifications"
-            aria-label="الإشعارات"
+            aria-label={t('notifications') || 'الإشعارات'}
             className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative"
           >
-            <Bell size={18} />
+            <Bell size={18} aria-hidden="true" />
             {criticalAlerts.length > 0 && (
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--surface)]"></span>
             )}
           </Link>
           <Link
             to="/settings"
-            aria-label="الإعدادات"
+            aria-label={t('settings') || 'الإعدادات'}
             className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"
           >
-            <Settings size={18} />
+            <Settings size={18} aria-hidden="true" />
           </Link>
         </div>
       </div>
 
       {/* بطاقة السيارة الحالية */}
       <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
-        <div className="absolute top-0 right-0 p-4 opacity-5"><Car size={100} /></div>
-        <p className="text-xs text-blue-300 font-bold mb-3">السيارة الحالية</p>
+        <div className="absolute top-0 right-0 p-4 opacity-5"><Car size={100} aria-hidden="true" /></div>
+        <p className="text-xs text-blue-300 font-bold mb-3">{t('currentCar') || 'السيارة الحالية'}</p>
         <div className="flex items-center gap-3 sm:gap-4 relative z-10">
           <div className="w-16 h-16 sm:w-20 sm:h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
             {currentCar.image ? (
               <img src={currentCar.image} alt="car" className="w-full h-full object-cover" />
             ) : (
-              <Car size={28} className="text-white/50" />
+              <Car size={28} className="text-white/50" aria-hidden="true" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -238,16 +234,16 @@ export default function Dashboard() {
               {currentCar.make} {currentCar.model}
             </h2>
             <p className="text-[11px] sm:text-sm font-mono text-blue-200 mt-1 bg-blue-500/20 px-2 py-0.5 rounded inline-block truncate max-w-full">
-              {currentCar.plate || 'بدون لوحة'}
+              {currentCar.plate || (t('noPlate') || 'بدون لوحة')}
             </p>
           </div>
         </div>
         <div className="flex gap-2 mt-4 relative z-10">
           <Link to="/vehicles" className="flex-1 bg-white/10 hover:bg-white/20 text-white text-[11px] sm:text-xs font-bold py-2.5 rounded-xl text-center backdrop-blur-md transition-colors">
-            تغيير السيارة
+            {t('switchCar') || 'تغيير السيارة'}
           </Link>
           <Link to="/add-vehicle" className="flex-1 bg-[var(--primary)] hover:bg-blue-600 text-white text-[11px] sm:text-xs font-bold py-2.5 rounded-xl text-center shadow-lg transition-colors">
-            إضافة سيارة +
+            {t('addNewCar') || 'إضافة سيارة +'}
           </Link>
         </div>
       </div>
@@ -256,10 +252,9 @@ export default function Dashboard() {
       {criticalAlerts.length > 0 && (
         <div className="space-y-2 animate-fade-in">
           <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">
-            تنبيهات تحتاج انتباهك
+            {t('alertsNeedAttention') || 'تنبيهات تحتاج انتباهك'}
           </h3>
           {criticalAlerts.map((alert, idx) => {
-            // ✅ key فريد: alert.id (يحتوي subtype) قبل recordId
             const key = alert.id || alert.recordId || `alert-${idx}`;
             const showDoneBtn = canQuickDone(alert);
 
@@ -274,7 +269,9 @@ export default function Dashboard() {
               >
                 <Link to={alert.link} className="flex-1 flex items-center gap-3 min-w-0">
                   <div className={`p-2 rounded-xl ${alert.severity === 'critical' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
-                    {alert.severity === 'critical' ? <AlertTriangle size={18} /> : <ShieldAlert size={18} />}
+                    {alert.severity === 'critical' 
+                      ? <AlertTriangle size={18} aria-hidden="true" /> 
+                      : <ShieldAlert size={18} aria-hidden="true" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate">{alert.title}</p>
@@ -282,24 +279,19 @@ export default function Dashboard() {
                   </div>
                 </Link>
 
-                {/* ✅ زر "إنجاز" يظهر فقط لـ maintenance/reminder */}
                 {showDoneBtn ? (
                   <button
                     type="button"
                     onClick={(e) => handleQuickDone(e, alert)}
-                    aria-label={
-                      alert.sourceTable === 'maintenance'
-                        ? 'إتمام الصيانة'
-                        : 'إتمام التذكير'
-                    }
+                    aria-label={alert.sourceTable === 'maintenance' ? (t('completeMaintenance') || 'إتمام الصيانة') : (t('completeReminder') || 'إتمام التذكير')}
                     className="bg-green-500 text-white p-2 rounded-xl shadow-lg hover:bg-green-600 active:scale-90 transition-all flex flex-col items-center justify-center gap-0.5 flex-shrink-0"
                   >
-                    <CheckCircle size={16} />
-                    <span className="text-[9px] font-bold">إنجاز</span>
+                    <CheckCircle size={16} aria-hidden="true" />
+                    <span className="text-[9px] font-bold">{t('done') || 'إنجاز'}</span>
                   </button>
                 ) : (
-                  <Link to={alert.link} aria-label="عرض التفاصيل" className="p-2 flex-shrink-0">
-                    <ChevronLeft size={16} className="opacity-50" />
+                  <Link to={alert.link} aria-label={t('viewDetails') || 'عرض التفاصيل'} className="p-2 flex-shrink-0">
+                    <ChevronLeft size={16} className="opacity-50 rtl:rotate-0 ltr:rotate-180" aria-hidden="true" />
                   </Link>
                 )}
               </div>
@@ -311,20 +303,20 @@ export default function Dashboard() {
       {/* الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-4">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all">
-          <div className="p-1.5 sm:p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1 sm:mb-2"><Fuel size={18} /></div>
-          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">وقود</span>
+          <div className="p-1.5 sm:p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1 sm:mb-2"><Fuel size={18} aria-hidden="true" /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">{t('fuel') || 'وقود'}</span>
         </Link>
         <Link to="/maintenance" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 active:scale-95 transition-all">
-          <div className="p-1.5 sm:p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-1 sm:mb-2"><Wrench size={18} /></div>
-          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">صيانة</span>
+          <div className="p-1.5 sm:p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-1 sm:mb-2"><Wrench size={18} aria-hidden="true" /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">{t('maintenance') || 'صيانة'}</span>
         </Link>
         <Link to="/expenses" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all">
-          <div className="p-1.5 sm:p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-1 sm:mb-2"><Wallet size={18} /></div>
-          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">مصاريف</span>
+          <div className="p-1.5 sm:p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-1 sm:mb-2"><Wallet size={18} aria-hidden="true" /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">{t('expenses') || 'مصاريف'}</span>
         </Link>
         <Link to="/documents" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all">
-          <div className="p-1.5 sm:p-2 bg-green-500/10 text-green-500 rounded-lg mb-1 sm:mb-2"><FileText size={18} /></div>
-          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">وثائق</span>
+          <div className="p-1.5 sm:p-2 bg-green-500/10 text-green-500 rounded-lg mb-1 sm:mb-2"><FileText size={18} aria-hidden="true" /></div>
+          <span className="text-[10px] sm:text-[11px] font-bold text-[var(--text)]">{t('documents') || 'وثائق'}</span>
         </Link>
       </div>
 
@@ -332,7 +324,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3 mt-4">
         
         <div className="bg-[var(--surface)] border border-green-500/20 p-3 sm:p-4 rounded-2xl">
-          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي الإيرادات</p>
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('totalIncome') || 'إجمالي الإيرادات'}</p>
           <p className="text-lg sm:text-xl font-extrabold text-green-500 truncate">
             {incomeValue.toLocaleString()}{' '}
             <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
@@ -340,7 +332,7 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-[var(--surface)] border border-red-500/20 p-3 sm:p-4 rounded-2xl">
-          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">إجمالي المصاريف</p>
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('totalExpenses') || 'إجمالي المصاريف'}</p>
           <p className="text-lg sm:text-xl font-extrabold text-red-500 truncate">
             {totalValue.toLocaleString()}{' '}
             <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
@@ -351,17 +343,17 @@ export default function Dashboard() {
           isNetPositive ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
         }`}>
           <div>
-            <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">صافي الربح</p>
+            <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('netProfit') || 'صافي الربح'}</p>
             <p className={`text-xl sm:text-2xl font-extrabold flex items-center gap-1 ${isNetPositive ? 'text-green-500' : 'text-red-500'}`}>
               {netValue.toLocaleString()}{' '}
               <span className="text-xs font-normal">{currency}</span>
             </p>
           </div>
-          <TrendingUp size={32} className={isNetPositive ? 'text-green-500/20' : 'text-red-500/20'} />
+          <TrendingUp size={32} className={isNetPositive ? 'text-green-500/20' : 'text-red-500/20'} aria-hidden="true" />
         </div>
 
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
-          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">عداد السيارة</p>
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('odometer') || 'عداد السيارة'}</p>
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1">
               <input
@@ -371,47 +363,47 @@ export default function Dashboard() {
                 value={newOdo}
                 onChange={(e) => setNewOdo(e.target.value)}
                 placeholder={String(odometerValue)}
-                aria-label="قراءة العداد الجديدة"
+                aria-label={t('editOdometer') || 'قراءة العداد الجديدة'}
                 className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none"
                 autoFocus
               />
               <button
                 type="button"
                 onClick={handleSaveOdometer}
-                aria-label="حفظ العداد"
+                aria-label={t('save') || 'حفظ العداد'}
                 className="text-green-500 p-1 bg-green-500/10 rounded"
               >
-                <Check size={14} />
+                <Check size={14} aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => setIsEditingOdo(false)}
-                aria-label="إلغاء"
+                aria-label={t('cancel') || 'إلغاء'}
                 className="text-red-500 p-1 bg-red-500/10 rounded"
               >
-                <X size={14} />
+                <X size={14} aria-hidden="true" />
               </button>
             </div>
           ) : (
             <div className="flex items-center justify-between mt-1">
               <p className="text-lg sm:text-xl font-extrabold text-blue-500 flex items-center gap-1 truncate">
                 {odometerValue.toLocaleString()}{' '}
-                <span className="text-[10px] sm:text-xs font-normal">KM</span>
+                <span className="text-[10px] sm:text-xs font-normal">{t('km') || 'KM'}</span>
               </p>
               <button
                 type="button"
                 onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }}
-                aria-label="تعديل العداد"
+                aria-label={t('editOdometer') || 'تعديل العداد'}
                 className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors flex-shrink-0"
               >
-                <Pencil size={14} />
+                <Pencil size={14} aria-hidden="true" />
               </button>
             </div>
           )}
         </div>
 
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
-          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">متوسط الاستهلاك</p>
+          <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('avgConsumption') || 'متوسط الاستهلاك'}</p>
           <p className="text-lg sm:text-xl font-extrabold text-yellow-500 flex items-center gap-1">
             {avgConsumption.value !== null ? avgConsumption.value : '—'}{' '}
             <span className="text-[10px] sm:text-xs font-normal">{avgConsumption.unit}</span>
@@ -422,16 +414,16 @@ export default function Dashboard() {
       {/* آخر العمليات */}
       <div>
         <div className="flex justify-between items-center mb-3 mt-4">
-          <h3 className="font-bold text-[var(--text)] text-sm">آخر العمليات</h3>
+          <h3 className="font-bold text-[var(--text)] text-sm">{t('recentActivity') || 'آخر العمليات'}</h3>
           <Link to="/timeline" className="text-xs text-[var(--primary)] font-bold flex items-center">
-            عرض الكل <ChevronLeft size={14} />
+            {t('viewAll') || 'عرض الكل'} <ChevronLeft size={14} className="rtl:rotate-0 ltr:rotate-180" aria-hidden="true" />
           </Link>
         </div>
 
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
           {recentActivity.length === 0 ? (
             <div className="p-6 text-center text-xs text-[var(--text-muted)]">
-              لا توجد عمليات مسجلة بعد.
+              {t('noData') || 'لا توجد عمليات مسجلة بعد.'}
             </div>
           ) : (
             recentActivity.map((activity, index) => {
@@ -467,24 +459,24 @@ export default function Dashboard() {
                 >
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <div className={`p-2 rounded-lg ${bg} ${color} flex-shrink-0`}>
-                      <Icon size={16} />
+                      <Icon size={16} aria-hidden="true" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] sm:text-xs font-bold text-[var(--text)] truncate">
                         {isFuel
-                          ? (isElectricFuel ? 'شحن كهرباء' : 'تعبئة وقود')
+                          ? (isElectricFuel ? (t('chargingSession') || 'شحن كهرباء') : (t('fuel') || 'تعبئة وقود'))
                           : isMaint
-                            ? 'صيانة'
+                            ? (t('maintenance') || 'صيانة')
                             : isIncome
-                              ? 'إيراد'
-                              : 'مصروف'}
+                              ? (t('income') || 'إيراد')
+                              : (t('expense') || 'مصروف')}
                       </p>
                       <p className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">
-                        {activity.date || 'غير محدد'}
+                        {activity.date || (t('notSpecified') || 'غير محدد')}
                       </p>
                     </div>
                   </div>
-                  <p className={`text-xs sm:text-sm font-bold flex-shrink-0 ml-2 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>
+                  <p className={`text-xs sm:text-sm font-bold flex-shrink-0 ms-2 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>
                     {isIncome ? '+' : ''}{safeCost.toLocaleString()}{' '}
                     <span className="text-[9px] sm:text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
