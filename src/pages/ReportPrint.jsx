@@ -8,7 +8,6 @@ export default function ReportPrint() {
   const { currentCar, t, currency, lang } = useContext(AppContext);
   const [period, setPeriod] = useState('all'); 
 
-  // دالة لترجمة أنواع الصيانة
   const getMaintenanceTypeLabel = (type) => {
     const map = {
       oilChange: t('oilChange') || 'تغيير زيت',
@@ -73,7 +72,6 @@ export default function ReportPrint() {
           </button>
         </div>
         
-        {/* فلتر الفترة */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[
             { v: 'all', l: t('allPeriods') || 'كل الفترات' },
@@ -120,7 +118,6 @@ export default function ReportPrint() {
             <p className="text-2xl font-black text-gray-900">{currentCar.make} {currentCar.model} <span className="text-gray-400 text-lg">({currentCar.year})</span></p>
           </div>
           <div className={dir === 'rtl' ? 'text-left' : 'text-right'}>
-            {/* ✅ إصلاح: استخدام t('plate') بدلاً من t('plateNumber') */}
             {currentCar.plate && <p className="text-sm text-gray-700 mb-1">{t('plate') || 'اللوحة'}: <span className="font-mono font-bold bg-white px-2 py-1 border border-gray-300 rounded">{currentCar.plate}</span></p>}
             {currentCar.odometer && <p className="text-sm text-gray-700">{t('odometer') || 'العداد'}: <span className="font-bold">{Number(currentCar.odometer).toLocaleString()} KM</span></p>}
           </div>
@@ -140,15 +137,18 @@ export default function ReportPrint() {
               <p className="text-xs text-red-700 font-bold mb-1">{t('totalExpenses') || 'إجمالي المصاريف'}</p>
               <p className="text-2xl font-black text-red-600" dir="ltr">- {totals.totalExpenses.toLocaleString()} {currency}</p>
             </div>
-            <div className="col-span-2 border-2 border-gray-900 rounded-xl p-5 bg-gray-900 text-white flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-300 font-bold mb-1">{t('netProfit') || 'صافي الربح'}</p>
-                <p className={`text-4xl font-black ${totals.net >= 0 ? 'text-green-400' : 'text-red-400'}`} dir="ltr">
-                  {totals.net >= 0 ? '+' : ''}{totals.net.toLocaleString()} {currency}
-                </p>
+            
+            {/* ✅ إصلاح 1: تحسين شكل بطاقة صافي الربح */}
+            <div className="col-span-2 border-2 border-gray-900 rounded-xl p-5 bg-gray-900 text-white flex flex-col justify-center gap-3 relative overflow-hidden">
+              <div className="flex items-center justify-between relative z-10">
+                <p className="text-sm text-gray-300 font-bold">{t('netProfit') || 'صافي الربح'}</p>
+                <div className="text-4xl opacity-30">💰</div>
               </div>
-              <div className="text-5xl opacity-20">💰</div>
+              <p className={`text-4xl font-black relative z-10 ${totals.net >= 0 ? 'text-green-400' : 'text-red-400'}`} dir="ltr">
+                {totals.net >= 0 ? '+' : ''}{totals.net.toLocaleString()} {currency}
+              </p>
             </div>
+
           </div>
         </div>
 
