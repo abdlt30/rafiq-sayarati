@@ -1,6 +1,7 @@
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react'; // ✅ إضافة useMemo
 import { AppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
+import { notificationService } from '../services/notificationService'; // ✅ استدعاء محرك التنبيهات
 import { 
   Car, FileText, Bell, Settings, Info, Database, 
   PieChart, Clock, Tag, ShieldAlert, ChevronLeft, ChevronRight,
@@ -22,6 +23,7 @@ const MenuRow = ({ icon: Icon, label, path, color, badge }) => {
           <Icon size={18} />
         </div>
         <span className="text-sm font-bold text-[var(--text)]">{label}</span>
+        {/* ✅ عرض الشارة فقط إذا كان هناك تنبيهات حقيقية */}
         {badge && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{badge}</span>}
       </div>
       {lang === 'ar' ? <ChevronLeft size={16} className="text-[var(--text-muted)]" /> : <ChevronRight size={16} className="text-[var(--text-muted)]" />}
@@ -30,7 +32,27 @@ const MenuRow = ({ icon: Icon, label, path, color, badge }) => {
 };
 
 export default function More() {
-  const { t } = useContext(AppContext);
+  // ✅ جلب السيارة الحالية واللغة لحساب التنبيهات
+  const { t, currentCar, lang } = useContext(AppContext);
+
+  // ✅ الخوارزمية الذكية: حساب التنبيهات غير المقروءة
+  const unreadCount = useMemo(() => {
+    if (!currentCar) return 0;
+    try {
+      // 1. جلب جميع التنبيهات الحالية من المحرك
+      const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
+      
+      // 2. جلب معرفات التنبيهات التي قرأها المستخدم سابقاً
+      const readIds = JSON.parse(localStorage.getItem('read_notifications')) || [];
+      
+      // 3. تصفية التنبيهات التي لم يقرأها المستخدم
+      const unreadAlerts = alerts.filter(a => !readIds.includes(a.id));
+      
+      return unreadAlerts.length;
+    } catch (e) {
+      return 0; // في حال حدوث خطأ، لا نظهر شارة
+    }
+  }, [currentCar, t, lang]);
 
   return (
     <div className="space-y-6 pb-24 px-4 pt-4 max-w-2xl mx-auto">
@@ -47,7 +69,6 @@ export default function More() {
         
         <MenuRow icon={TrendingUp} label={t('income') || 'الإيرادات'} path="/income" color="text-green-500" />
         
-        {/* ✅ إصلاح: استخدام الترجمة بدلاً من النص الثابت */}
         <MenuRow icon={MapPin} label={t('fuelStations') || 'محطات الوقود'} path="/fuel-stations" color="text-red-500" />
       </div>
 
@@ -58,8 +79,6 @@ export default function More() {
         </h2>
         <MenuRow icon={PieChart} label={t('reports') || 'التقارير'} path="/reports" color="text-green-500" />
         <MenuRow icon={Clock} label={t('timeline') || 'سجل السيارة'} path="/timeline" color="text-orange-500" />
-        
-        {/* ✅ إصلاح: استخدام الترجمة بدلاً من النص الثابت */}
         <MenuRow icon={Tag} label={t('valuation') || 'تقييم السيارة'} path="/valuation" color="text-teal-500" />
       </div>
 
@@ -68,7 +87,16 @@ export default function More() {
         <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">
           {t('system') || 'النظام'}
         </h2>
-        <MenuRow icon={ShieldAlert} label={t('notifications') || 'مركز التنبيهات'} path="/notifications" color="text-red-500" badge="3" />
+        
+        {/* ✅ إصلاح: الشارة الآن ديناميكية وتختفي إذا كان العدد 0 */}
+        <MenuRow 
+          icon={ShieldAlert} 
+          label={t('notifications') || 'مركز التنبيهات'} 
+          path="/notifications" 
+          color="text-red-500" 
+          badge={unreadCount > 0 ? unreadCount.toString() : null} 
+        />
+        
         <MenuRow icon={Database} label={t('backup') || 'النسخ الاحتياطي'} path="/backup" color="text-indigo-500" />
         <MenuRow icon={Settings} label={t('settings') || 'الإعدادات'} path="/settings" color="text-slate-500" />
         <MenuRow icon={Info} label={t('aboutApp') || 'حول التطبيق'} path="/about" color="text-sky-500" />
