@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import Input from '../components/ui/Input';
@@ -6,107 +6,247 @@ import Button from '../components/ui/Button';
 import OptionPicker from '../components/ui/OptionPicker';
 import { Camera, X } from 'lucide-react';
 
+const EMPTY_CAR = { 
+  make: '', model: '', plate: '', odometer: '', 
+  year: '', color: '', image: '',
+  powertrain: 'ice',
+  fuelType: 'petrol',      // ✅ جديد: petrol/diesel
+  batteryCapacity: '',
+  category: 'car'          // ✅ جديد: car/truck/van
+};
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;       // 5MB قبل الضغط
+const MAX_IMAGE_DIM = 800;                     // بعد الضغط
+const MAX_MAKE_LEN = 50;
+const MAX_MODEL_LEN = 50;
+const MAX_PLATE_LEN = 20;
+const MAX_ODO = 10_000_000;                    // 10M km (أكثر من كافٍ)
+const MIN_BATTERY = 5;                         // kWh
+const MAX_BATTERY = 250;                       // kWh (أكبر من أي EV حالي)
+const MIN_YEAR = 1886;                         // أول سيارة في التاريخ
+
 export default function AddVehicle() {
-  const { addNewCar, updateCar, vehicles, t } = useContext(AppContext); 
+  const { addNewCar, updateCar, vehicles, t, bumpDataVersion } = useContext(AppContext); 
   const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
   
   const editId = searchParams.get('id');
   const isEditing = Boolean(editId);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [car, setCar] = useState(EMPTY_CAR);
 
-  // ✅ إضافة حقول المحرك وسعة البطارية
-  const [car, setCar] = useState({ 
-    make: '', model: '', plate: '', odometer: '', 
-    year: '', color: '', image: '',
-    powertrain: 'ice', // القيمة الافتراضية: احتراق داخلي
-    batteryCapacity: '' // خاصة بالسيارات الكهربائية والهجينة
-  });
-
+  /* ✅ خيارات كاملة */
   const powertrainOptions = [
     { value: 'ice', label: t('ice') || 'بنزين / ديزل' },
     { value: 'ev', label: t('ev') || 'كهربائية' },
-    { value: 'hybrid', label: t('hybrid') || 'هجينة' }
+    { value: 'hybrid', label: t('hybrid') || 'هجينة' },
+    { value: 'phev', label: t('phev') || 'هجينة قابلة للشحن (PHEV)' }
   ];
 
+  const fuelTypeOptions = [
+    { value: 'petrol', label: t('petrol') || 'بنزين' },
+    { value: 'diesel', label: t('diesel') || 'ديزل' }
+  ];
+
+  const categoryOptions = [
+    { value: 'car', label: t('carCategory') || 'سيارة' },
+    { value: 'truck', label: t('truckCategory') || 'شاحنة' },
+    { value: 'van', label: t('vanCategory') || 'فان / نقل خفيف' }
+  ];
+
+  /* ✅ منطق العرض حسب النوع */
+  const needsBattery = car.powertrain === 'ev' || car.powertrain === 'hybrid' || car.powertrain === 'phev';
+  const needsFuelType = car.powertrain === 'ice' || car.powertrain === 'hybrid' || car.powertrain === 'phev';
+
+  /* ===================== تحميل بيانات التعديل ===================== */
   useEffect(() => {
-    if (isEditing && vehicles.length > 0) {
-      const carToEdit = vehicles.find(v => String(v.id) === String(editId));
-      if (carToEdit) {
-        setCar({
-          ...carToEdit,
-          odometer: carToEdit.odometer || carToEdit.currentOdometer || '',
-          powertrain: carToEdit.powertrain || 'ice', // دعم السيارات القديمة
-          batteryCapacity: carToEdit.batteryCapacity || ''
-        });
-      }
-    }
+    if (!isEditing || vehicles.length === 0) return;
+    const carToEdit = vehicles.find(v => String(v.id) === String(editId));
+    if (!carToEdit) return;
+
+    setCar({
+      make: carToEdit.make || '',
+      model: carToEdit.model || '',
+      plate: carToEdit.plate || '',
+      odometer: carToEdit.odometer != null ? String(carToEdit.odometer) : (carToEdit.currentOdometer != null ? String(carToEdit.currentOdometer) : ''),
+      year: carToEdit.year != null ? String(carToEdit.year) : '',
+      color: carToEdit.color || '',
+      image: carToEdit.image || '',
+      powertrain: carToEdit.powertrain || 'ice',
+      fuelType: carToEdit.fuelType || 'petrol',
+      batteryCapacity: carToEdit.batteryCapacity != null ? String(carToEdit.batteryCapacity) : '',
+      category: carToEdit.category || 'car'
+    });
   }, [isEditing, editId, vehicles]);
 
-  const compressImage = (file, maxWidth = 600, maxHeight = 600) => {
+  /* ===================== ضغط الصور ===================== */
+  const compressImage = (file, maxDim = MAX_IMAGE_DIM) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.readAsDataURL(file);
+      reader.onerror = () => reject(new Error('read_failed'));
       reader.onload = (event) => {
         const img = new Image();
-        img.src = event.target.result;
+        img.onerror = () => reject(new Error('image_load_failed'));
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          if (width > height) {
-            if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-          } else {
-            if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+          try {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+              else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error('canvas_context_failed'));
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          } catch (err) {
+            reject(err);
           }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.7)); 
         };
-        img.onerror = (error) => reject(error);
+        img.src = event.target.result;
       };
-      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
     });
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      try {
-        const compressedBase64 = await compressImage(file);
-        setCar({ ...car, image: compressedBase64 });
-      } catch (error) {
-        alert("حدث خطأ أثناء معالجة الصورة. يرجى اختيار صورة أخرى.");
-      }
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    // ✅ تحقق MIME
+    if (!file.type.startsWith('image/')) {
+      setError(t('invalidFileType') || 'الرجاء اختيار ملف صورة صالح.');
+      input.value = null;
+      return;
+    }
+
+    // ✅ حد أقصى أولي
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError(t('imageTooLarge') || 'حجم الصورة كبير جداً. الحد 5 ميجابايت.');
+      input.value = null;
+      return;
+    }
+
+    try {
+      const compressed = await compressImage(file);
+      setCar(prev => ({ ...prev, image: compressed }));
+      setError('');
+    } catch (err) {
+      console.error('image compress failed:', err);
+      setError(t('imageProcessingFailed') || 'تعذر معالجة الصورة. جرّب صورة أخرى.');
+    } finally {
+      input.value = null; // ✅ يسمح برفع نفس الملف مرة أخرى
     }
   };
 
+  /* ===================== التحقق الرياضي ===================== */
+  const validate = () => {
+    const make = (car.make || '').trim();
+    const model = (car.model || '').trim();
+    if (!make || !model) {
+      return t('fillRequiredFields') || 'الرجاء تعبئة الماركة والموديل.';
+    }
+
+    if (make.length > MAX_MAKE_LEN || model.length > MAX_MODEL_LEN) {
+      return t('fieldTooLong') || 'اسم الماركة أو الموديل طويل جداً.';
+    }
+
+    // ✅ العداد: فراغ = مرفوض، وإلا يجب أن يكون صحيحاً في النطاق
+    const odoRaw = String(car.odometer ?? '').trim();
+    if (odoRaw === '') {
+      return t('fillRequiredFields') || 'الرجاء إدخال العداد.';
+    }
+    const odoNum = Number(odoRaw);
+    if (!Number.isFinite(odoNum) || odoNum < 0 || odoNum > MAX_ODO) {
+      return t('invalidOdometer') || 'العداد يجب أن يكون رقماً بين 0 و 10,000,000.';
+    }
+    if (!Number.isInteger(odoNum)) {
+      return t('invalidOdometer') || 'العداد يجب أن يكون عدداً صحيحاً.';
+    }
+
+    // ✅ السنة: اختيارية، لكن إن وُجدت يجب أن تكون معقولة
+    const yearRaw = String(car.year ?? '').trim();
+    if (yearRaw !== '') {
+      const yearNum = Number(yearRaw);
+      const currentYear = new Date().getFullYear();
+      if (!Number.isInteger(yearNum) || yearNum < MIN_YEAR || yearNum > currentYear + 1) {
+        return t('invalidYear') || `السنة يجب أن تكون بين ${MIN_YEAR} و ${currentYear + 1}.`;
+      }
+    }
+
+    // ✅ سعة البطارية: إن وُجدت
+    const battRaw = String(car.batteryCapacity ?? '').trim();
+    if (needsBattery && battRaw !== '') {
+      const battNum = Number(battRaw);
+      if (!Number.isFinite(battNum) || battNum < MIN_BATTERY || battNum > MAX_BATTERY) {
+        return t('invalidBattery') || `السعة يجب أن تكون بين ${MIN_BATTERY} و ${MAX_BATTERY} kWh.`;
+      }
+    }
+
+    // ✅ رقم اللوحة اختياري، لكن إن وُجد بحد أقصى
+    if ((car.plate || '').length > MAX_PLATE_LEN) {
+      return t('fieldTooLong') || 'رقم اللوحة طويل جداً.';
+    }
+
+    return null; // لا أخطاء
+  };
+
+  /* ===================== الحفظ ===================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if(!car.make || !car.model || !car.odometer) {
-      return alert(t('fillRequiredFields') || 'الرجاء تعبئة الحقول الأساسية');
+    setError('');
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
     }
-    
-    const carData = { 
-      ...car, 
-      odometer: Number(car.odometer),
-      batteryCapacity: car.batteryCapacity ? Number(car.batteryCapacity) : null
+
+    // ✅ بناء البيانات المُطبَّعة (نُخزّن أرقاماً لا نصوصاً)
+    const odoNum = Number(car.odometer);
+    const yearNum = car.year !== '' ? Number(car.year) : null;
+    const battNum = (needsBattery && car.batteryCapacity !== '') 
+      ? Number(car.batteryCapacity) 
+      : null;
+
+    const carData = {
+      make: car.make.trim(),
+      model: car.model.trim(),
+      plate: (car.plate || '').trim(),
+      color: (car.color || '').trim(),
+      image: car.image || '',
+      odometer: odoNum,
+      year: yearNum,
+      powertrain: car.powertrain,
+      fuelType: needsFuelType ? car.fuelType : 'electric',
+      batteryCapacity: needsBattery ? battNum : null,
+      category: car.category
     };
-    delete carData.currentOdometer;
 
     setIsSaving(true);
     try {
       if (isEditing) {
         updateCar(editId, carData);
+        bumpDataVersion();
         navigate('/vehicles');
       } else {
-        addNewCar(carData);
+        // ✅ AppContext.addNewCar يُرجع boolean
+        const ok = addNewCar(carData);
+        if (!ok) {
+          setError(t('errorSaving') || 'فشل الحفظ. قد تكون مساحة التخزين ممتلئة.');
+          return;
+        }
+        bumpDataVersion();
         navigate('/');
       }
-    } catch (error) {
-      alert('حدث خطأ أثناء الحفظ، قد تكون مساحة التخزين ممتلئة.');
+    } catch (err) {
+      console.error('save failed:', err);
+      setError(t('errorSaving') || 'حدث خطأ أثناء الحفظ.');
     } finally {
       setIsSaving(false);
     }
@@ -120,35 +260,82 @@ export default function AddVehicle() {
         </h2>
       </div>
 
+      {/* ✅ عرض الخطأ الموحد */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-3 rounded-xl text-sm font-bold mb-4">
+          {error}
+        </div>
+      )}
+
       <div className="flex justify-center mb-8">
         <div className="relative w-32 h-32 rounded-3xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-[var(--primary)] transition-colors">
           {car.image ? (
             <>
               <img src={car.image} alt="Car" className="w-full h-full object-cover" />
-              <button type="button" onClick={() => setCar({...car, image: ''})} className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm">
+              <button 
+                type="button" 
+                onClick={() => setCar({...car, image: ''})} 
+                aria-label="حذف الصورة"
+                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm"
+              >
                 <X size={14} />
               </button>
             </>
           ) : (
             <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
               <Camera size={32} className="mb-2" />
-              <span className="text-[10px] font-bold">إضافة صورة</span>
+              <span className="text-[10px] font-bold">{t('addImage') || 'إضافة صورة'}</span>
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
           )}
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 space-y-1">
-        <Input label={t('carMake') || 'الماركة'} value={car.make} onChange={(e) => setCar({...car, make: e.target.value})} required />
-        <Input label={t('carModel') || 'الموديل'} value={car.model} onChange={(e) => setCar({...car, model: e.target.value})} required />
+      <form onSubmit={handleSubmit} noValidate className="flex-1 space-y-1">
+        <Input 
+          label={t('carMake') || 'الماركة'} 
+          value={car.make} 
+          onChange={(e) => setCar({...car, make: e.target.value})} 
+          maxLength={MAX_MAKE_LEN}
+          required 
+        />
+        <Input 
+          label={t('carModel') || 'الموديل'} 
+          value={car.model} 
+          onChange={(e) => setCar({...car, model: e.target.value})} 
+          maxLength={MAX_MODEL_LEN}
+          required 
+        />
         
         <div className="grid grid-cols-2 gap-3">
-          <Input label={t('carYear') || 'سنة الصنع'} type="number" value={car.year || ''} onChange={(e) => setCar({...car, year: e.target.value})} />
-          <Input label={t('plateNumber') || 'رقم اللوحة'} value={car.plate} onChange={(e) => setCar({...car, plate: e.target.value})} />
+          <Input 
+            label={t('carYear') || 'سنة الصنع'} 
+            type="number" 
+            inputMode="numeric"
+            min={MIN_YEAR}
+            max={new Date().getFullYear() + 1}
+            value={car.year || ''} 
+            onChange={(e) => setCar({...car, year: e.target.value})} 
+          />
+          <Input 
+            label={t('plateNumber') || 'رقم اللوحة'} 
+            value={car.plate} 
+            onChange={(e) => setCar({...car, plate: e.target.value})} 
+            maxLength={MAX_PLATE_LEN}
+          />
         </div>
 
-        {/* ✅ حقل نوع المحرك */}
+        {/* ✅ نوع الفئة (جديد) */}
+        <div className="mt-2">
+          <OptionPicker 
+            label={t('vehicleCategory') || 'فئة السيارة'} 
+            options={categoryOptions} 
+            value={car.category} 
+            onChange={(val) => setCar({...car, category: val})} 
+          />
+        </div>
+
+        {/* ✅ نوع المحرك (مع PHEV) */}
         <div className="mt-2">
           <OptionPicker 
             label={t('powertrain') || 'نوع المحرك'} 
@@ -158,13 +345,28 @@ export default function AddVehicle() {
           />
         </div>
 
-        {/* ✅ حقل سعة البطارية (يظهر فقط للكهربائية والهجينة) */}
-        {(car.powertrain === 'ev' || car.powertrain === 'hybrid') && (
+        {/* ✅ نوع الوقود (للـ ICE والهجين) */}
+        {needsFuelType && (
+          <div className="mt-2 animate-fade-in">
+            <OptionPicker 
+              label={t('fuelType') || 'نوع الوقود'} 
+              options={fuelTypeOptions} 
+              value={car.fuelType || 'petrol'} 
+              onChange={(val) => setCar({...car, fuelType: val})} 
+            />
+          </div>
+        )}
+
+        {/* ✅ سعة البطارية (EV/Hybrid/PHEV) */}
+        {needsBattery && (
           <div className="mt-2 animate-fade-in">
             <Input 
               label={t('batteryCapacity') || 'سعة البطارية (kWh)'} 
               type="number" 
+              inputMode="decimal"
               step="0.1"
+              min={MIN_BATTERY}
+              max={MAX_BATTERY}
               value={car.batteryCapacity || ''} 
               onChange={(e) => setCar({...car, batteryCapacity: e.target.value})} 
             />
@@ -172,12 +374,25 @@ export default function AddVehicle() {
         )}
 
         <div className="mt-2">
-          <Input label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} type="number" value={car.odometer} onChange={(e) => setCar({...car, odometer: e.target.value})} required />
+          <Input 
+            label={t('currentOdometer') || 'عداد السيارة الحالي (KM)'} 
+            type="number" 
+            inputMode="numeric"
+            min="0"
+            step="1"
+            value={car.odometer} 
+            onChange={(e) => setCar({...car, odometer: e.target.value})} 
+            required 
+          />
         </div>
         
         <div className="mt-8">
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? 'جاري الحفظ...' : (isEditing ? (t('save') || 'حفظ التعديلات') : (t('saveAndContinue') || 'حفظ ومتابعة'))}
+            {isSaving 
+              ? (t('saving') || 'جاري الحفظ...') 
+              : (isEditing 
+                  ? (t('save') || 'حفظ التعديلات') 
+                  : (t('saveAndContinue') || 'حفظ ومتابعة'))}
           </Button>
         </div>
       </form>
