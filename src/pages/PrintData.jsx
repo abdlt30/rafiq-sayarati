@@ -7,7 +7,6 @@ import { ArrowRight, Printer } from 'lucide-react';
 export default function PrintData() {
   const { currentCar, t, lang, currency } = useContext(AppContext);
 
-  // تجميع البيانات وترجمتها
   const data = useMemo(() => {
     if (!currentCar) return [];
     const fuel = dbService.getFuel().filter(f => f.carId === currentCar.id).map(f => ({ ...f, type: t('fuel') || 'وقود', cost: f.cost }));
@@ -34,27 +33,30 @@ export default function PrintData() {
         </button>
       </div>
 
-      <h2 className="text-2xl font-black mb-4 text-center">{t('appName') || 'رفيق سيارتي'}</h2>
-      <p className="text-center text-sm text-gray-500 mb-6">
-        {currentCar.make} {currentCar.model} - {currentCar.plate || ''}
-      </p>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-black mb-2">{t('appName') || 'رفيق سيارتي'}</h2>
+        <p className="text-sm text-gray-500 font-bold">
+          {currentCar.make} {currentCar.model} - {currentCar.plate || ''}
+        </p>
+      </div>
 
-      <table className="w-full text-sm border-collapse" style={{ direction: dir }}>
+      <table className="w-full text-sm border-collapse border border-gray-400" style={{ direction: dir }}>
         <thead>
           <tr className="bg-gray-100 border-b-2 border-gray-800">
-            <th className="p-2 border border-gray-300 text-start">{t('date') || 'التاريخ'}</th>
-            <th className="p-2 border border-gray-300 text-start">{t('type') || 'النوع'}</th>
-            <th className="p-2 border border-gray-300 text-start">{t('amount') || 'المبلغ'}</th>
-            <th className="p-2 border border-gray-300 text-start">{t('odometer') || 'العداد'}</th>
+            <th className="p-3 border border-gray-400 text-start">{t('date') || 'التاريخ'}</th>
+            {/* ✅ إصلاح: استخدام الترجمة هنا */}
+            <th className="p-3 border border-gray-400 text-start">{t('type') || 'النوع'}</th>
+            <th className="p-3 border border-gray-400 text-start">{t('amount') || 'المبلغ'}</th>
+            <th className="p-3 border border-gray-400 text-start">{t('odometer') || 'العداد'}</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, index) => (
             <tr key={index} className="border-b border-gray-300">
-              <td className="p-2 border border-gray-300">{row.date}</td>
-              <td className="p-2 border border-gray-300">{row.type}</td>
-              <td className="p-2 border border-gray-300 font-bold">{Number(row.cost).toLocaleString()} {currency}</td>
-              <td className="p-2 border border-gray-300">{row.odometer ? Number(row.odometer).toLocaleString() : '-'}</td>
+              <td className="p-2 border border-gray-400">{row.date}</td>
+              <td className="p-2 border border-gray-400">{row.type}</td>
+              <td className="p-2 border border-gray-400 font-bold">{Number(row.cost).toLocaleString()} {currency}</td>
+              <td className="p-2 border border-gray-400">{row.odometer ? Number(row.odometer).toLocaleString() : '-'}</td>
             </tr>
           ))}
         </tbody>
