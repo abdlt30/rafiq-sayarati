@@ -71,7 +71,12 @@ export default function Fuel() {
     e.preventDefault();
     if (!currentCar) return; 
     
-    // ✅ 1. التحقق الرياضي والأمني من المدخلات
+    // ✅ 1. التحقق اليدوي من امتلاء الحقول (بدلاً من رسالة المتصفح)
+    if (!formData.date || !formData.odometer || !formData.amount || !formData.cost) {
+      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
+    }
+
+    // ✅ 2. التحقق الرياضي والأمني من المدخلات
     const odoNum = Number(formData.odometer);
     const amountNum = Number(formData.amount);
     const costNum = Number(formData.cost);
@@ -80,7 +85,6 @@ export default function Fuel() {
       return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة أكبر من صفر.', 'error');
     }
 
-    // التحقق من أن العداد الجديد ليس أقل من العداد الحالي للسيارة
     if (odoNum < (currentCar.odometer || 0) && !editingId) {
       return showToast(t('invalidOdometer') || 'العداد لا يمكن أن يكون أقل من العداد السابق.', 'error');
     }
@@ -251,7 +255,8 @@ export default function Fuel() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
+          {/* ✅ إصلاح: إضافة noValidate لإيقاف رسائل المتصفح الافتراضية */}
+          <form onSubmit={handleSave} noValidate className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
             <button type="button" onClick={closeModal} className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
               <X size={20} />
             </button>
@@ -262,7 +267,7 @@ export default function Fuel() {
             <div className="space-y-3 overflow-y-auto pb-2">
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
-                <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
+                <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
               
               {isHybrid && (
@@ -278,19 +283,19 @@ export default function Fuel() {
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد'} (KM)</label>
-                <input type="number" inputMode="numeric" min="0" required placeholder="0" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                <input type="number" inputMode="numeric" min="0" placeholder="0" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
               
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">
                   {(isElectric || formData.energyType === 'electricity') ? (t('kwh') || 'كيلوواط/ساعة (kWh)') : (t('liters') || 'اللترات')}
                 </label>
-                <input type="number" inputMode="decimal" min="0" step="0.01" required placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
-                <input type="number" inputMode="decimal" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
             
