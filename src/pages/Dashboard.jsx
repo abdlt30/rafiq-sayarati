@@ -11,6 +11,19 @@ import {
 
 const EMPTY_TOTALS = { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
 
+/* ✅ مساعد رياضي: يرفض NaN/Infinity/-Infinity */
+const safeNumber = (v) => {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/* ✅ فحص سريع: هل التنبيه يدعم "إنجاز"؟ */
+const canQuickDone = (alert) =>
+  alert &&
+  alert.recordId &&
+  (alert.sourceTable === 'maintenance' || alert.sourceTable === 'reminder');
+
 export default function Dashboard() {
   const { currentCar, updateCar, t, currency, user, lang, dataVersion } = useContext(AppContext);
 
@@ -30,7 +43,7 @@ export default function Dashboard() {
     }
   }, [currentCar, dataVersion]);
 
-  /* ✅ متوسط الاستهلاك - يدعم amount الجديد + energyType + powertrain */
+  /* ✅ متوسط الاستهلاك - يدعم amount + energyType + powertrain */
   const avgConsumption = useMemo(() => {
     if (!currentCar) return { value: null, unit: 'L/100km' };
 
@@ -39,23 +52,25 @@ export default function Dashboard() {
     const unit = targetEnergy === 'electricity' ? 'kWh/100km' : 'L/100km';
 
     try {
+      const carIdStr = String(currentCar.id);
       const fuelRecords = (dbService.getFuel() || [])
-        .filter(f => f.carId === currentCar.id)
+        .filter(f => String(f.carId) === carIdStr)
         .filter(f => (f.energyType || 'gasoline') === targetEnergy);
 
       if (fuelRecords.length < 2) return { value: null, unit };
 
-      const sorted = [...fuelRecords].sort(
-        (a, b) => Number(a.odometer) - Number(b.odometer)
-      );
+      // ✅ تطبيع العداد كرقم صحيح موجب
+      const normalized = fuelRecords
+        .map(f => ({ ...f, _odo: safeNumber(f.odometer) }))
+        .filter(f => f._odo > 0)
+        .sort((a, b) => a._odo - b._odo);
 
       let totalAmount = 0;
       let totalDistance = 0;
 
-      for (let i = 1; i < sorted.length; i++) {
-        const dist = Number(sorted[i].odometer) - Number(sorted[i - 1].odometer);
-        // ✅ دعم الحقل الجديد amount مع fallback للحقل القديم liters
-        const amount = Number(sorted[i].amount ?? sorted[i].liters) || 0;
+      for (let i = 1; i < normalized.length; i++) {
+        const dist = normalized[i]._odo - normalized[i - 1]._odo;
+        const amount = safeNumber(normalized[i].amount ?? normalized[i].liters);
         if (dist > 0 && amount > 0) {
           totalDistance += dist;
           totalAmount += amount;
@@ -92,21 +107,17 @@ export default function Dashboard() {
   const recentActivity = useMemo(() => {
     if (!currentCar) return [];
     try {
-      const fuel = (dbService.getFuel() || [])
-        .filter(f => f.carId === currentCar.id)
-        .map(f => ({ ...f, type: 'fuel' }));
-      const maintenance = (dbService.getMaintenance() || [])
-        .filter(m => m.carId === currentCar.id)
-        .map(m => ({ ...m, type: 'maintenance' }));
-      const expenses = (dbService.getExpenses() || [])
-        .filter(e => e.carId === currentCar.id)
-        .map(e => ({ ...e, type: 'expense' }));
-      const incomes = (dbService.getIncomes() || [])
-        .filter(i => i.carId === currentCar.id)
-        .map(i => ({ ...i, type: 'income', cost: i.amount }));
+      const carIdStr = String(currentCar.id);
+      const filter = (arr) => (Array.isArray(arr) ? arr : []).filter(r => String(r.carId) === carIdStr);
 
+      const fuel = filter(dbService.getFuel()).map(f => ({ ...f, type: 'fuel' }));
+      const maintenance = filter(dbService.getMaintenance()).map(m => ({ ...m, type: 'maintenance' }));
+      const expenses = filter(dbService.getExpenses()).map(e => ({ ...e, type: 'expense' }));
+      const incomes = filter(dbService.getIncomes()).map(i => ({ ...i, type: 'income', cost: i.amount }));
+
+      // ✅ ترتيب مستقر بـ localeCompare
       return [...fuel, ...maintenance, ...expenses, ...incomes]
-        .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
         .slice(0, 4);
     } catch (e) {
       console.error('recentActivity load failed:', e);
@@ -116,17 +127,20 @@ export default function Dashboard() {
 
   if (!currentCar) return null;
 
-  const today = new Date().toLocaleDateString(
-    lang === 'ar' ? 'ar-MA' : 'en-US',
-    { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-  );
+  /* ✅ اليوم - مع دعم الفرنسية */
+  const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
+  const today = new Date().toLocaleDateString(todayLocale, {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
 
-  /* ✅ حماية العداد: تحقق من الأرقام + تأكيد عند التنقيص */
+  /* ✅ حماية العداد */
   const handleSaveOdometer = useCallback(() => {
-    const val = Number(newOdo);
+    const raw = String(newOdo).trim();
+    if (raw === '') return; // ✅ لا تسمح بمسح العداد
+    const val = Number(raw);
     if (!Number.isFinite(val) || val < 0) return;
 
-    const currentVal = Number(currentCar.odometer || 0);
+    const currentVal = safeNumber(currentCar.odometer);
     if (val < currentVal && !window.confirm('العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟')) {
       return;
     }
@@ -135,30 +149,47 @@ export default function Dashboard() {
     setIsEditingOdo(false);
   }, [newOdo, currentCar, updateCar]);
 
-  /* ✅ إصلاح حرج: لا نلمس العداد - فقط نحذف سجل الصيانة بعد تأكيد */
+  /* =========================================================
+     ✅ إصلاح حرج: توزيع الحذف حسب sourceTable
+     ========================================================= */
   const handleQuickDone = useCallback((e, alert) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!alert.recordId) return;
+    if (!alert.recordId || !alert.sourceTable) return;
+
+    // ✅ حماية إضافية: فقط maintenance و reminder
+    if (alert.sourceTable !== 'maintenance' && alert.sourceTable !== 'reminder') {
+      return;
+    }
+
+    const targetName =
+      alert.sourceTable === 'maintenance'
+        ? 'سجل الصيانة'
+        : 'التذكير';
 
     const confirmed = window.confirm(
-      `هل أنت متأكد من إتمام: ${alert.title}؟\nسيتم حذف سجل الصيانة نهائياً.`
+      `هل أنت متأكد من إتمام: ${alert.title}؟\nسيتم حذف ${targetName} نهائياً.`
     );
     if (!confirmed) return;
 
     try {
-      dbService.deleteMaintenance(alert.recordId);
+      if (alert.sourceTable === 'maintenance') {
+        dbService.deleteMaintenance(alert.recordId);
+      } else if (alert.sourceTable === 'reminder') {
+        dbService.deleteReminder(alert.recordId);
+      }
     } catch (err) {
       console.error('Quick done failed:', err);
     }
   }, []);
 
-  /* ✅ قيمة صافية آمنة */
-  const netValue = Number(totals.net) || 0;
+  /* ✅ قيم آمنة للعرض */
+  const netValue = safeNumber(totals.net);
   const isNetPositive = netValue >= 0;
-  const incomeValue = Number(totals.income) || 0;
-  const totalValue = Number(totals.total) || 0;
+  const incomeValue = safeNumber(totals.income);
+  const totalValue = safeNumber(totals.total);
+  const odometerValue = safeNumber(currentCar.odometer);
 
   return (
     <div className="space-y-5 pb-24 px-4 pt-2">
@@ -227,43 +258,53 @@ export default function Dashboard() {
           <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">
             تنبيهات تحتاج انتباهك
           </h3>
-          {criticalAlerts.map((alert, idx) => (
-            <div
-              key={alert.recordId || alert.id || `alert-${alert.title}-${idx}`}
-              className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
-                alert.severity === 'critical'
-                  ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
-                  : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
-              }`}
-            >
-              <Link to={alert.link} className="flex-1 flex items-center gap-3 min-w-0">
-                <div className={`p-2 rounded-xl ${alert.severity === 'critical' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
-                  {alert.severity === 'critical' ? <AlertTriangle size={18} /> : <ShieldAlert size={18} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{alert.title}</p>
-                  <p className="text-[11px] opacity-80 truncate mt-0.5">{alert.desc}</p>
-                </div>
-              </Link>
+          {criticalAlerts.map((alert, idx) => {
+            // ✅ key فريد: alert.id (يحتوي subtype) قبل recordId
+            const key = alert.id || alert.recordId || `alert-${idx}`;
+            const showDoneBtn = canQuickDone(alert);
 
-              {/* زر الإنجاز يظهر فقط عند وجود recordId قابل للحذف */}
-              {alert.recordId ? (
-                <button
-                  type="button"
-                  onClick={(e) => handleQuickDone(e, alert)}
-                  aria-label="إتمام الصيانة"
-                  className="bg-green-500 text-white p-2 rounded-xl shadow-lg hover:bg-green-600 active:scale-90 transition-all flex flex-col items-center justify-center gap-0.5 flex-shrink-0"
-                >
-                  <CheckCircle size={16} />
-                  <span className="text-[9px] font-bold">إنجاز</span>
-                </button>
-              ) : (
-                <Link to={alert.link} aria-label="عرض التفاصيل" className="p-2 flex-shrink-0">
-                  <ChevronLeft size={16} className="opacity-50" />
+            return (
+              <div
+                key={key}
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
+                  alert.severity === 'critical'
+                    ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
+                    : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
+                }`}
+              >
+                <Link to={alert.link} className="flex-1 flex items-center gap-3 min-w-0">
+                  <div className={`p-2 rounded-xl ${alert.severity === 'critical' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                    {alert.severity === 'critical' ? <AlertTriangle size={18} /> : <ShieldAlert size={18} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">{alert.title}</p>
+                    <p className="text-[11px] opacity-80 truncate mt-0.5">{alert.desc}</p>
+                  </div>
                 </Link>
-              )}
-            </div>
-          ))}
+
+                {/* ✅ زر "إنجاز" يظهر فقط لـ maintenance/reminder */}
+                {showDoneBtn ? (
+                  <button
+                    type="button"
+                    onClick={(e) => handleQuickDone(e, alert)}
+                    aria-label={
+                      alert.sourceTable === 'maintenance'
+                        ? 'إتمام الصيانة'
+                        : 'إتمام التذكير'
+                    }
+                    className="bg-green-500 text-white p-2 rounded-xl shadow-lg hover:bg-green-600 active:scale-90 transition-all flex flex-col items-center justify-center gap-0.5 flex-shrink-0"
+                  >
+                    <CheckCircle size={16} />
+                    <span className="text-[9px] font-bold">إنجاز</span>
+                  </button>
+                ) : (
+                  <Link to={alert.link} aria-label="عرض التفاصيل" className="p-2 flex-shrink-0">
+                    <ChevronLeft size={16} className="opacity-50" />
+                  </Link>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -329,7 +370,7 @@ export default function Dashboard() {
                 min="0"
                 value={newOdo}
                 onChange={(e) => setNewOdo(e.target.value)}
-                placeholder={String(currentCar.odometer || 0)}
+                placeholder={String(odometerValue)}
                 aria-label="قراءة العداد الجديدة"
                 className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none"
                 autoFocus
@@ -354,12 +395,12 @@ export default function Dashboard() {
           ) : (
             <div className="flex items-center justify-between mt-1">
               <p className="text-lg sm:text-xl font-extrabold text-blue-500 flex items-center gap-1 truncate">
-                {Number(currentCar.odometer || 0).toLocaleString()}{' '}
+                {odometerValue.toLocaleString()}{' '}
                 <span className="text-[10px] sm:text-xs font-normal">KM</span>
               </p>
               <button
                 type="button"
-                onClick={() => { setNewOdo(String(currentCar.odometer || '')); setIsEditingOdo(true); }}
+                onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }}
                 aria-label="تعديل العداد"
                 className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors flex-shrink-0"
               >
@@ -415,9 +456,11 @@ export default function Dashboard() {
                     ? 'bg-green-500/10'
                     : 'bg-purple-500/10';
 
+              const safeCost = safeNumber(activity.cost);
+
               return (
                 <div
-                  key={activity.id || `${activity.type}-${activity.date || 'nodate'}-${index}`}
+                  key={activity.id || `act-${index}`}
                   className={`flex items-center justify-between p-3 ${
                     index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''
                   }`}
@@ -442,7 +485,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <p className={`text-xs sm:text-sm font-bold flex-shrink-0 ml-2 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>
-                    {isIncome ? '+' : ''}{Number(activity.cost || 0).toLocaleString()}{' '}
+                    {isIncome ? '+' : ''}{safeCost.toLocaleString()}{' '}
                     <span className="text-[9px] sm:text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
                 </div>
