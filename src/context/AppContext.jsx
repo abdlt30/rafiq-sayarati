@@ -70,6 +70,11 @@ const translations = {
     storageFull: 'مساحة التخزين ممتلئة. يرجى اختيار صورة أصغر أو حذف بعض البيانات.',
     storageError: 'تعذر حفظ التعديلات. مساحة التخزين ممتلئة.',
 
+    // ✅ المفاتيح الجديدة للإشعارات (تمت إضافتها الآن)
+    invalidNumbers: 'الرجاء إدخال أرقام صحيحة أكبر من صفر.',
+    invalidOdometer: 'العداد لا يمكن أن يكون أقل من العداد السابق للسيارة.',
+    saveSuccess: 'تم حفظ البيانات بنجاح!',
+
     // مفاتيح الإيرادات
     income: 'الإيرادات',
     totalIncome: 'إجمالي الإيرادات',
@@ -138,7 +143,7 @@ const translations = {
     gasoline: 'بنزين',
     electricity: 'كهرباء (شحن)',
 
-    // ✅ موسوعة أنواع الصيانة الشاملة (تمت إضافتها)
+    // ✅ موسوعة أنواع الصيانة الشاملة
     evMaintenance: 'صيانة كهربائية',
     engineOil: 'زيت المحرك',
     oilFilter: 'فلتر الزيت',
@@ -232,6 +237,11 @@ const translations = {
     storageFull: 'Storage is full. Please choose a smaller image or delete some data.',
     storageError: 'Failed to save changes. Storage is full.',
 
+    // ✅ New Dynamic Form Keys (Added Now)
+    invalidNumbers: 'Please enter valid numbers greater than zero.',
+    invalidOdometer: 'Odometer cannot be less than the previous reading.',
+    saveSuccess: 'Data saved successfully!',
+
     // Income Keys
     income: 'Income',
     totalIncome: 'Total Income',
@@ -300,7 +310,7 @@ const translations = {
     gasoline: 'Gasoline',
     electricity: 'Electricity (Charging)',
 
-    // ✅ Comprehensive Maintenance Encyclopedia (Added)
+    // ✅ Comprehensive Maintenance Encyclopedia
     evMaintenance: 'EV Maintenance',
     engineOil: 'Engine Oil',
     oilFilter: 'Oil Filter',
@@ -394,6 +404,11 @@ const translations = {
     storageFull: 'Le stockage est plein. Veuillez choisir une image plus petite ou supprimer des données.',
     storageError: 'Échec de la sauvegarde. Le stockage est plein.',
 
+    // ✅ Nouvelles clés de formulaire dynamique (Ajoutées maintenant)
+    invalidNumbers: 'Veuillez saisir des chiffres valides supérieurs à zéro.',
+    invalidOdometer: 'Le compteur ne peut pas être inférieur à la lecture précédente.',
+    saveSuccess: 'Données enregistrées avec succès !',
+
     // Clés de Revenus
     income: 'Revenus',
     totalIncome: 'Revenu Total',
@@ -462,7 +477,7 @@ const translations = {
     gasoline: 'Essence',
     electricity: 'Électricité (Recharge)',
 
-    // ✅ Encyclopédie Complète d'Entretien (Ajoutée)
+    // ✅ Encyclopédie Complète d'Entretien
     evMaintenance: 'Entretien VE',
     engineOil: 'Huile Moteur',
     oilFilter: 'Filtre à Huile',
@@ -546,8 +561,12 @@ export const AppProvider = ({ children }) => {
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   const changeLang = (newLang) => setLang(newLang);
   
+  // ✅ إضافة تحقق أمني إضافي لمنع حفظ سيارة بعداد سالب أو صفر
   const addNewCar = (carData) => {
     try {
+      if (Number(carData.odometer) < 0) {
+        throw new Error("Invalid Odometer");
+      }
       const newCar = { ...carData, id: Date.now().toString() };
       const updatedVehicles = [...vehicles, newCar];
       localStorage.setItem('savedCar', JSON.stringify(newCar));
@@ -556,12 +575,19 @@ export const AppProvider = ({ children }) => {
       setVehicles(updatedVehicles);
     } catch (error) {
       console.error("Storage Error:", error);
-      alert(t('storageFull') || 'مساحة التخزين ممتلئة. يرجى اختيار صورة أصغر الحجم أو حذف بعض البيانات.');
+      if (error.message === "Invalid Odometer") {
+        alert(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة.');
+      } else {
+        alert(t('storageFull') || 'مساحة التخزين ممتلئة. يرجى اختيار صورة أصغر الحجم أو حذف بعض البيانات.');
+      }
     }
   };
 
   const updateCar = (carId, updatedData) => {
     try {
+      if (updatedData.odometer && Number(updatedData.odometer) < 0) {
+         throw new Error("Invalid Odometer");
+      }
       const updatedVehicles = vehicles.map(v => v.id === carId ? { ...v, ...updatedData } : v);
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
       
@@ -573,7 +599,11 @@ export const AppProvider = ({ children }) => {
       setVehicles(updatedVehicles);
     } catch (error) {
       console.error("Storage Error:", error);
-      alert(t('storageError') || 'مساحة التخزين ممتلئة. تعذر حفظ التعديلات.');
+      if (error.message === "Invalid Odometer") {
+        alert(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة.');
+      } else {
+        alert(t('storageError') || 'مساحة التخزين ممتلئة. تعذر حفظ التعديلات.');
+      }
     }
   };
 
