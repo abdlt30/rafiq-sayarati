@@ -1,12 +1,11 @@
 import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, AlertCircle, CheckCircle } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal'; 
 import OptionPicker from '../components/ui/OptionPicker'; 
 
 const EMPTY_FORM = { date: '', type: '', cost: '', nextKm: '' };
-const MAX_CUSTOM_TYPE_LEN = 30;
 
 export default function Maintenance() {
   const { currentCar, t, currency, dataVersion, bumpDataVersion } = useContext(AppContext);
@@ -21,30 +20,12 @@ export default function Maintenance() {
 
   const toastTimeoutRef = useRef(null);
 
-  /* ===================== تصنيف السيارة ===================== */
-  // ✅ FIX: دعم phev (مثل Fuel.jsx)
+  /* ✅ 1. تحديد نوع السيارة - يدعم PHEV */
   const isElectric = currentCar?.powertrain === 'ev';
   const isHybrid = currentCar?.powertrain === 'hybrid' || currentCar?.powertrain === 'phev';
+  const isTruck = currentCar?.category === 'truck';
 
-  /* ===================== Toast آمن ===================== */
-  const showToast = useCallback((message, type = 'error') => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setToast({ show: true, message, type });
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 4000);
-  }, []);
-
-  const dismissToast = () => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setToast({ show: false, message: '', type: 'success' });
-  };
-
-  useEffect(() => () => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-  }, []);
-
-  /* ===================== قوائم الصيانة ===================== */
+  /* ✅ 2. قوائم الصيانة حسب نوع السيارة */
   const iceTypes = useMemo(() => [
     { value: 'oilChange', label: t('engineOil') || 'زيت المحرك' },
     { value: 'oilFilter', label: t('oilFilter') || 'فلتر الزيت' },
@@ -68,8 +49,7 @@ export default function Maintenance() {
     { value: 'softwareUpdate', label: t('softwareUpdate') || 'تحديث برمجي' },
     { value: 'coolant', label: t('coolant') || 'سائل التبريد' },
     { value: 'brakeFluid', label: t('brakeFluid') || 'سائل الفرامل' },
-    // ✅ إصلاح إملائي: "أحادي السرعة" أدق هندسياً
-    { value: 'transmissionOil', label: t('transmissionOil') || 'زيت ناقل الحركة (أحادي السرعة)' },
+    { value: 'transmissionOil', label: t('transmissionOil') || 'زيت ناقل الحركة (أحادي)' },
     { value: 'cabinFilter', label: t('cabinFilter') || 'فلتر هواء المقصورة' },
     { value: 'tires', label: t('tires') || 'إطارات' },
     { value: 'brakes', label: t('brakes') || 'فرامل' },
@@ -77,49 +57,74 @@ export default function Maintenance() {
     { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
   ], [t]);
 
-  const hybridTypes = useMemo(() => [
-    ...iceTypes.filter(item => item.value !== 'otherMaintenance'),
-    ...evTypes.filter(item => ['batteryCheck', 'softwareUpdate', 'transmissionOil'].includes(item.value)),
-    { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
-  ], [iceTypes, evTypes, t]);
+  const truckExtras = useMemo(() => [
+    { value: 'airBrakes', label: t('airBrakes') || 'فرامل هوائية' },
+    { value: 'adBlue', label: t('adBlue') || 'سائل AdBlue' },
+    { value: 'chassisLubrication', label: t('chassisLubrication') || 'تشحيم الشاسيه' },
+    { value: 'engineHours', label: t('engineHours') || 'ساعات المحرك' }
+  ], [t]);
 
-  // ✅ FIX: أنواع مكررة في hybridTypes (transmissionOil تظهر مرتين: من iceTypes ومن evTypes)
-  //    نُزيل التكرار بفلترة النوع
-  const hybridTypesDedup = useMemo(() => {
-    const seen = new Set();
-    return hybridTypes.filter(item => {
-      if (seen.has(item.value)) return false;
-      seen.add(item.value);
-      return true;
-    });
-  }, [hybridTypes]);
-
+  /* ✅ 3. اختيار القائمة الأساسية حسب نوع السيارة */
   const baseTypes = useMemo(() => {
     if (isElectric) return evTypes;
-    if (isHybrid) return hybridTypesDedup;
+    if (isHybrid) {
+      return [
+        ...iceTypes.filter(i => i.value !== 'otherMaintenance'),
+        ...evTypes.filter(i => ['batteryCheck', 'softwareUpdate', 'transmissionOil'].includes(i.value)),
+        { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
+      ];
+    }
+    if (isTruck) {
+      return [
+        ...iceTypes.filter(i => i.value !== 'otherMaintenance'),
+        ...truckExtras,
+        { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
+      ];
+    }
     return iceTypes;
-  }, [isElectric, isHybrid, evTypes, hybridTypesDedup, iceTypes]);
+  }, [isElectric, isHybrid, isTruck, iceTypes, evTypes, truckExtras, t]);
 
-  const allTypes = useMemo(() => [
-    ...baseTypes,
-    ...customTypes.map(ct => ({ value: ct, label: ct }))
-  ], [baseTypes, customTypes]);
+  const allTypes = useMemo(() => {
+    const custom = (customTypes || []).map(ct => ({ value: ct, label: ct }));
+    return [...baseTypes, ...custom];
+  }, [baseTypes, customTypes]);
 
-  /* ===================== تحميل البيانات ===================== */
+  /* ===================== Toast ===================== */
+  const showToast = useCallback((message, type = 'error') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ show: true, message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  }, []);
+
+  const dismissToast = () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ show: false, message: '', type: 'success' });
+  };
+
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+  }, []);
+
+  /* ===================== Load Data ===================== */
   const loadData = useCallback(() => {
     try {
-      if (currentCar) {
-        const allMaintenance = dbService.getMaintenance() || [];
-        const carMaintenance = allMaintenance.filter(r => r.carId === currentCar.id);
-        setRecords([...carMaintenance].sort((a, b) => 
-          new Date(b.date || 0) - new Date(a.date || 0)
-        ));
-        const types = dbService.getCustomTypes() || [];
-        setCustomTypes(Array.isArray(types) ? types : []);
-      } else {
+      if (!currentCar) {
         setRecords([]);
         setCustomTypes([]);
+        return;
       }
+      const allMaintenance = dbService.getMaintenance() || [];
+      const carMaintenance = allMaintenance.filter(r => r.carId === currentCar.id);
+      // ✅ ترتيب مستقر باستخدام localeCompare (يعمل مع ISO dates)
+      const sorted = [...carMaintenance].sort((a, b) =>
+        (b.date || '').localeCompare(a.date || '')
+      );
+      setRecords(sorted);
+
+      const types = dbService.getCustomTypes() || [];
+      setCustomTypes(Array.isArray(types) ? types : []);
     } catch (e) {
       console.error('loadData failed:', e);
       setRecords([]);
@@ -129,25 +134,19 @@ export default function Maintenance() {
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
-  /* ===================== إضافة نوع مخصص ===================== */
+  /* ===================== Add Custom Type ===================== */
   const handleAddCustomType = () => {
-    const input = window.prompt(t('enterCustomTypeName') || 'أدخل اسم نوع الصيانة الجديد:');
-    if (input === null) return; // ألغى المستخدم
+    const newType = window.prompt(t('enterCustomTypeName') || 'أدخل اسم نوع الصيانة الجديد:');
+    if (!newType) return;
 
-    const trimmed = String(input).trim();
-    if (trimmed === '') {
-      return showToast('الاسم لا يمكن أن يكون فارغاً.', 'error');
-    }
-    if (trimmed.length > MAX_CUSTOM_TYPE_LEN) {
-      return showToast(`الاسم طويل جداً (الحد الأقصى ${MAX_CUSTOM_TYPE_LEN} حرفاً).`, 'error');
-    }
+    const trimmed = newType.trim();
+    if (trimmed === '') return;
 
-    // ✅ رفض التكرار (حساس لحالة الأحرف)
-    const lower = trimmed.toLowerCase();
-    const existing = [...baseTypes.map(x => x.label), ...customTypes]
-      .some(x => String(x).toLowerCase() === lower);
-    if (existing) {
-      return showToast('هذا النوع موجود مسبقاً.', 'error');
+    // ✅ منع التكرار (case-insensitive)
+    const exists = allTypes.some(t => t.label.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      showToast(t('typeAlreadyExists') || 'هذا النوع موجود بالفعل.', 'error');
+      return;
     }
 
     try {
@@ -156,51 +155,42 @@ export default function Maintenance() {
       setFormData(prev => ({ ...prev, type: trimmed }));
     } catch (e) {
       console.error('addCustomType failed:', e);
-      showToast(t('errorSaving') || 'حدث خطأ أثناء إضافة النوع.', 'error');
+      showToast(t('errorSaving') || 'حدث خطأ أثناء الإضافة.', 'error');
     }
   };
 
-  /* ===================== حفظ ===================== */
+  /* ===================== Save ===================== */
   const handleSave = (e) => {
     e.preventDefault();
     if (!currentCar) return;
 
+    // ✅ تحقق يدوي شامل
     const isBlank = (v) => v === '' || v === undefined || v === null;
-
-    // ✅ 1. حقول إلزامية
-    if (!formData.date || isBlank(formData.type) || isBlank(formData.cost)) {
-      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة الحقول المطلوبة.', 'error');
+    if (isBlank(formData.date) || isBlank(formData.type) || isBlank(formData.cost)) {
+      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
     }
 
-    // ✅ 2. تحقق رقمي من التكلفة
     const costNum = Number(formData.cost);
     if (!Number.isFinite(costNum) || costNum < 0) {
-      return showToast(t('invalidNumbers') || 'الرجاء إدخال قيمة صحيحة للتكلفة.', 'error');
+      return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة.', 'error');
     }
 
-    // ✅ 3. تحقق رياضي من nextKm (فارغ → null، وإلا يجب أن يكون > عداد السيارة)
-    let nextKmValue = null;
+    // ✅ nextKm: null إذا فارغ، وإلا يجب أن يكون صحيحاً موجباً
+    let nextKmNum = null;
     if (!isBlank(formData.nextKm)) {
-      const nkNum = Number(formData.nextKm);
-      if (!Number.isFinite(nkNum) || nkNum <= 0) {
-        return showToast('العداد المستهدف يجب أن يكون رقماً موجباً.', 'error');
+      const n = Number(formData.nextKm);
+      if (!Number.isFinite(n) || n < 0) {
+        return showToast(t('invalidNumbers') || 'الرجاء إدخال عداد صحيح للصيانة القادمة.', 'error');
       }
-      const carOdo = Number(currentCar.odometer) || 0;
-      if (nkNum <= carOdo) {
-        return showToast(
-          `العداد المستهدف (${nkNum.toLocaleString()}) يجب أن يكون أكبر من عداد السيارة الحالي (${carOdo.toLocaleString()}).`,
-          'error'
-        );
-      }
-      nextKmValue = nkNum;
+      nextKmNum = Math.round(n); // ✅ عداد يجب أن يكون صحيحاً
     }
 
     const data = { 
       carId: currentCar.id, 
       date: formData.date,
       type: formData.type,
-      cost: costNum, 
-      nextKm: nextKmValue 
+      cost: costNum,
+      nextKm: nextKmNum
     };
     
     try {
@@ -209,26 +199,24 @@ export default function Maintenance() {
       } else {
         dbService.addMaintenance(data);
       }
-      
-      loadData(); 
+      loadData();
+      bumpDataVersion(); // ✅ يُحدّث Dashboard
       closeModal();
-      bumpDataVersion?.(); // ✅ يُحدّث Dashboard
-      showToast(t('saveSuccess') || 'تم حفظ البيانات بنجاح!', 'success');
+      showToast(t('saveSuccess') || 'تم الحفظ بنجاح!', 'success');
     } catch (error) {
       console.error("خطأ في حفظ الصيانة:", error);
       showToast(t('errorSaving') || 'حدث خطأ أثناء الحفظ.', 'error');
     }
   };
 
-  /* ===================== حذف ===================== */
+  /* ===================== Delete ===================== */
   const handleDelete = () => {
     if (!deleteId) return;
     try {
       dbService.deleteMaintenance(deleteId);
-      loadData(); 
-      bumpDataVersion?.(); // ✅
+      loadData();
+      bumpDataVersion(); // ✅ يُحدّث Dashboard
       setDeleteId(null);
-      showToast('تم حذف السجل.', 'success');
     } catch (e) {
       console.error('deleteMaintenance failed:', e);
       setDeleteId(null);
@@ -237,11 +225,13 @@ export default function Maintenance() {
   };
 
   /* ===================== Modals ===================== */
+  const defaultType = baseTypes[0]?.value || 'otherMaintenance';
+
   const openAddModal = () => {
     setEditingId(null);
     setFormData({ 
       date: new Date().toISOString().split('T')[0], 
-      type: baseTypes[0]?.value || 'otherMaintenance',
+      type: defaultType,
       cost: '', 
       nextKm: '' 
     });
@@ -252,7 +242,7 @@ export default function Maintenance() {
     setEditingId(record.id);
     setFormData({ 
       date: record.date || '', 
-      type: record.type || (baseTypes[0]?.value || 'otherMaintenance'),
+      type: record.type || defaultType, 
       cost: record.cost != null ? String(record.cost) : '', 
       nextKm: record.nextKm != null ? String(record.nextKm) : '' 
     });
@@ -265,19 +255,26 @@ export default function Maintenance() {
     setFormData(EMPTY_FORM);
   };
 
-  /* ===================== Render ===================== */
+  /* ✅ رسالة الحذف — استخدام مفتاح موجود بدلاً من confirmDeleteMsg غير المُعرَّف */
+  const deleteMessage = useMemo(() => {
+    const msg = t('confirmDeleteMsg');
+    return msg === 'confirmDeleteMsg' 
+      ? 'هل أنت متأكد من حذف سجل الصيانة هذا؟' 
+      : msg;
+  }, [t]);
+
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* ✅ Toast */}
+      {/* ✅ الإشعار العائم */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
           <button 
-            type="button" 
+            type="button"
             onClick={dismissToast} 
-            aria-label="إغلاق الإشعار"
+            aria-label="إغلاق"
             className="ml-2 opacity-70 hover:opacity-100"
           >
             <X size={16} />
@@ -309,24 +306,21 @@ export default function Maintenance() {
                   <p className="font-bold text-[var(--text)] text-sm">
                     {allTypes.find(dt => dt.value === record.type)?.label || record.type}
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date || '—'}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="text-end">
                   <p className="font-extrabold text-[var(--primary)] text-sm">
-                    {Number(record.cost || 0).toLocaleString()}{' '}
-                    <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
+                    {Number(record.cost || 0).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
                   {record.nextKm ? (
                     <p className="text-[10px] text-[var(--text-muted)] flex items-center justify-end gap-1 mt-0.5">
                       <Gauge size={10} /> {Number(record.nextKm).toLocaleString()} KM
                     </p>
                   ) : (
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                      {t('noNextMaintenance') || 'لا توجد صيانة قادمة'}
-                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t('noNextMaintenance') || 'لا توجد صيانة قادمة'}</p>
                   )}
                 </div>
                 
@@ -334,7 +328,7 @@ export default function Maintenance() {
                   <button 
                     type="button"
                     onClick={() => openEdit(record)} 
-                    aria-label="تعديل السجل"
+                    aria-label="تعديل"
                     className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"
                   >
                     <Edit2 size={14} />
@@ -342,7 +336,7 @@ export default function Maintenance() {
                   <button 
                     type="button"
                     onClick={() => setDeleteId(record.id)} 
-                    aria-label="حذف السجل"
+                    aria-label="حذف"
                     className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
                   >
                     <Trash2 size={14} />
@@ -369,7 +363,7 @@ export default function Maintenance() {
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
-        message="هل أنت متأكد من حذف سجل الصيانة هذا؟"
+        message={deleteMessage}
         variant="danger" 
         confirmText={t('confirmDeleteBtn') || 'نعم، احذف'} 
       />
@@ -391,9 +385,7 @@ export default function Maintenance() {
             
             <div className="space-y-3 overflow-y-auto pb-2">
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">
-                  {t('date') || 'التاريخ'}
-                </label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input 
                   type="date" 
                   value={formData.date} 
@@ -404,9 +396,7 @@ export default function Maintenance() {
 
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-[11px] font-bold text-[var(--text-muted)] block">
-                    {t('maintenanceType') || 'نوع الصيانة'}
-                  </label>
+                  <label className="text-[11px] font-bold text-[var(--text-muted)] block">{t('maintenanceType') || 'نوع الصيانة'}</label>
                   <button 
                     type="button" 
                     onClick={handleAddCustomType} 
@@ -424,9 +414,7 @@ export default function Maintenance() {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">
-                  {t('cost') || 'التكلفة'} ({currency})
-                </label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
                 <input 
                   type="number" 
                   inputMode="decimal" 
@@ -440,23 +428,17 @@ export default function Maintenance() {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">
-                  {t('nextOdometer') || 'العداد للصيانة القادمة'} (KM)
-                </label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('nextOdometer') || 'العداد للصيانة القادمة'} (KM)</label>
                 <input 
                   type="number" 
                   inputMode="numeric" 
                   min="0" 
+                  step="1" 
                   placeholder={t('optional') || 'اختياري'} 
                   value={formData.nextKm} 
                   onChange={e => setFormData({...formData, nextKm: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
                 />
-                {formData.nextKm && Number(formData.nextKm) > 0 && Number(formData.nextKm) <= (Number(currentCar?.odometer) || 0) && (
-                  <p className="text-[10px] text-yellow-500 mt-1">
-                    ⚠️ العداد المستهدف أقل من أو يساوي العداد الحالي ({Number(currentCar?.odometer || 0).toLocaleString()} KM)
-                  </p>
-                )}
               </div>
             </div>
 
