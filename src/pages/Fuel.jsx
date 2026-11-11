@@ -3,7 +3,7 @@ import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity, Zap, BatteryCharging } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal'; 
-import OptionPicker from '../components/ui/OptionPicker'; // ✅ استدعاء القائمة المخصصة
+import OptionPicker from '../components/ui/OptionPicker'; 
 
 export default function Fuel() {
   const { currentCar, updateCar, t, currency } = useContext(AppContext); 
@@ -13,13 +13,13 @@ export default function Fuel() {
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null); 
   
-  // ✅ إضافة حقل energyType للنموذج لدعم الهجين
   const [formData, setFormData] = useState({ date: '', odometer: '', energyType: 'gasoline', amount: '', cost: '' });
 
-  const isElectric = currentCar?.powertrain === 'ev';
-  const isHybrid = currentCar?.powertrain === 'hybrid';
-  
-  // خيارات مصدر الطاقة للسيارات الهجينة
+  // ✅ 1. تحديد نوع السيارة بدقة (دعم EV و Hybrid و PHEV)
+  const powertrain = currentCar?.powertrain || 'ice'; 
+  const isElectric = powertrain === 'ev';
+  const isHybrid = powertrain === 'hybrid' || powertrain === 'phev'; // دعم الهجين القابل للشحن
+
   const energyOptions = [
     { value: 'gasoline', label: t('gasoline') || 'بنزين' },
     { value: 'electricity', label: t('electricity') || 'كهرباء (شحن)' }
@@ -36,6 +36,7 @@ export default function Fuel() {
 
   useEffect(() => { loadData(); }, [currentCar]);
 
+  // ✅ 2. إصلاح خوارزمية حساب الاستهلاك (دعم البيانات القديمة)
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
     const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
@@ -45,9 +46,15 @@ export default function Fuel() {
       if (index > 0) {
         const prevRecord = sortedByOdometer[index - 1];
         const distance = Number(record.odometer) - Number(prevRecord.odometer);
-        // حساب الاستهلاك فقط إذا كان نفس النوع (بنزين مع بنزين، كهرباء مع كهرباء)
-        if (distance > 0 && Number(record.amount) > 0 && record.energyType === prevRecord.energyType) {
-          consumption = ((Number(record.amount) / distance) * 100).toFixed(1);
+        
+        // ✅ إصلاح: القيمة الافتراضية 'gasoline' للسجلات القديمة لمنع أخطاء المقارنة
+        const currentEnergy = record.energyType || 'gasoline';
+        const prevEnergy = prevRecord.energyType || 'gasoline';
+        
+        const currentAmount = Number(record.amount || record.liters || 0);
+
+        if (distance > 0 && currentAmount > 0 && currentEnergy === prevEnergy) {
+          consumption = ((currentAmount / distance) * 100).toFixed(1);
         }
       }
       return { ...record, consumption };
@@ -55,17 +62,31 @@ export default function Fuel() {
     return calculated.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [records]);
 
+  // ✅ 3. إصلاح أمني: التحقق من صحة البيانات قبل الحفظ
   const handleSave = (e) => {
     e.preventDefault();
     if (!currentCar) return; 
     
+    let finalEnergyType = 'gasoline';
+    if (isElectric) finalEnergyType = 'electricity';
+    else if (isHybrid) finalEnergyType = formData.energyType;
+
+    const odoNum = Number(formData.odometer);
+    const amountNum = Number(formData.amount);
+    const costNum = Number(formData.cost);
+
+    if (isNaN(odoNum) || isNaN(amountNum) || isNaN(costNum) || odoNum < 0 || amountNum < 0 || costNum < 0) {
+      alert(t('fillRequiredFields') || 'الرجاء إدخال أرقام صحيحة.');
+      return;
+    }
+
     const data = { 
       carId: currentCar.id, 
       date: formData.date,
-      odometer: Number(formData.odometer), 
-      energyType: isElectric ? 'electricity' : (isHybrid ? formData.energyType : 'gasoline'),
-      amount: Number(formData.amount), // نخزن اللترات أو kWh هنا
-      cost: Number(formData.cost) 
+      odometer: odoNum, 
+      energyType: finalEnergyType,
+      amount: amountNum, 
+      cost: costNum 
     };
     
     try {
@@ -75,6 +96,7 @@ export default function Fuel() {
         dbService.addFuel(data);
       }
 
+      // تحديث العداد الرئيسي للسيارة
       if (data.odometer > (currentCar.odometer || 0)) {
         updateCar(currentCar.id, { odometer: data.odometer });
       }
@@ -83,7 +105,7 @@ export default function Fuel() {
       closeModal();
     } catch (error) {
       console.error("خطأ أثناء حفظ البيانات:", error);
-      alert("حدث خطأ أثناء الحفظ.");
+      alert(t('errorSaving') || "حدث خطأ أثناء الحفظ.");
     }
   };
 
@@ -100,19 +122,20 @@ export default function Fuel() {
     setFormData({ 
       date: record.date, 
       odometer: record.odometer, 
-      energyType: record.energyType || 'gasoline',
-      amount: record.amount || record.liters, // دعم البيانات القديمة
+      energyType: record.energyType || (isElectric ? 'electricity' : 'gasoline'),
+      amount: record.amount || record.liters || '',
       cost: record.cost 
     });
     setIsModalOpen(true);
   };
 
+  // ✅ 4. إصلاح UX: تعيين النوع الافتراضي بناءً على السيارة
   const openAddModal = () => {
     setEditingId(null);
     setFormData({ 
       date: new Date().toISOString().split('T')[0], 
       odometer: currentCar?.odometer || '', 
-      energyType: 'gasoline',
+      energyType: isElectric ? 'electricity' : 'gasoline',
       amount: '', 
       cost: '' 
     });
@@ -146,6 +169,7 @@ export default function Fuel() {
           {recordsWithConsumption.map(record => {
             const isEnergyElectric = record.energyType === 'electricity';
             const unit = isEnergyElectric ? 'kWh' : 'L';
+            const amountToShow = record.amount || record.liters;
             
             return (
               <div key={record.id} className={`bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm transition-colors ${isEnergyElectric ? 'hover:border-green-500/30' : 'hover:border-blue-500/30'}`}>
@@ -158,7 +182,7 @@ export default function Fuel() {
                     <p className="font-bold text-[var(--text)] text-sm">
                       {Number(record.cost).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date} • {record.amount} {unit}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date} • {amountToShow} {unit}</p>
                   </div>
                 </div>
 
@@ -221,7 +245,7 @@ export default function Fuel() {
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
               
-              {/* ✅ اختيار مصدر الطاقة للسيارات الهجينة فقط */}
+              {/* خيار مصدر الطاقة يظهر فقط للسيارات الهجينة */}
               {isHybrid && (
                 <div className="animate-fade-in">
                   <OptionPicker 
