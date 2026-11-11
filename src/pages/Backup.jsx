@@ -6,19 +6,27 @@ import { Download, Upload, Shield, AlertTriangle, CheckCircle } from 'lucide-rea
 export default function Backup() {
   const { t } = useContext(AppContext);
   const fileInputRef = useRef(null);
-  const [status, setStatus] = useState({ type: '', message: '' }); // لحالة النجاح أو الفشل
+  const [status, setStatus] = useState({ type: '', message: '' });
 
-  // دالة تصدير البيانات
+  // ✅ 1. تحديث دالة التصدير لتشمل كل شيء
   const exportData = () => {
     try {
       const data = {
-        car: JSON.parse(localStorage.getItem('savedCar')),
+        currentCar: JSON.parse(localStorage.getItem('savedCar')) || null,
         vehicles: JSON.parse(localStorage.getItem('vehicles')) || [],
-        fuel: dbService.getFuel(),
-        expenses: dbService.getExpenses(),
-        maintenance: dbService.getMaintenance(),
-        documents: dbService.getDocuments(),
-        reminders: dbService.getReminders(), // تمت إضافة التذكيرات
+        fuel: dbService.getFuel() || [],
+        maintenance: dbService.getMaintenance() || [],
+        expenses: dbService.getExpenses() || [],
+        incomes: dbService.getIncomes() || [], // ✅ إضافة الإيرادات
+        documents: dbService.getDocuments() || [],
+        reminders: dbService.getReminders() || [],
+        customTypes: dbService.getCustomTypes() || [], // ✅ إضافة الأنواع المخصصة
+        settings: { // ✅ إضافة الإعدادات واسم المستخدم
+          theme: localStorage.getItem('theme') || 'dark',
+          lang: localStorage.getItem('lang') || 'ar',
+          currency: localStorage.getItem('currency') || 'MAD',
+          user_name: localStorage.getItem('user_name') || ''
+        },
         exportDate: new Date().toISOString()
       };
       
@@ -32,11 +40,12 @@ export default function Backup() {
       URL.revokeObjectURL(url);
       setStatus({ type: 'success', message: t('exportSuccess') || 'تم تصدير البيانات بنجاح!' });
     } catch (error) {
+      console.error("Export Error:", error);
       setStatus({ type: 'error', message: 'حدث خطأ أثناء تصدير البيانات.' });
     }
   };
 
-  // دالة استيراد البيانات
+  // ✅ 2. تحديث دالة الاستيراد لاستعادة كل شيء
   const handleImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -46,31 +55,43 @@ export default function Backup() {
       try {
         const data = JSON.parse(event.target.result);
         
-        // التحقق من صحة الملف (هل يحتوي على بيانات السيارات على الأقل؟)
-        if (!data.vehicles && !data.car) {
+        // التحقق من صحة الملف
+        if (!data.vehicles && !data.currentCar) {
           throw new Error("ملف غير صالح");
         }
 
         if (window.confirm(t('confirmImport') || 'تحذير: سيتم استبدال جميع بياناتك الحالية بالبيانات المستوردة. هل أنت متأكد؟')) {
-          if (data.car) localStorage.setItem('savedCar', JSON.stringify(data.car));
+          
+          // استعادة السيارات
+          if (data.currentCar) localStorage.setItem('savedCar', JSON.stringify(data.currentCar));
           if (data.vehicles) localStorage.setItem('vehicles', JSON.stringify(data.vehicles));
           
-          // حفظ بيانات الـ dbService
+          // استعادة سجلات قاعدة البيانات
           if (data.fuel) localStorage.setItem('fuel_records', JSON.stringify(data.fuel));
-          if (data.expenses) localStorage.setItem('expenses_records', JSON.stringify(data.expenses));
           if (data.maintenance) localStorage.setItem('maintenance_records', JSON.stringify(data.maintenance));
+          if (data.expenses) localStorage.setItem('expenses_records', JSON.stringify(data.expenses));
+          if (data.incomes) localStorage.setItem('income_records', JSON.stringify(data.incomes)); // ✅ استعادة الإيرادات
           if (data.documents) localStorage.setItem('documents_records', JSON.stringify(data.documents));
           if (data.reminders) localStorage.setItem('reminders_records', JSON.stringify(data.reminders));
+          if (data.customTypes) localStorage.setItem('custom_maintenance_types', JSON.stringify(data.customTypes)); // ✅ استعادة الأنواع المخصصة
+
+          // استعادة الإعدادات واسم المستخدم
+          if (data.settings) {
+            if (data.settings.theme) localStorage.setItem('theme', data.settings.theme);
+            if (data.settings.lang) localStorage.setItem('lang', data.settings.lang);
+            if (data.settings.currency) localStorage.setItem('currency', data.settings.currency);
+            if (data.settings.user_name) localStorage.setItem('user_name', data.settings.user_name);
+          }
 
           alert(t('importSuccess') || 'تم استيراد البيانات بنجاح! سيتم إعادة تشغيل التطبيق لتحديث الواجهة.');
-          window.location.reload(); // إعادة التشغيل لتحديث الـ Context
+          window.location.reload(); 
         }
       } catch (error) {
+        console.error("Import Error:", error);
         setStatus({ type: 'error', message: t('importError') || 'خطأ: الملف غير صالح أو تالف.' });
       }
     };
     reader.readAsText(file);
-    // تصفير الحقل ليتمكن المستخدم من اختيار نفس الملف مرة أخرى إذا أراد
     e.target.value = null; 
   };
 
@@ -82,7 +103,7 @@ export default function Backup() {
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('backup') || 'النسخ الاحتياطي'}</h1>
       </div>
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] p-6 rounded-2xl space-y-6">
+      <div className="bg-[var(--surface)] border border-[var(--border)] p-6 rounded-2xl space-y-6 shadow-sm">
         <div className="flex items-center gap-3 text-[var(--success)]">
           <Shield size={28} />
           <h2 className="text-lg font-bold text-[var(--text)]">{t('dataProtection') || 'حماية البيانات'}</h2>
@@ -94,7 +115,7 @@ export default function Backup() {
 
         {/* رسائل الحالة */}
         {status.message && (
-          <div className={`p-3 rounded-xl flex items-center gap-2 text-sm font-bold ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+          <div className={`p-3 rounded-xl flex items-center gap-2 text-sm font-bold animate-fade-in ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
             {status.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
             {status.message}
           </div>
@@ -104,7 +125,7 @@ export default function Backup() {
           {/* زر التصدير */}
           <button 
             onClick={exportData} 
-            className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
+            className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-600 active:scale-[0.98] transition-all shadow-lg shadow-blue-500/20"
           >
             <Download size={18} /> {t('exportData') || 'تصدير البيانات (JSON)'}
           </button>
@@ -119,7 +140,7 @@ export default function Backup() {
           />
           <button 
             onClick={() => fileInputRef.current.click()} 
-            className="w-full bg-[var(--surface-2)] text-[var(--text)] border border-[var(--border)] font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-[var(--border)] transition-colors"
+            className="w-full bg-[var(--surface-2)] text-[var(--text)] border border-[var(--border)] font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-[var(--border)] active:scale-[0.98] transition-all"
           >
             <Upload size={18} /> {t('importData') || 'استيراد البيانات'}
           </button>
