@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, BatteryCharging, Zap } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2 } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal'; 
 import OptionPicker from '../components/ui/OptionPicker'; 
 
@@ -12,40 +12,69 @@ export default function Maintenance() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [formData, setFormData] = useState({ date: '', type: 'oilChange', cost: '', nextKm: '' });
+  const [formData, setFormData] = useState({ date: '', type: '', cost: '', nextKm: '' });
   const [customTypes, setCustomTypes] = useState([]);
 
   // ✅ 1. تحديد نوع السيارة
   const isElectric = currentCar?.powertrain === 'ev';
   const isHybrid = currentCar?.powertrain === 'hybrid';
+  const isTruck = currentCar?.category === 'truck'; // يمكن إضافته مستقبلاً
 
-  // ✅ 2. قائمة صيانة السيارات التقليدية (ICE)
+  // ✅ 2. محرك الصيانة الديناميكي: قوائم مخصصة لكل نوع
   const iceTypes = [
-    { value: 'oilChange', label: t('oilChange') || 'تغيير زيت' },
+    { value: 'oilChange', label: t('engineOil') || 'زيت المحرك' },
+    { value: 'oilFilter', label: t('oilFilter') || 'فلتر الزيت' },
+    { value: 'airFilter', label: t('airFilter') || 'فلتر الهواء' },
+    { value: 'cabinFilter', label: t('cabinFilter') || 'فلتر هواء المقصورة' },
+    { value: 'sparkPlugs', label: t('sparkPlugs') || 'شمعات الاحتراق' },
+    { value: 'timingBelt', label: t('timingBelt') || 'سير التوقيت' },
+    { value: 'fuelFilter', label: t('fuelFilter') || 'فلتر الوقود' },
+    { value: 'coolant', label: t('coolant') || 'سائل التبريد' },
+    { value: 'brakeFluid', label: t('brakeFluid') || 'سائل الفرامل' },
+    { value: 'transmissionOil', label: t('transmissionOil') || 'زيت ناقل الحركة' },
+    { value: 'battery12v', label: t('battery12v') || 'بطارية 12V' },
     { value: 'tires', label: t('tires') || 'إطارات' },
     { value: 'brakes', label: t('brakes') || 'فرامل' },
-    { value: 'battery', label: t('battery') || 'بطارية 12V' },
-    { value: 'airFilter', label: t('airFilter') || 'فلتر هواء' },
     { value: 'fullInspection', label: t('fullInspection') || 'فحص شامل' },
-    { value: 'other', label: t('otherMaintenance') || 'أخرى' }
+    { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
   ];
 
-  // ✅ 3. قائمة صيانة السيارات الكهربائية (EV)
   const evTypes = [
     { value: 'batteryCheck', label: t('batteryCheck') || 'فحص البطارية الرئيسية' },
     { value: 'softwareUpdate', label: t('softwareUpdate') || 'تحديث برمجي' },
+    { value: 'coolant', label: t('coolant') || 'سائل التبريد' },
+    { value: 'brakeFluid', label: t('brakeFluid') || 'سائل الفرامل' },
+    { value: 'transmissionOil', label: t('transmissionOil') || 'زيت ناقل الحركة (أحادي)' },
+    { value: 'cabinFilter', label: t('cabinFilter') || 'فلتر هواء المقصورة' },
     { value: 'tires', label: t('tires') || 'إطارات' },
     { value: 'brakes', label: t('brakes') || 'فرامل' },
     { value: 'fullInspection', label: t('fullInspection') || 'فحص شامل' },
-    { value: 'other', label: t('otherMaintenance') || 'أخرى' }
+    { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
   ];
 
-  // ✅ 4. دمج القوائم بناءً على نوع السيارة (الهجينة تأخذ من الاثنين)
-  const baseTypes = isElectric 
-    ? evTypes 
-    : (isHybrid ? [...iceTypes, ...evTypes.filter(ev => !['tires', 'brakes', 'fullInspection', 'other'].includes(ev.value))] : iceTypes);
+  // للسيارات الهجينة: نجمع بين القائمتين (لأنها تحتاج كليهما)
+  const hybridTypes = [
+    ...iceTypes.filter(item => item.value !== 'otherMaintenance'),
+    ...evTypes.filter(item => ['batteryCheck', 'softwareUpdate', 'transmissionOil'].includes(item.value)),
+    { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
+  ];
 
-  // دمج الأنواع المخصصة
+  // للشاحنات (مستقبلياً): نضيف بنود خاصة
+  const truckTypes = [
+    ...iceTypes.filter(item => item.value !== 'otherMaintenance'),
+    { value: 'airBrakes', label: t('airBrakes') || 'فرامل هوائية' },
+    { value: 'adBlue', label: t('adBlue') || 'سائل AdBlue' },
+    { value: 'chassisLubrication', label: t('chassisLubrication') || 'تشحيم الشاسيه' },
+    { value: 'engineHours', label: t('engineHours') || 'ساعات المحرك' },
+    { value: 'otherMaintenance', label: t('otherMaintenance') || 'أخرى' }
+  ];
+
+  // اختيار القائمة حسب نوع السيارة
+  let baseTypes = iceTypes;
+  if (isElectric) baseTypes = evTypes;
+  else if (isHybrid) baseTypes = hybridTypes;
+  else if (isTruck) baseTypes = truckTypes;
+
   const allTypes = [
     ...baseTypes,
     ...customTypes.map(ct => ({ value: ct, label: ct }))
@@ -115,7 +144,7 @@ export default function Maintenance() {
     setEditingId(null);
     setFormData({ 
       date: new Date().toISOString().split('T')[0], 
-      type: isElectric ? 'batteryCheck' : 'oilChange', // ✅ القيمة الافتراضية تتغير
+      type: baseTypes[0].value, // القيمة الافتراضية حسب نوع السيارة
       cost: '', 
       nextKm: '' 
     });
@@ -124,56 +153,42 @@ export default function Maintenance() {
 
   const openEdit = (record) => {
     setEditingId(record.id);
-    const typeKeyMap = { 
-      'تغيير زيت': 'oilChange', 'إطارات': 'tires', 'فرامل': 'brakes', 'بطارية': 'battery', 
-      'فلتر هواء': 'airFilter', 'فحص شامل': 'fullInspection', 'أخرى': 'other',
-      'فحص البطارية': 'batteryCheck', 'تحديث برمجي': 'softwareUpdate'
-    };
-    const typeKey = typeKeyMap[record.type] || record.type;
-    
-    setFormData({ date: record.date, type: typeKey, cost: record.cost, nextKm: record.nextKm || '' });
+    setFormData({ date: record.date, type: record.type, cost: record.cost, nextKm: record.nextKm || '' });
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ date: '', type: isElectric ? 'batteryCheck' : 'oilChange', cost: '', nextKm: '' });
+    setFormData({ date: '', type: baseTypes[0].value, cost: '', nextKm: '' });
   };
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('maintenance') || 'الصيانة'}</h1>
       </div>
 
-      {/* قائمة السجلات */}
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
-            {isElectric ? <BatteryCharging size={48} className="opacity-40" /> : <Wrench size={48} className="opacity-40" />}
+            <Wrench size={48} className="opacity-40" />
           </div>
           <p>{t('noMaintenanceRecords') || 'لا توجد سجلات صيانة.'}</p>
         </div>
       ) : (
         <div className="space-y-2">
           {records.map(record => (
-            <div key={record.id} className={`bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm transition-colors ${isElectric ? 'hover:border-green-500/30' : 'hover:border-yellow-500/30'}`}>
+            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm hover:border-yellow-500/30 transition-colors">
               
               <div className="flex items-center gap-3">
-                {/* ✅ تغيير لون وأيقونة الصيانة بناءً على نوع السيارة أو نوع الصيانة */}
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  record.type === 'batteryCheck' || record.type === 'softwareUpdate' 
-                    ? 'bg-green-500/10 text-green-500' 
-                    : 'bg-yellow-500/10 text-yellow-500'
-                }`}>
-                  {record.type === 'batteryCheck' ? <BatteryCharging size={18} /> : record.type === 'softwareUpdate' ? <Zap size={18} /> : <Wrench size={18} />}
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 text-yellow-500 flex items-center justify-center flex-shrink-0">
+                  <Wrench size={18} />
                 </div>
                 <div>
                   <p className="font-bold text-[var(--text)] text-sm">
-                    {baseTypes.find(dt => dt.value === record.type)?.label || record.type}
+                    {allTypes.find(dt => dt.value === record.type)?.label || record.type}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date}</p>
                 </div>
@@ -204,15 +219,13 @@ export default function Maintenance() {
         </div>
       )}
 
-      {/* الزر العائم */}
       <button 
         onClick={openAddModal} 
-        className={`fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 ${isElectric ? 'bg-green-500 shadow-green-500/40' : 'bg-[var(--primary)] shadow-blue-500/40'}`}
+        className="fixed bottom-24 right-6 rtl:left-6 rtl:auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
         <Plus size={28} />
       </button>
 
-      {/* نافذة الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
@@ -223,7 +236,6 @@ export default function Maintenance() {
         confirmText={t('confirmDeleteBtn') || 'نعم، احذف'} 
       />
 
-      {/* نافذة الإضافة/التعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
@@ -248,7 +260,6 @@ export default function Maintenance() {
                   </button>
                 </div>
                 
-                {/* ✅ تمرير القائمة الديناميكية هنا */}
                 <OptionPicker 
                   options={allTypes} 
                   value={formData.type} 
@@ -267,7 +278,7 @@ export default function Maintenance() {
               </div>
             </div>
 
-            <button type="submit" className={`w-full mt-5 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-[0.98] transition-all flex-shrink-0 ${isElectric ? 'bg-green-500 hover:bg-green-600' : 'bg-[var(--primary)] hover:bg-blue-600'}`}>
+            <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex-shrink-0">
               {t('save') || 'حفظ البيانات'}
             </button>
           </form>
