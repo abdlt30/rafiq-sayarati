@@ -1,20 +1,20 @@
 import { useContext, useRef, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { useNavigate } from 'react-router-dom'; // ✅ ضروري للانتقال لصفحة PDF
+import { useNavigate } from 'react-router-dom'; 
 import { 
   Download, Upload, ShieldCheck, AlertTriangle, CheckCircle, 
   Database, ChevronRight, FileSpreadsheet, FileText, Printer 
-} from 'lucide-react'; // ✅ إضافة أيقونات التصدير
+} from 'lucide-react'; 
 
 export default function Backup() {
   const { t, lang, currentCar, currency } = useContext(AppContext);
-  const navigate = useNavigate(); // ✅ دالة التنقل
+  const navigate = useNavigate(); 
   const fileInputRef = useRef(null);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [lastBackup, setLastBackup] = useState('');
 
-  // ✅ جلب تاريخ آخر نسخة احتياطية
+  // جلب تاريخ آخر نسخة احتياطية
   useEffect(() => {
     const savedDate = localStorage.getItem('last_backup_date');
     if (savedDate) {
@@ -65,34 +65,43 @@ export default function Backup() {
     }
   };
 
-  // ✅ 2. تصدير Excel/CSV (جدول بيانات للمحاسب)
+  // ✅ 2. تصدير Excel/CSV (تم إصلاح الترميز والترجمة)
   const exportCSV = () => {
     if (!currentCar) return;
     
     try {
-      const fuel = dbService.getFuel().filter(f => f.carId === currentCar.id).map(f => ({ date: f.date, type: t('fuel'), amount: f.cost, odometer: f.odometer, notes: `${f.liters}L` }));
-      const maint = dbService.getMaintenance().filter(m => m.carId === currentCar.id).map(m => ({ date: m.date, type: m.type, amount: m.cost, odometer: m.nextKm || '', notes: '' }));
-      const exp = dbService.getExpenses().filter(e => e.carId === currentCar.id).map(e => ({ date: e.date, type: e.type, amount: e.cost, odometer: '', notes: '' }));
-      const inc = dbService.getIncomes().filter(i => i.carId === currentCar.id).map(i => ({ date: i.date, type: i.type, amount: i.amount, odometer: '', notes: i.notes || '' }));
+      // ترجمة الأنواع أثناء تجميع البيانات
+      const fuel = dbService.getFuel().filter(f => f.carId === currentCar.id).map(f => ({ date: f.date, type: t('fuel') || 'الوقود', amount: f.cost, odometer: f.odometer, notes: `${f.liters}L` }));
+      const maint = dbService.getMaintenance().filter(m => m.carId === currentCar.id).map(m => ({ date: m.date, type: t(m.type) || m.type, amount: m.cost, odometer: m.nextKm || '', notes: '' }));
+      const exp = dbService.getExpenses().filter(e => e.carId === currentCar.id).map(e => ({ date: e.date, type: t(e.type) || e.type, amount: e.cost, odometer: '', notes: '' }));
+      const inc = dbService.getIncomes().filter(i => i.carId === currentCar.id).map(i => ({ date: i.date, type: t(i.type) || i.type, amount: i.amount, odometer: '', notes: i.notes || '' }));
 
       const allData = [...fuel, ...maint, ...exp, ...inc].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      const headers = [t('date') || 'التاريخ', t('type') || 'النوع', t('amount') || 'المبلغ', t('currency') || 'العملة', t('odometer') || 'العداد', t('notes') || 'ملاحظات'];
+      const headers = [
+        `"${t('date') || 'التاريخ'}"`, 
+        `"${t('type') || 'النوع'}"`, 
+        `"${t('amount') || 'المبلغ'}"`, 
+        `"${t('currency') || 'العملة'}"`, 
+        `"${t('odometer') || 'العداد'}"`, 
+        `"${t('notes') || 'ملاحظات'}"`
+      ];
       const csvRows = [headers.join(',')];
 
       allData.forEach(row => {
         const values = [
-          row.date,
-          `"${row.type}"`,
+          `"${row.date}"`,
+          `"${row.type}"`, 
           row.amount,
-          currency,
-          row.odometer,
+          `"${currency}"`,
+          row.odometer ? `"${row.odometer}"` : '""',
           `"${row.notes}"`
         ];
         csvRows.push(values.join(','));
       });
 
-      const csvString = "\uFEFF" + csvRows.join('\n'); // \uFEFF لدعم اللغة العربية في الإكسيل
+      // ✅ إضافة BOM (\uFEFF) لضمان قراءة العربية في الإكسيل + استخدام \r\n
+      const csvString = "\uFEFF" + csvRows.join('\r\n'); 
       const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -170,9 +179,7 @@ export default function Backup() {
         </div>
       )}
 
-      {/* ==========================================
-          القسم الأول: مركز التصدير (للمحاسب والقراءة)
-         ========================================== */}
+      {/* مركز التصدير */}
       <div>
         <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">{t('exportCenter') || 'مركز التصدير'}</h2>
         
@@ -201,8 +208,8 @@ export default function Backup() {
             <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" />
           </button>
 
-          {/* طباعة */}
-          <button onClick={() => window.print()} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors active:bg-[var(--surface-3)]">
+          {/* ✅ إصلاح: التوجه لصفحة طباعة مخصصة بدلاً من طباعة الواجهة */}
+          <button onClick={() => navigate('/print-data')} className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors active:bg-[var(--surface-3)]">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg"><Printer size={18} /></div>
               <div className="text-start">
@@ -215,9 +222,7 @@ export default function Backup() {
         </div>
       </div>
 
-      {/* ==========================================
-          القسم الثاني: النسخ الاحتياطي (لنقل التطبيق)
-         ========================================== */}
+      {/* النسخ الاحتياطي للنظام */}
       <div className="mt-6">
         <h2 className="text-xs font-bold text-[var(--text-muted)] mb-3 px-1 uppercase tracking-wider">{t('systemBackup') || 'النسخة الاحتياطية للنظام'}</h2>
 
