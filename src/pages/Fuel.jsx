@@ -1,11 +1,10 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity, Zap, BatteryCharging } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal'; 
 
 export default function Fuel() {
-  // ✅ إصلاح 1: استدعاء updateCar من الـ Context لتحديث العداد الرئيسي
   const { currentCar, updateCar, t, currency } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
@@ -14,6 +13,13 @@ export default function Fuel() {
   const [deleteId, setDeleteId] = useState(null); 
   
   const [formData, setFormData] = useState({ date: '', odometer: '', liters: '', cost: '' });
+
+  // ✅ تحديد ما إذا كانت السيارة كهربائية أو هجينة
+  const isElectric = currentCar?.powertrain === 'ev';
+  const isHybrid = currentCar?.powertrain === 'hybrid';
+  
+  // تحديد وحدة القياس (لتر أو كيلوواط)
+  const unit = isElectric ? 'kWh' : 'L';
 
   const loadData = () => {
     if (currentCar) {
@@ -28,6 +34,7 @@ export default function Fuel() {
     loadData();
   }, [currentCar]);
 
+  // ✅ حساب الاستهلاك الديناميكي
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
     const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
@@ -38,6 +45,7 @@ export default function Fuel() {
         const prevRecord = sortedByOdometer[index - 1];
         const distance = Number(record.odometer) - Number(prevRecord.odometer);
         if (distance > 0 && Number(record.liters) > 0) {
+          // حساب L/100km أو kWh/100km
           consumption = ((Number(record.liters) / distance) * 100).toFixed(1);
         }
       }
@@ -54,7 +62,7 @@ export default function Fuel() {
       carId: currentCar.id, 
       date: formData.date,
       odometer: Number(formData.odometer), 
-      liters: Number(formData.liters), 
+      liters: Number(formData.liters), // سيتم تخزين kWh هنا أيضاً للتوحيد
       cost: Number(formData.cost) 
     };
     
@@ -65,7 +73,6 @@ export default function Fuel() {
         dbService.addFuel(data);
       }
 
-      // ✅ إصلاح 2 (السحر هنا): تحديث عداد السيارة الرئيسي إذا كان هذا العداد أكبر
       if (data.odometer > (currentCar.odometer || 0)) {
         updateCar(currentCar.id, { odometer: data.odometer });
       }
@@ -74,7 +81,7 @@ export default function Fuel() {
       closeModal();
     } catch (error) {
       console.error("خطأ أثناء حفظ البيانات:", error);
-      alert("حدث خطأ أثناء الحفظ. تأكد من المدخلات.");
+      alert("حدث خطأ أثناء الحفظ.");
     }
   };
 
@@ -96,7 +103,7 @@ export default function Fuel() {
     setEditingId(null);
     setFormData({ 
       date: new Date().toISOString().split('T')[0], 
-      odometer: currentCar?.odometer || '', // تعبئة العداد الحالي تلقائياً
+      odometer: currentCar?.odometer || '', 
       liters: '', 
       cost: '' 
     });
@@ -113,30 +120,33 @@ export default function Fuel() {
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('fuel') || 'سجل الوقود'}</h1>
+        {/* ✅ تغيير العنوان حسب نوع السيارة */}
+        <h1 className="text-2xl font-bold text-[var(--text)]">
+          {isElectric ? (t('chargingLog') || 'سجل الشحن') : (t('fuel') || 'سجل الوقود')}
+        </h1>
       </div>
 
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
-            <FuelIcon size={48} className="opacity-40" />
+            {isElectric ? <BatteryCharging size={48} className="opacity-40" /> : <FuelIcon size={48} className="opacity-40" />}
           </div>
-          <p>{t('noFuelRecords') || 'لا توجد سجلات وقود.'}</p>
+          <p>{isElectric ? (t('noChargingRecords') || 'لا توجد سجلات شحن.') : (t('noFuelRecords') || 'لا توجد سجلات وقود.')}</p>
         </div>
       ) : (
         <div className="space-y-2">
           {recordsWithConsumption.map(record => (
-            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm hover:border-blue-500/30 transition-colors">
+            <div key={record.id} className={`bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm transition-colors ${isElectric ? 'hover:border-green-500/30' : 'hover:border-blue-500/30'}`}>
               
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
-                  <FuelIcon size={18} />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isElectric ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                  {isElectric ? <Zap size={18} /> : <FuelIcon size={18} />}
                 </div>
                 <div>
                   <p className="font-bold text-[var(--text)] text-sm">
                     {Number(record.cost).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date} • {record.liters} L</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date} • {record.liters} {unit}</p>
                 </div>
               </div>
 
@@ -146,11 +156,11 @@ export default function Fuel() {
                     <Gauge size={10} /> {Number(record.odometer).toLocaleString()} KM
                   </p>
                   {record.consumption ? (
-                    <p className="text-[10px] font-bold text-green-500 mt-1 flex items-center justify-end gap-1">
-                      <Activity size={10} /> {record.consumption} L/100km
+                    <p className={`text-[10px] font-bold mt-1 flex items-center justify-end gap-1 ${isElectric ? 'text-green-500' : 'text-green-500'}`}>
+                      <Activity size={10} /> {record.consumption} {isElectric ? 'kWh/100km' : 'L/100km'}
                     </p>
                   ) : (
-                    <p className="text-[10px] text-[var(--text-muted)] mt-1">أول تعبئة</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1">{isElectric ? 'أول شحن' : 'أول تعبئة'}</p>
                   )}
                 </div>
                 
@@ -167,7 +177,7 @@ export default function Fuel() {
 
       <button 
         onClick={openAddModal} 
-        className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+        className={`fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 ${isElectric ? 'bg-green-500 shadow-green-500/40' : 'bg-[var(--primary)] shadow-blue-500/40'}`}
       >
         <Plus size={28} />
       </button>
@@ -177,9 +187,9 @@ export default function Fuel() {
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
-        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف سجل الوقود هذا؟ لا يمكن التراجع عن هذا الإجراء.'}
+        message={isElectric ? 'هل أنت متأكد من حذف سجل الشحن؟' : 'هل أنت متأكد من حذف سجل الوقود؟'}
         variant="danger"
-        confirmText="نعم، احذف"
+        confirmText={t('confirmDeleteBtn') || 'نعم، احذف'}
       />
 
       {isModalOpen && (
@@ -189,30 +199,35 @@ export default function Fuel() {
               <X size={20} />
             </button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
-              {editingId ? 'تعديل التعبئة' : 'إضافة تعبئة'}
+              {editingId ? (t('edit') || 'تعديل') : (isElectric ? (t('addCharging') || 'إضافة شحن') : (t('addFuel') || 'إضافة تعبئة'))}
             </h2>
             
             <div className="space-y-3 overflow-y-auto pb-2">
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">التاريخ</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">العداد (KM)</label>
-                <input type="number" min="0" required placeholder="0" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد'} (KM)</label>
+                <input type="number" inputMode="numeric" min="0" required placeholder="0" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
+              
+              {/* ✅ حقل اللترات/الكيلوواط ديناميكي */}
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">اللترات</label>
-                <input type="number" min="0" step="0.01" required placeholder="0.00" value={formData.liters} onChange={e => setFormData({...formData, liters: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">
+                  {isElectric ? (t('kwh') || 'كيلوواط/ساعة (kWh)') : (t('liters') || 'اللترات')}
+                </label>
+                <input type="number" inputMode="decimal" min="0" step="0.01" required placeholder="0.00" value={formData.liters} onChange={e => setFormData({...formData, liters: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
+
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">التكلفة ({currency})</label>
-                <input type="number" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
+                <input type="number" inputMode="decimal" min="0" step="0.01" required placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
             
-            <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex-shrink-0">
-              حفظ البيانات
+            <button type="submit" className={`w-full mt-5 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-[0.98] transition-all flex-shrink-0 ${isElectric ? 'bg-green-500 hover:bg-green-600' : 'bg-[var(--primary)] hover:bg-blue-600'}`}>
+              {t('save') || 'حفظ البيانات'}
             </button>
           </form>
         </div>
