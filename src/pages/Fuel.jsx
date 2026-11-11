@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
-import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity, Zap, BatteryCharging } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity, Zap, BatteryCharging, AlertCircle, CheckCircle } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal'; 
 import OptionPicker from '../components/ui/OptionPicker'; 
 
@@ -13,17 +13,25 @@ export default function Fuel() {
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null); 
   
+  // ✅ حالة الإشعار العائم (Toast)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
   const [formData, setFormData] = useState({ date: '', odometer: '', energyType: 'gasoline', amount: '', cost: '' });
 
-  // ✅ 1. تحديد نوع السيارة بدقة (دعم EV و Hybrid و PHEV)
   const powertrain = currentCar?.powertrain || 'ice'; 
   const isElectric = powertrain === 'ev';
-  const isHybrid = powertrain === 'hybrid' || powertrain === 'phev'; // دعم الهجين القابل للشحن
+  const isHybrid = powertrain === 'hybrid' || powertrain === 'phev';
 
   const energyOptions = [
     { value: 'gasoline', label: t('gasoline') || 'بنزين' },
     { value: 'electricity', label: t('electricity') || 'كهرباء (شحن)' }
   ];
+
+  // ✅ دالة إظهار الإشعار العائم
+  const showToast = (message, type = 'error') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+  };
 
   const loadData = () => {
     if (currentCar) {
@@ -36,7 +44,6 @@ export default function Fuel() {
 
   useEffect(() => { loadData(); }, [currentCar]);
 
-  // ✅ 2. إصلاح خوارزمية حساب الاستهلاك (دعم البيانات القديمة)
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
     const sortedByOdometer = [...records].sort((a, b) => Number(a.odometer) - Number(b.odometer));
@@ -47,10 +54,8 @@ export default function Fuel() {
         const prevRecord = sortedByOdometer[index - 1];
         const distance = Number(record.odometer) - Number(prevRecord.odometer);
         
-        // ✅ إصلاح: القيمة الافتراضية 'gasoline' للسجلات القديمة لمنع أخطاء المقارنة
         const currentEnergy = record.energyType || 'gasoline';
         const prevEnergy = prevRecord.energyType || 'gasoline';
-        
         const currentAmount = Number(record.amount || record.liters || 0);
 
         if (distance > 0 && currentAmount > 0 && currentEnergy === prevEnergy) {
@@ -62,23 +67,27 @@ export default function Fuel() {
     return calculated.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [records]);
 
-  // ✅ 3. إصلاح أمني: التحقق من صحة البيانات قبل الحفظ
   const handleSave = (e) => {
     e.preventDefault();
     if (!currentCar) return; 
     
-    let finalEnergyType = 'gasoline';
-    if (isElectric) finalEnergyType = 'electricity';
-    else if (isHybrid) finalEnergyType = formData.energyType;
-
+    // ✅ 1. التحقق الرياضي والأمني من المدخلات
     const odoNum = Number(formData.odometer);
     const amountNum = Number(formData.amount);
     const costNum = Number(formData.cost);
 
-    if (isNaN(odoNum) || isNaN(amountNum) || isNaN(costNum) || odoNum < 0 || amountNum < 0 || costNum < 0) {
-      alert(t('fillRequiredFields') || 'الرجاء إدخال أرقام صحيحة.');
-      return;
+    if (isNaN(odoNum) || isNaN(amountNum) || isNaN(costNum) || odoNum <= 0 || amountNum <= 0 || costNum <= 0) {
+      return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة أكبر من صفر.', 'error');
     }
+
+    // التحقق من أن العداد الجديد ليس أقل من العداد الحالي للسيارة
+    if (odoNum < (currentCar.odometer || 0) && !editingId) {
+      return showToast(t('invalidOdometer') || 'العداد لا يمكن أن يكون أقل من العداد السابق.', 'error');
+    }
+
+    let finalEnergyType = 'gasoline';
+    if (isElectric) finalEnergyType = 'electricity';
+    else if (isHybrid) finalEnergyType = formData.energyType;
 
     const data = { 
       carId: currentCar.id, 
@@ -96,16 +105,17 @@ export default function Fuel() {
         dbService.addFuel(data);
       }
 
-      // تحديث العداد الرئيسي للسيارة
       if (data.odometer > (currentCar.odometer || 0)) {
         updateCar(currentCar.id, { odometer: data.odometer });
       }
 
       loadData(); 
       closeModal();
+      showToast(t('saveSuccess') || 'تم حفظ البيانات بنجاح!', 'success');
+      
     } catch (error) {
       console.error("خطأ أثناء حفظ البيانات:", error);
-      alert(t('errorSaving') || "حدث خطأ أثناء الحفظ.");
+      showToast(t('errorSaving') || "حدث خطأ أثناء الحفظ.", 'error');
     }
   };
 
@@ -129,7 +139,6 @@ export default function Fuel() {
     setIsModalOpen(true);
   };
 
-  // ✅ 4. إصلاح UX: تعيين النوع الافتراضي بناءً على السيارة
   const openAddModal = () => {
     setEditingId(null);
     setFormData({ 
@@ -151,6 +160,17 @@ export default function Fuel() {
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
+      {/* ✅ الإشعار العائم الاحترافي (Toast) */}
+      {toast.show && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
+          <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-70 hover:opacity-100">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">
           {isElectric ? (t('chargingLog') || 'سجل الشحن') : (t('fuel') || 'سجل الوقود')}
@@ -245,7 +265,6 @@ export default function Fuel() {
                 <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
               
-              {/* خيار مصدر الطاقة يظهر فقط للسيارات الهجينة */}
               {isHybrid && (
                 <div className="animate-fade-in">
                   <OptionPicker 
