@@ -28,7 +28,6 @@ export default function Fuel() {
     { value: 'electricity', label: t('electricity') || 'كهرباء (شحن)' }
   ];
 
-  // ✅ Toast آمن (يمسح المؤقت السابق + تنظيف عند unmount)
   const showToast = useCallback((message, type = 'error') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
@@ -46,12 +45,13 @@ export default function Fuel() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   }, []);
 
-  // ✅ loadData محصّن ضد الأخطاء
   const loadData = useCallback(() => {
     try {
       if (currentCar) {
-        const allFuel = dbService.getFuel()?.filter(r => r.carId === currentCar.id) || [];
-        setRecords([...allFuel].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)));
+        // ✅ إصلاح: استخدام String() للتطابق
+        const allFuel = dbService.getFuel()?.filter(r => String(r.carId) === String(currentCar.id)) || [];
+        // ✅ ترتيب مستقر
+        setRecords([...allFuel].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))));
       } else {
         setRecords([]); 
       }
@@ -63,11 +63,9 @@ export default function Fuel() {
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
-  /* ===================== ✅ حساب الاستهلاك - مُصلَح ===================== */
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
 
-    // ✅ FIX: تجميع حسب نوع الطاقة (يمنع مقارنة بنزين مع كهرباء في hybrid)
     const groups = {};
     records.forEach(r => {
       const e = r.energyType || 'gasoline';
@@ -81,7 +79,6 @@ export default function Fuel() {
         const prev = sorted[i - 1];
         const curr = sorted[i];
         const distance = Number(curr.odometer) - Number(prev.odometer);
-        // ✅ دعم amount الجديد مع fallback للحقل القديم liters
         const amount = Number(curr.amount ?? curr.liters) || 0;
         if (Number.isFinite(distance) && distance > 0 && amount > 0) {
           const c = (amount / distance) * 100;
@@ -94,10 +91,9 @@ export default function Fuel() {
 
     return records
       .map(r => ({ ...r, consumption: consumptionById[r.id] ?? null }))
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   }, [records]);
 
-  /* ===================== ✅ الحفظ ===================== */
   const handleSave = (e) => {
     e.preventDefault();
     if (!currentCar) return;
@@ -111,13 +107,11 @@ export default function Fuel() {
     const amountNum = Number(formData.amount);
     const costNum = Number(formData.cost);
 
-    // ✅ يسمح بـ 0 للعداد (سيارة جديدة) والتكلفة، ويرفض القيم غير المحدودة
     if (!Number.isFinite(odoNum) || !Number.isFinite(amountNum) || !Number.isFinite(costNum) ||
         odoNum < 0 || amountNum <= 0 || costNum < 0) {
       return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة أكبر من صفر.', 'error');
     }
 
-    // ✅ تحقق أمني محسّن: العداد الجديد ≥ أعلى قيمة مسجّلة (السيارة أو سجلات الوقود)
     if (!editingId) {
       const maxFuelOdo = records.reduce((m, r) => Math.max(m, Number(r.odometer) || 0), 0);
       const maxOdo = Math.max(Number(currentCar.odometer) || 0, maxFuelOdo);
@@ -146,7 +140,6 @@ export default function Fuel() {
         dbService.addFuel(data);
       }
 
-      // ✅ إذا ارتفع العداد نُحدّث السيارة (يُبمب dataVersion داخلياً)، وإلا نُبمب يدوياً
       if (data.odometer > (Number(currentCar.odometer) || 0)) {
         updateCar(currentCar.id, { odometer: data.odometer });
       } else {
@@ -162,13 +155,12 @@ export default function Fuel() {
     }
   };
 
-  /* ===================== ✅ الحذف ===================== */
   const handleDelete = () => {
     if (!deleteId) return;
     try {
       dbService.deleteFuel(deleteId);
       loadData();
-      bumpDataVersion(); // ✅ يُحدّث Dashboard
+      bumpDataVersion();
       setDeleteId(null); 
     } catch (e) {
       console.error('deleteFuel failed:', e);
@@ -177,7 +169,6 @@ export default function Fuel() {
     }
   };
 
-  /* ===================== Modals ===================== */
   const openEdit = (record) => {
     setEditingId(record.id);
     setFormData({ 
@@ -211,7 +202,6 @@ export default function Fuel() {
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
-      {/* ✅ الإشعار العائم */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
@@ -255,8 +245,9 @@ export default function Fuel() {
                     {isEnergyElectric ? <Zap size={18} /> : <FuelIcon size={18} />}
                   </div>
                   <div>
+                    {/* ✅ إصلاح NaN: إضافة || 0 */}
                     <p className="font-bold text-[var(--text)] text-sm">
-                      {Number(record.cost).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
+                      {Number(record.cost || 0).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date} • {amountToShow} {unit}</p>
                   </div>
@@ -265,7 +256,8 @@ export default function Fuel() {
                 <div className="flex items-center gap-3">
                   <div className="text-end">
                     <p className="text-[10px] font-bold text-[var(--text-muted)] flex items-center justify-end gap-1">
-                      <Gauge size={10} /> {Number(record.odometer).toLocaleString()} KM
+                      {/* ✅ إصلاح NaN: إضافة || 0 */}
+                      <Gauge size={10} /> {Number(record.odometer || 0).toLocaleString()} KM
                     </p>
                     {record.consumption ? (
                       <p className={`text-[10px] font-bold mt-1 flex items-center justify-end gap-1 ${isEnergyElectric ? 'text-green-500' : 'text-blue-500'}`}>
@@ -302,11 +294,12 @@ export default function Fuel() {
         </div>
       )}
 
+      {/* ✅ إصلاح rtl:auto -> rtl:right-auto */}
       <button 
         type="button"
         onClick={openAddModal} 
         aria-label="إضافة سجل جديد"
-        className={`fixed bottom-24 right-6 rtl:left-6 rtl:auto w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 ${isElectric ? 'bg-green-500 shadow-green-500/40' : 'bg-[var(--primary)] shadow-blue-500/40'}`}
+        className={`fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 ${isElectric ? 'bg-green-500 shadow-green-500/40' : 'bg-[var(--primary)] shadow-blue-500/40'}`}
       >
         <Plus size={28} />
       </button>
@@ -316,7 +309,7 @@ export default function Fuel() {
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
         title={t('confirmDelete') || 'تأكيد الحذف'}
-        message="هل أنت متأكد من حذف هذا السجل؟"
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذا السجل؟'}
         variant="danger"
         confirmText={t('confirmDeleteBtn') || 'نعم، احذف'}
       />
@@ -324,11 +317,12 @@ export default function Fuel() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} noValidate className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
+            {/* ✅ إصلاح RTL لزر الإغلاق */}
             <button 
               type="button" 
               onClick={closeModal} 
               aria-label="إغلاق"
-              className="absolute top-4 left-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10"
+              className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10"
             >
               <X size={20} />
             </button>
