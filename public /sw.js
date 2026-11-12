@@ -1,27 +1,33 @@
-// اسم الكاش (يجب تغييره عند تحديث التطبيق لإجبار المتصفح على تحميل النسخة الجديدة)
+// ✅ اسم الكاش - يجب تغييره عند تحديث التطبيق (v1, v2...)
 const CACHE_NAME = 'rafiq-sayarati-v1';
 
-// قائمة الملفات الأساسية التي سيتم حفظها للعمل بدون إنترنت
+// ✅ استخدام مسارات نسبية (Relative Paths) للعمل على GitHub Pages
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
-  // ملاحظة: Vite يقوم تلقائياً بتخزين ملفات JS و CSS عند أول زيارة
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192x192.png',
+  './icon-512x512.png'
 ];
 
-// 1. حدث التثبيت (Install) - حفظ الملفات الأساسية
+// =========================================================
+// 1. حدث التثبيت (Install)
+// =========================================================
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      // addAll تفشل بالكامل إذا فشل ملف واحد، نستخدم Promise.allSettled
+      return Promise.allSettled(
+        ASSETS_TO_CACHE.map(url => cache.add(url))
+      );
     })
   );
 });
 
-// 2. حدث التنشيط (Activate) - تنظيف الكاش القديم
+// =========================================================
+// 2. حدث التنشيط (Activate)
+// =========================================================
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -36,44 +42,58 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// 3. حدث الجلب (Fetch) - ✅ الميزة المفقودة: العمل بدون إنترنت
+// =========================================================
+// 3. حدث الجلب (Fetch) - محمي ضد الكاش الخارجي
+// =========================================================
 self.addEventListener('fetch', (e) => {
-  // تجاهل الطلبات التي ليست GET (مثل POST)
-  if (e.request.method !== 'GET') return;
+  const request = e.request;
 
+  // تجاهل الطلبات غير GET
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // ✅ إصلاح أمني: لا تخزن الطلبات الخارجية (Overpass API، إلخ)
+  if (url.origin !== self.location.origin) {
+    return; // يمررها المتصفح للشبكة مباشرة
+  }
+
+  // ✅ إصلاح منطقي: صفحة Fallback فقط للتنقل (navigate)
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      // إذا وجدنا الملف في الكاش، نرجعه فوراً (سرعة فائقة)
+    caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        // نقوم بتحديث الكاش في الخلفية (Stale-While-Revalidate)
-        fetch(e.request).then((networkResponse) => {
-          if (networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, networkResponse));
+        // تحديث الكاش في الخلفية (Stale-While-Revalidate)
+        fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
           }
-        }).catch(() => {}); // تجاهل الأخطاء في الخلفية
+        }).catch(() => {});
         return cachedResponse;
       }
 
-      // إذا لم نجده في الكاش، نجلبه من الإنترنت ونحفظه
-      return fetch(e.request).then((networkResponse) => {
-        if (networkResponse.status === 200) {
+      // جلب من الشبكة
+      return fetch(request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
         }
         return networkResponse;
       }).catch(() => {
-        // إذا فشل الاتصال ولم يوجد الملف، نرجع صفحة الخطأ (اختياري)
-        return caches.match('/index.html');
+        // ✅ fallback فقط عند فشل التنقل بين الصفحات
+        if (request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
       });
     })
   );
 });
 
-// 4. الاستماع للإشعارات القادمة (Push)
+// =========================================================
+// 4. الاستماع للإشعارات (Push)
+// =========================================================
 self.addEventListener('push', function(event) {
-  let data = { title: 'رفيق سيارتي', body: 'لديك تنبيه جديد', url: '/' };
+  let data = { title: 'رفيق سيارتي', body: 'لديك تنبيه جديد', url: './' };
   
-  // ✅ إصلاح: حماية التطبيق من الانهيار إذا كان الإشعار نصياً وليس JSON
   if (event.data) {
     try {
       data = { ...data, ...event.data.json() };
@@ -84,40 +104,48 @@ self.addEventListener('push', function(event) {
 
   const options = {
     body: data.body,
-    icon: '/icon-192x192.png',
-    badge: '/icon-192x192.png',
-    vibrate: [200, 100, 200],
+    icon: './icon-192x192.png',
+    badge: './icon-192x192.png',
     data: { url: data.url },
-    dir: 'rtl' // ✅ دعم اللغة العربية في الإشعار
+    dir: 'rtl'
   };
+
+  // ✅ إضافة vibrate بأمان (قد يفشل في iOS)
+  try {
+    options.vibrate = [200, 100, 200];
+  } catch { /* ignore */ }
 
   event.waitUntil(
     self.registration.showNotification(data.title, options)
   );
 });
 
+// =========================================================
 // 5. النقر على الإشعار
+// =========================================================
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   
-  // الحصول على الرابط المطلوب فتحه
-  const urlToOpen = event.notification.data.url || '/';
+  // ✅ استخدام الرابط الممرر أو الصفحة الرئيسية
+  const urlToOpen = new URL(
+    event.notification.data?.url || './',
+    self.location.origin
+  ).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // ✅ إصلاح: البحث عن أي نافذة مفتوحة للتطبيق (وليس فقط الصفحة الرئيسية)
+      // 1. البحث عن نافذة مفتوحة على نفس النطاق
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        // إذا كان التطبيق مفتوحاً، قم بتركيزه وتوجيهه للرابط
-        if ('focus' in client) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.focus();
           if (client.navigate) {
-             return client.navigate(urlToOpen);
+            return client.navigate(urlToOpen);
           }
-          return;
+          return client;
         }
       }
-      // إذا لم يكن مفتوحاً، افتح نافذة جديدة
+      // 2. فتح نافذة جديدة
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
