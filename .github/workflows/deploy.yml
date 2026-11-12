@@ -30,12 +30,11 @@ jobs:
         with:
           # ✅ Node 22 (LTS) بدلاً من 20 المهجور
           node-version: '22'
-          # ✅ تفعيل الكاش لتسريع البناء (يحتاج package-lock.json)
-          cache: 'npm'
+          # ❌ أزلنا cache: 'npm' لأنه يحتاج package-lock.json
           
       - name: Install dependencies
-        # ✅ npm ci = تثبيت حتمي وسريع ومطابق لـ package-lock.json
-        run: npm ci
+        # ✅ npm install يعمل بدون package-lock.json (يُنشئه تلقائياً)
+        run: npm install
         
       - name: Build
         run: npm run build
