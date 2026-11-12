@@ -203,4 +203,15 @@ export const fr = {
   currency_LYD: 'Dinar Libyen',
   currency_USD: 'Dollar Américain',
   currency_EUR: 'Euro',
+
+  dataSecureLocally: 'Vos données sont sécurisées et stockées localement',
+appDescription1: 'Rafiq Sayarati est votre compagnon intelligent pour gérer tout ce qui concerne votre voiture. Suivi des dépenses, du carburant, de l\'entretien et des documents.',
+appDescription2: 'Conçu pour être rapide, sécurisé et facile à utiliser, vous faisant gagner du temps et de l\'argent.',
+opensInBrowser: 'Ouvre dans le navigateur',
+privacyPolicy: 'Politique de confidentialité',
+contactDeveloper: 'Contacter le développeur',
+madeWithLove: 'Fait avec amour pour servir votre voiture',
+backupMovedMsg: 'La sauvegarde et la restauration (JSON) ont été déplacées vers les paramètres.',
+goToSettings: 'Aller aux paramètres',
+  
 };
