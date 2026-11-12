@@ -68,8 +68,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // ✅ تسجيل Service Worker (ضروري جداً لـ PWABuilder وللعمل بدون إنترنت)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // استخدام المسار النسبي ليتوافق مع GitHub Pages
-    navigator.serviceWorker.register('/rafiq-sayarati/sw.js')
+    // ✅ استخدام BASE_URL ليتكيف المسار تلقائياً مع GitHub Pages أو الدومين المخصص
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
+    
+    navigator.serviceWorker.register(swUrl)
       .then(registration => {
         console.log('SW registered successfully:', registration.scope);
       })
