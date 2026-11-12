@@ -4,11 +4,13 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class', // تفعيل الوضع الداكن
+  darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Cairo', 'Segoe UI', 'Tahoma', 'system-ui', 'sans-serif'], // ✅ ضبط الخط ليطابق الخط المحمل في index.html
+      },
       colors: {
-        // ألوان DriveLife
         dl: {
           bg: '#070b14',
           surface: '#0e1526',
@@ -23,9 +25,6 @@ export default {
           warning: '#f59e0b',
           danger: '#ef4444',
         }
-      },
-      fontFamily: {
-        sans: ['Segoe UI', 'Tahoma', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         'dl': '18px',
