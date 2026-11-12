@@ -10,6 +10,11 @@ permissions:
   pages: write
   id-token: write
 
+# ✅ يمنع تشغيل نسختين من النشر في نفس الوقت
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     environment:
@@ -23,11 +28,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          # ✅ تم حذف cache: 'npm' لأننا لا نملك ملف القفل
+          # ✅ Node 22 (LTS) بدلاً من 20 المهجور
+          node-version: '22'
+          # ✅ تفعيل الكاش لتسريع البناء (يحتاج package-lock.json)
+          cache: 'npm'
           
       - name: Install dependencies
-        run: npm install # ✅ تم تغييرها من npm ci إلى npm install
+        # ✅ npm ci = تثبيت حتمي وسريع ومطابق لـ package-lock.json
+        run: npm ci
         
       - name: Build
         run: npm run build
