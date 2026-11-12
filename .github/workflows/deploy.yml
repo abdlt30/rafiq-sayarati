@@ -10,7 +10,6 @@ permissions:
   pages: write
   id-token: write
 
-# ✅ يمنع تشغيل نسختين من النشر في نفس الوقت
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -28,12 +27,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          # ✅ Node 22 (LTS) بدلاً من 20 المهجور
           node-version: '22'
-          # ❌ أزلنا cache: 'npm' لأنه يحتاج package-lock.json
+          # ❌ تم إزالة cache: 'npm' لأنه يتطلب package-lock.json
           
       - name: Install dependencies
-        # ✅ npm install يعمل بدون package-lock.json (يُنشئه تلقائياً)
+        # ✅ تمت العودة إلى npm install (الذي يعمل بدون ملف القفل)
         run: npm install
         
       - name: Build
