@@ -5,33 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>رفيق سيارتي | Rafiq Sayarati</title>
     
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     
-    <link rel="manifest" href="/manifest.json" />
+    <!-- ✅ إصلاح المسار: استخدام مسار نسبي للعمل على GitHub Pages -->
+    <link rel="manifest" href="./manifest.json" />
+    
+    <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: { sans: ['Cairo', 'sans-serif'] },
-            colors: {
-              brand: { 500: '#3b82f6', 600: '#2563eb' },
-              dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' },
-              accent: { 500: '#10b981' }
-            }
-          }
-        }
-      }
-    </script>
+    <meta name="theme-color" content="#2f6bff">
   </head>
-  <body class="bg-dark-900 text-slate-200 font-sans antialiased">
+  <body class="bg-[#070b14] text-slate-200 font-sans antialiased">
     <div id="root"></div>
-    <!-- ✅ إجبار المتصفح على تحميل النسخة الجديدة -->
-    <script type="module" src="/src/main.jsx?v=5"></script>
+    
+    <!-- ✅ إزالة CDN Tailwind (لأنه سيتم بناؤه عبر Vite) -->
+    <!-- ✅ إصلاح مسار الدخول ليتعرف عليه Vite أثناء البناء -->
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
