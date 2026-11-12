@@ -58,9 +58,10 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* إصلاح مشكلة التمرير: السماح بالتمرير العمودي ومنع الأفقي فقط */
+/* ✅ إصلاح ارتفاع الشاشة في الهواتف */
 html, body, #root {
-  min-height: 100vh;
+  min-height: 100dvh; /* ✅ دعم الهواتف الحديثة */
+  height: 100%;
   margin: 0;
   overflow-x: hidden; 
   scroll-behavior: smooth;
@@ -76,7 +77,7 @@ input[type="date"] {
   color-scheme: dark;
 }
 
-/* ✅ جديد: إخفاء أسهم حقول الأرقام (Spinners) لتبدو كتطبيق أصلي */
+/* ✅ إخفاء أسهم حقول الأرقام (Spinners) */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
   -webkit-appearance: none; 
@@ -201,15 +202,14 @@ input[type=number] {
 }
 
 /* =========================================
-   5. ✅ جديد: إعدادات الطباعة (PDF Export)
+   5. إعدادات الطباعة (PDF Export)
    ========================================= */
 @page {
-  margin: 1cm; /* هوامش الورقة */
+  margin: 1cm;
   size: auto;
 }
 
 @media print {
-  /* إخفاء العناصر غير المرغوب بطباعتها (أزرار، قوائم، شريط سفلي) */
   .no-print, 
   .bottom-nav, 
   .header, 
@@ -218,7 +218,6 @@ input[type=number] {
     display: none !important;
   }
 
-  /* إجبار الخلفية البيضاء والنص الأسود */
   body, html, #root {
     background-color: #ffffff !important;
     color: #000000 !important;
@@ -226,7 +225,6 @@ input[type=number] {
     overflow: visible !important;
   }
 
-  /* ضبط حاوية التقرير */
   .print-container {
     padding: 0 !important;
     margin: 0 !important;
@@ -235,7 +233,6 @@ input[type=number] {
     border: none !important;
   }
 
-  /* ضبط الجداول */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
@@ -259,12 +256,10 @@ input[type=number] {
     font-weight: bold !important;
   }
 
-  /* إجبار النصوص على الظهور بالأسود */
   h1, h2, h3, h4, h5, h6, p, span, div {
     color: #000000 !important;
   }
   
-  /* فصل الصفحات */
   .page-break {
     page-break-before: always;
   }
