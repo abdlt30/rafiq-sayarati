@@ -1,4 +1,5 @@
 {
+  "id": "/rafiq-sayarati/",
   "name": "رفيق سيارتي - Rafiq Sayarati",
   "short_name": "رفيق سيارتي",
   "description": "تطبيقك الذكي لإدارة مصاريف، صيانة، وإيرادات سيارتك.",
@@ -31,6 +32,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "إضافة وقود",
+      "short_name": "وقود",
+      "description": "إضافة سجل تعبئة وقود جديد",
+      "url": "./#/fuel",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "إضافة مصروف",
+      "short_name": "مصروف",
+      "description": "إضافة مصروف جديد",
+      "url": "./#/expenses",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "الصيانة",
+      "short_name": "صيانة",
+      "description": "عرض سجل الصيانة",
+      "url": "./#/maintenance",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": []
