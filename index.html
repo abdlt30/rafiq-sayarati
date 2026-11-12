@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- ✅ إصلاح المسار: استخدام مسار نسبي للعمل على GitHub Pages -->
-    <link rel="manifest" href="./manifest.json" />
+    <!-- ✅ إصلاح المسار الديناميكي لـ Vite و GitHub Pages -->
+    <link rel="manifest" href="%BASE_URL%manifest.json" />
     
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,8 +21,7 @@
   <body class="bg-[#070b14] text-slate-200 font-sans antialiased">
     <div id="root"></div>
     
-    <!-- ✅ إزالة CDN Tailwind (لأنه سيتم بناؤه عبر Vite) -->
-    <!-- ✅ إصلاح مسار الدخول ليتعرف عليه Vite أثناء البناء -->
+    <!-- ✅ سيتم التعامل مع هذا المسار بواسطة Vite أثناء البناء -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
