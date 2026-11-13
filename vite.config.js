@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path'; // ✅ اختياري: إذا أردت استخدام @ للاختصار
 
 export default defineConfig({
   plugins: [react()],
@@ -10,6 +11,14 @@ export default defineConfig({
   resolve: {
     // ✅ يمنع تحميل نسختين من React (يمنع خطأ Invalid Hook Call)
     dedupe: ['react', 'react-dom'], 
+    
+    // 💡 نصيحة خبير: فك التعليق عن هذا الجزء لتتمكن من استخدام @ للوصول لمجلد src
+    // مثال: import Button from '@/shared/components/ui/Button'
+    /*
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+    */
   },
 
   // ✅ تحسينات البناء للإنتاج (Enterprise-Grade)
@@ -20,6 +29,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // ✅ تقسيم الحزم لتسريع التحميل (Code Splitting)
+        // ⚠️ تنبيه: تأكد من تثبيت (npm install) للمكتبات التالية (recharts, leaflet) وإلا سيفشل البناء
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'charts-vendor': ['recharts'],
