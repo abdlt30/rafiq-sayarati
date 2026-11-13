@@ -39,26 +39,29 @@ export const en = {
   noResults: 'No results found',
   currency: 'Currency',
   language: 'Language',
+  exporting: 'Exporting...', // ✅ Added
+  resetting: 'Clearing...', // ✅ Added
 
   // ===================== Onboarding & Welcome =====================
+  // ✅ Improved phrasing for natural English flow
   welcomeMessagePart1: 'Control your car expenses, track maintenance, and save',
-  welcomeMessagePart2: 'of your budget smartly.',
+  welcomeMessagePart2: 'your budget smartly.',
   startNow: 'Start Now',
   howToCallYou: 'What should we call you?',
   enterName: 'Enter your name...',
   featureTrackExpenses: 'Track expenses accurately',
   featureTrackExpensesDesc: 'Know where every penny goes',
   featureSmartAlerts: 'Smart Alerts',
-  featureSmartAlertsDesc: 'Never miss a maintenance or renewal',
+  featureSmartAlertsDesc: 'Never miss a maintenance or renewal date',
   featurePeaceOfMind: 'Peace of Mind',
-  featurePeaceOfMindDesc: 'Your car is always ready',
+  featurePeaceOfMindDesc: 'Your car is always ready to go',
   privacyNoteShort: 'Your data is kept private on your device',
   skip: 'Skip',
   next: 'Next',
   onboardingTitle1: 'Track every penny',
-  onboardingDesc1: 'Log fuel, maintenance, and insurance expenses in one place. The app calculates cost per KM automatically.',
+  onboardingDesc1: 'Log fuel, maintenance, and insurance expenses in one place. The app calculates the cost per KM automatically.',
   onboardingTitle2: 'Proactive Maintenance',
-  onboardingDesc2: 'Don\'t wait for your car to break down. Add reminders for oil and tires by distance or date.',
+  onboardingDesc2: 'Don\'t wait for your car to break down. Add reminders for oil and tires based on distance or date.',
   onboardingTitle3: 'Never Miss a Date',
   onboardingDesc3: 'Smart alerts before insurance or inspection expiry. Keep your car safe and legal.',
   loginTitle: 'Welcome Back',
@@ -214,6 +217,9 @@ export const en = {
   addDocument: 'Add Document',
   documentType: 'Document Type',
   endDate: 'End Date',
+  expiryDate: 'Expiry Date', // ✅ Added
+  registration: 'Registration (Carte Grise)', // ✅ Added
+  uploadImage: 'Take a photo or upload', // ✅ Added
   technicalInspection: 'Technical Inspection',
   license: 'License',
   expired: 'Expired',
@@ -282,6 +288,7 @@ export const en = {
   recentActivity: 'Recent Activity',
   upcomingMaintenance: 'Upcoming Maintenance',
   timeline: 'Timeline',
+  carTimeline: 'Car Timeline', // ✅ Added
   confirmLowerOdometer: 'The new odometer is less than the current one. Are you sure?',
 
   // ===================== Reports & Print =====================
@@ -290,6 +297,7 @@ export const en = {
   comprehensiveFinancialReport: 'Comprehensive Financial Report',
   financialSummary: 'Financial Summary',
   totalExpenses: 'Total Expenses',
+  totalFuel: 'Total Fuel', // ✅ Added
   totalFuelCost: 'Total Fuel Cost',
   expenseDistribution: 'Expense Distribution',
   monthlyExpenses: 'Monthly Expenses',
@@ -300,6 +308,9 @@ export const en = {
   otherExpenses: 'Other Expenses',
   fuelLog: 'Fuel Log',
   maintenanceLog: 'Maintenance Log',
+  pdfReport: 'PDF Report', // ✅ Added
+  noChartData: 'Not enough data for chart', // ✅ Added
+  addMoreRecords: 'Add more records to view analytics', // ✅ Added
   printPdf: 'Print / PDF',
   printReport: 'Print Report',
   shareReport: 'Share Report',
@@ -321,7 +332,7 @@ export const en = {
   resale: 'Resale Value',
   valuationDesc: 'Enter your car details to calculate the estimated market value based on local depreciation (age, mileage, condition).',
   purchasePrice: 'Purchase Price',
-  priceHelper: 'Enter amount in Moroccan Dirham',
+  priceHelper: 'Enter amount', // ✅ Adjusted for generic currency
   carCondition: 'Current Car Condition',
   conditionExcellent: 'Excellent',
   conditionGood: 'Good',
