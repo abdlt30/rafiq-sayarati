@@ -1,6 +1,6 @@
 import { useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
-import { useNavigate, useLocation } from 'react-router-dom'; // ✅ إضافة useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 import { notificationService } from '../services/notificationService';
 import { 
   Car, FileText, Bell, Settings, Info, Database, 
@@ -8,54 +8,60 @@ import {
   MapPin, TrendingUp
 } from 'lucide-react';
 
-// ✅ مكون مساعد (خارج الدالة الرئيسية لتحسين الأداء)
+// ✅ مكوّن مساعد (خارج الدالة الرئيسية لتحسين الأداء)
 const MenuRow = ({ icon: Icon, label, path, color, badge }) => {
   const { lang } = useContext(AppContext);
   const navigate = useNavigate();
 
   return (
     <button 
+      type="button"
       onClick={() => navigate(path)} 
       className="w-full flex items-center justify-between p-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:bg-[var(--surface-2)] transition-colors mb-2 active:scale-[0.98]"
     >
       <div className="flex items-center gap-3">
         <div className={`p-2 rounded-xl bg-[var(--surface-2)] ${color}`}>
-          <Icon size={18} />
+          <Icon size={18} aria-hidden="true" />
         </div>
         <span className="text-sm font-bold text-[var(--text)]">{label}</span>
-        {/* ✅ عرض الشارة */}
+        {/* ✅ الشارة */}
         {badge && (
           <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
             {badge}
           </span>
         )}
       </div>
-      {lang === 'ar' ? <ChevronLeft size={16} className="text-[var(--text-muted)]" /> : <ChevronRight size={16} className="text-[var(--text-muted)]" />}
+      {lang === 'ar' 
+        ? <ChevronLeft size={16} className="text-[var(--text-muted)]" aria-hidden="true" /> 
+        : <ChevronRight size={16} className="text-[var(--text-muted)]" aria-hidden="true" />}
     </button>
   );
 };
 
 export default function More() {
   const { t, currentCar, lang, dataVersion } = useContext(AppContext);
-  const location = useLocation(); // ✅ مراقبة تغيير المسار
+  const location = useLocation();
 
-  // ✅ حساب التنبيهات غير المقروءة (مُحصن ضد الأخطاء)
+  /* ✅ حساب التنبيهات غير المقروءة (مُحصن + O(1)) */
   const unreadCount = useMemo(() => {
     if (!currentCar) return 0;
     try {
       const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
       
-      // ✅ حماية الـ JSON من التلف
+      // ✅ حماية JSON من التلف
       const saved = localStorage.getItem('read_notifications');
       const parsed = saved ? JSON.parse(saved) : [];
-      const readIds = Array.isArray(parsed) ? parsed : [];
+      const readIds = Array.isArray(parsed) ? parsed.filter(x => typeof x === 'string') : [];
       
-      const unreadAlerts = alerts.filter(a => !readIds.includes(a.id));
+      // ✅ Set للبحث السريع O(1)
+      const readSet = new Set(readIds);
+      const unreadAlerts = alerts.filter(a => !readSet.has(a.id));
       return unreadAlerts.length;
     } catch (e) {
+      console.error('unreadCount failed:', e);
       return 0;
     }
-    // ✅ إضافة location.pathname و dataVersion لضمان التحديث الفوري عند العودة
+    // ✅ location.pathname + dataVersion لضمان التحديث عند العودة أو إضافة سجل
   }, [currentCar, t, lang, location.pathname, dataVersion]);
 
   return (
