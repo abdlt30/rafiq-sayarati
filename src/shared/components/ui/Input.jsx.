@@ -81,4 +81,7 @@ const Input = forwardRef(function Input(
   );
 });
 
+// ✅ إضافة اسم للمكون لتسهيل تصحيح الأخطاء في React DevTools
+Input.displayName = 'Input';
+
 export default Input;
