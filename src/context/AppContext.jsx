@@ -1,10 +1,10 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
 import { dbService } from '../services/dbService'; 
 import { translations } from '../locales'; 
+import { notificationService } from '../services/notificationService';
 
 export const AppContext = createContext();
 
-/* ✅ توليد IDs متوافق مع dbService (لا تصادم) */
 const generateCarId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     try { return crypto.randomUUID(); } catch { /* fallback */ }
@@ -12,37 +12,19 @@ const generateCarId = () => {
   return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
 };
 
-/* ✅ رمي أخطاء موقّعة (بدل alert) */
-const typedError = (code, message = code) => {
-  const err = new Error(message);
-  err.code = code;
-  return err;
-};
-
 export const AppProvider = ({ children }) => {
-  
-  /* ===================== user ===================== */
   const [user, setUserState] = useState(() => {
-    try {
-      const savedName = localStorage.getItem('user_name');
-      return savedName ? { name: savedName } : null;
-    } catch { return null; }
+    try { const savedName = localStorage.getItem('user_name'); return savedName ? { name: savedName } : null; } catch { return null; }
   });
 
   const setUser = useCallback((userData) => {
     setUserState(userData);
     try {
-      if (userData && userData.name) {
-        localStorage.setItem('user_name', userData.name);
-      } else {
-        localStorage.removeItem('user_name');
-      }
-    } catch (e) {
-      console.error('Save user failed:', e);
-    }
+      if (userData && userData.name) localStorage.setItem('user_name', userData.name);
+      else localStorage.removeItem('user_name');
+    } catch (e) { console.error('Save user failed:', e); }
   }, []);
 
-  /* ===================== car ===================== */
   const [currentCar, setCurrentCar] = useState(() => {
     try {
       const saved = localStorage.getItem('savedCar');
@@ -55,48 +37,64 @@ export const AppProvider = ({ children }) => {
   const [vehicles, setVehicles] = useState(() => {
     try {
       const parsedVehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
-      if (Array.isArray(parsedVehicles) && parsedVehicles.length > 0) {
-        return parsedVehicles;
-      }
-      // ✅ Fallback: استخدام savedCar إذا لم توجد سيارات
+      if (Array.isArray(parsedVehicles) && parsedVehicles.length > 0) return parsedVehicles;
       const parsedCar = JSON.parse(localStorage.getItem('savedCar') || 'null');
       return parsedCar && typeof parsedCar === 'object' ? [parsedCar] : [];
-    } catch (e) {
-      console.error('vehicles init failed:', e);
-      return [];
-    }
+    } catch { return []; }
   });
 
-  /* ===================== UI ===================== */
-  // ✅ تحديث: إضافة setIsLoading لتتمكن من التحكم بها من الخدمات
-  const [isLoading, setIsLoading] = useState(false); 
-  
+  const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState(() => {
-    try {
-      const saved = localStorage.getItem('theme');
-      return saved === 'light' || saved === 'dark' ? saved : 'dark';
-    } catch { return 'dark'; }
+    try { const saved = localStorage.getItem('theme'); return saved === 'light' || saved === 'dark' ? saved : 'dark'; } catch { return 'dark'; }
   });
-  
   const [lang, setLang] = useState(() => {
-    try {
-      const saved = localStorage.getItem('lang');
-      return ['ar', 'en', 'fr'].includes(saved) ? saved : 'ar';
-    } catch { return 'ar'; }
+    try { const saved = localStorage.getItem('lang'); return ['ar', 'en', 'fr'].includes(saved) ? saved : 'ar'; } catch { return 'ar'; }
   });
-  
   const [currency, setCurrencyRaw] = useState(() => {
-    try {
-      const saved = localStorage.getItem('currency');
-      return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD';
-    } catch { return 'MAD'; }
+    try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; }
   });
 
-  /* ✅ عداد إصدار البيانات */
+  /* ✅ 1. الحالة المركزية للبيانات (Enterprise Grade) */
+  const [totals, setTotals] = useState({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 });
+  const [recentActivity, setRecentActivity] = useState([]);
   const [dataVersion, setDataVersion] = useState(0);
-  const bumpDataVersion = useCallback(() => {
-    setDataVersion(v => v + 1);
-  }, []);
+  const bumpDataVersion = useCallback(() => setDataVersion(v => v + 1), []);
+
+  /* ✅ 2. دالة تحديث لوحة التحكم بالكامل */
+  const refreshDashboard = useCallback(async () => {
+    if (!currentCar) return;
+    setIsLoading(true);
+    try {
+      const fetchedTotals = await dbService.getTotals(currentCar.id);
+      setTotals(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 });
+
+      const fuelRecords = await dbService.getFuel();
+      const maintenanceRecords = await dbService.getMaintenance();
+      const expenseRecords = await dbService.getExpenses();
+      const incomeRecords = await dbService.getIncomes();
+
+      const carIdStr = String(currentCar.id);
+      const filter = (arr) => (Array.isArray(arr) ? arr : []).filter(r => String(r.carId) === carIdStr);
+
+      const activities = [
+        ...filter(fuelRecords).map(f => ({ ...f, type: 'fuel' })),
+        ...filter(maintenanceRecords).map(m => ({ ...m, type: 'maintenance' })),
+        ...filter(expenseRecords).map(e => ({ ...e, type: 'expense' })),
+        ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
+      ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 4);
+
+      setRecentActivity(activities);
+    } catch (e) {
+      console.error("Failed to refresh dashboard:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentCar]);
+
+  // تحديث لوحة التحكم عند تغيير السيارة أو البيانات
+  useEffect(() => {
+    refreshDashboard();
+  }, [currentCar, dataVersion, refreshDashboard]);
 
   useEffect(() => {
     try {
@@ -106,200 +104,115 @@ export const AppProvider = ({ children }) => {
       localStorage.setItem('theme', theme);
       localStorage.setItem('lang', lang);
       localStorage.setItem('currency', currency);
-    } catch (e) {
-      console.error('Persist settings failed:', e);
-    }
+    } catch (e) { console.error('Persist settings failed:', e); }
   }, [theme, lang, currency]);
 
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  }, []);
-
-  const changeLang = useCallback((newLang) => {
-    if (['ar', 'en', 'fr'].includes(newLang)) {
-      setLang(newLang);
-    }
-  }, []);
-
-  /* ✅ setCurrency آمن (لا يقبل قيماً غير صالحة) */
+  const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
+  const changeLang = useCallback((newLang) => { if (['ar', 'en', 'fr'].includes(newLang)) setLang(newLang); }, []);
   const setCurrency = useCallback((newCurrency) => {
-    if (typeof newCurrency === 'string' && /^[A-Z]{3}$/.test(newCurrency.trim())) {
-      setCurrencyRaw(newCurrency.trim());
-    }
+    if (typeof newCurrency === 'string' && /^[A-Z]{3}$/.test(newCurrency.trim())) setCurrencyRaw(newCurrency.trim());
   }, []);
 
-  /* ✅ دالة الترجمة الآمنة (تدعم المتغيرات + تمنع الانهيار) */
   const t = useCallback((key, variables = {}) => {
     let text = translations[lang]?.[key] ?? translations['en']?.[key] ?? key;
     text = String(text);
     if (variables && typeof variables === 'object') {
       Object.keys(variables).forEach((varName) => {
         const placeholder = `{${varName}}`;
-        if (text.includes(placeholder)) {
-          text = text.split(placeholder).join(String(variables[varName] ?? ''));
-        }
+        if (text.includes(placeholder)) text = text.split(placeholder).join(String(variables[varName] ?? ''));
       });
     }
     return text;
   }, [lang]);
 
-  /* ===================== التحقق من العداد ===================== */
   const validateOdometer = (input, { required = false } = {}) => {
-    if (input === undefined || input === null || String(input).trim() === '') {
-      return required ? { valid: false } : { valid: true, value: 0 };
-    }
+    if (input === undefined || input === null || String(input).trim() === '') return required ? { valid: false } : { valid: true, value: 0 };
     const num = Number(String(input).trim());
-    if (!Number.isFinite(num) || num < 0) {
-      return { valid: false };
-    }
-    return { valid: true, value: Math.round(num) }; // ✅ يضمن عدداً صحيحاً
+    if (!Number.isFinite(num) || num < 0) return { valid: false };
+    return { valid: true, value: Math.round(num) };
   };
 
-  /* ===================== CRUD السيارات ===================== */
   const addNewCar = useCallback((carData) => {
-    if (!carData || typeof carData !== 'object') {
-      throw typedError('INVALID_DATA');
-    }
-
+    if (!carData || typeof carData !== 'object') return false;
     const odoCheck = validateOdometer(carData.odometer, { required: false });
-    if (!odoCheck.valid) {
-      throw typedError('INVALID_ODOMETER');
-    }
+    if (!odoCheck.valid) return false;
 
     try {
-      const newCar = {
-        ...carData,
-        odometer: odoCheck.value,
-        id: generateCarId(),
-      };
-
+      const newCar = { ...carData, odometer: odoCheck.value, id: generateCarId() };
       const updatedVehicles = [...vehicles, newCar];
       localStorage.setItem('savedCar', JSON.stringify(newCar));
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      
-      // ⚠️ ملاحظة: يجب هنا استدعاء dbService.saveCar(newCar) إذا كانت قاعدة البيانات الأساسية
-      
       setCurrentCar(newCar);
       setVehicles(updatedVehicles);
       bumpDataVersion();
       return true;
-    } catch (e) {
-      console.error('addNewCar failed:', e);
-      if (e.name === 'QuotaExceededError' || String(e).includes('quota')) {
-        throw typedError('STORAGE_FULL');
-      }
-      throw e;
-    }
+    } catch (e) { return false; }
   }, [vehicles, bumpDataVersion]);
 
   const updateCar = useCallback((carId, updatedData) => {
-    if (!carId || !updatedData || typeof updatedData !== 'object') {
-      throw typedError('INVALID_DATA');
-    }
-
-    // ✅ التحقق من وجود السيارة
-    if (!vehicles.some(v => String(v.id) === String(carId))) {
-      throw typedError('CAR_NOT_FOUND');
-    }
+    if (!carId || !updatedData || typeof updatedData !== 'object') return false;
+    if (!vehicles.some(v => String(v.id) === String(carId))) return false;
 
     const sanitized = { ...updatedData };
     if (sanitized.odometer !== undefined) {
       const odoCheck = validateOdometer(sanitized.odometer, { required: true });
-      if (!odoCheck.valid) {
-        throw typedError('INVALID_ODOMETER');
-      }
+      if (!odoCheck.valid) return false;
       sanitized.odometer = odoCheck.value;
     }
 
     try {
-      const updatedVehicles = vehicles.map(v =>
-        String(v.id) === String(carId) ? { ...v, ...sanitized } : v
-      );
-      
-      // ✅ بناء الحالة الجديدة قبل الحفظ (transaction safety)
+      const updatedVehicles = vehicles.map(v => String(v.id) === String(carId) ? { ...v, ...sanitized } : v);
       const isCurrentCar = String(currentCar?.id) === String(carId);
       const newCurrentCar = isCurrentCar ? { ...currentCar, ...sanitized } : currentCar;
       
-      // محاولة الحفظ
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      if (isCurrentCar) {
-        localStorage.setItem('savedCar', JSON.stringify(newCurrentCar));
-      }
+      if (isCurrentCar) localStorage.setItem('savedCar', JSON.stringify(newCurrentCar));
       
-      // تحديث الحالة فقط بعد نجاح الحفظ
       setVehicles(updatedVehicles);
       if (isCurrentCar) setCurrentCar(newCurrentCar);
       bumpDataVersion();
       return true;
-    } catch (e) {
-      console.error('updateCar failed:', e);
-      if (e.name === 'QuotaExceededError' || String(e).includes('quota')) {
-        throw typedError('STORAGE_FULL');
-      }
-      throw e;
-    }
+    } catch (e) { return false; }
   }, [vehicles, currentCar, bumpDataVersion]);
 
   const deleteCar = useCallback((id) => {
     if (!id) return false;
-
     try {
-      // ✅ حذف بيانات السيارة المرتبطة (دعم الدوال غير المتزامنة)
       if (dbService?.deleteCarData) {
-        try { 
-          const res = dbService.deleteCarData(id);
-          if (res instanceof Promise) {
-            res.catch(dbErr => console.error('dbService.deleteCarData failed:', dbErr));
-          }
-        } catch (dbErr) { 
-          console.error('dbService.deleteCarData failed:', dbErr); 
-        }
+        try { const res = dbService.deleteCarData(id); if (res instanceof Promise) res.catch(console.error); } catch (dbErr) {}
       }
-
       const updatedVehicles = vehicles.filter(v => String(v.id) !== String(id));
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
 
       if (String(currentCar?.id) === String(id)) {
         const nextCar = updatedVehicles.length > 0 ? updatedVehicles[0] : null;
         setCurrentCar(nextCar);
-        if (nextCar) {
-          localStorage.setItem('savedCar', JSON.stringify(nextCar));
-        } else {
-          localStorage.removeItem('savedCar');
-        }
+        if (nextCar) localStorage.setItem('savedCar', JSON.stringify(nextCar));
+        else localStorage.removeItem('savedCar');
       }
-      
       setVehicles(updatedVehicles);
       bumpDataVersion();
       return true;
-    } catch (e) {
-      console.error('deleteCar failed:', e);
-      return false;
-    }
+    } catch (e) { return false; }
   }, [vehicles, currentCar, bumpDataVersion]);
 
-  /* ✅ selectCar يعيد boolean ويُبمب dataVersion */
   const selectCar = useCallback((car) => {
     if (!car || typeof car !== 'object') return false;
     try {
       localStorage.setItem('savedCar', JSON.stringify(car));
       setCurrentCar(car);
-      bumpDataVersion(); // ✅ مهم: لضمان تحديث الصفحات
+      bumpDataVersion();
       return true;
-    } catch (e) {
-      console.error('selectCar failed:', e);
-      return false;
-    }
+    } catch (e) { return false; }
   }, [bumpDataVersion]);
 
-  /* ===================== Context Value ===================== */
   return (
     <AppContext.Provider value={{ 
       currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, 
-      // ✅ إضافة setIsLoading
-      isLoading, setIsLoading, 
-      theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
+      isLoading, setIsLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
       user, setUser, dataVersion, bumpDataVersion,
+      // ✅ القيم المركزية الجديدة
+      totals, recentActivity, refreshDashboard
     }}>
       {children}
     </AppContext.Provider>
