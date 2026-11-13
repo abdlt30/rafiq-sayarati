@@ -56,15 +56,47 @@ body {
   margin: 0;
   padding: 0;
   transition: background-color 0.3s ease, color 0.3s ease;
+  
+  /* ✅ تحسين وضوح الخطوط (Anti-aliasing) */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ✅ لون تحديد النص (Selection) */
+::selection {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+/* ✅ شريط تمرير مخصص وأنيق (Custom Scrollbar) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* ✅ إصلاح ارتفاع الشاشة في الهواتف */
 html, body, #root {
-  min-height: 100dvh; /* ✅ دعم الهواتف الحديثة */
+  min-height: 100dvh; /* دعم الهواتف الحديثة */
   height: 100%;
   margin: 0;
   overflow-x: hidden; 
   scroll-behavior: smooth;
+}
+
+/* ✅ حماية الوصولية: إظهار إطار التركيز بلوحة المفاتيح */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* إجبار منتقي التاريخ على التكيف مع الثيم */
@@ -210,6 +242,7 @@ input[type=number] {
 }
 
 @media print {
+  /* ✅ إخفاء كل العناصر غير المرغوب بطباعتها */
   .no-print, 
   .bottom-nav, 
   .header, 
@@ -247,7 +280,7 @@ input[type=number] {
   th, td {
     border: 1px solid #000000 !important;
     padding: 6px !important;
-    text-align: right !important;
+    text-align: right !important; /* دعم اللغة العربية */
   }
 
   th {
