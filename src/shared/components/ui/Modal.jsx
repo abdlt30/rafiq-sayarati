@@ -1,7 +1,8 @@
 import { useEffect, useId } from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ isOpen, onClose, title, children }) {
+// ✅ إضافة closeLabel كـ prop مع قيمة افتراضية لدعم الترجمة
+export default function Modal({ isOpen, onClose, title, children, closeLabel = 'إغلاق' }) {
   const titleId = useId();
 
   // ✅ إدارة دورة حياة المودال (قفل التمرير + زر Escape)
@@ -39,7 +40,8 @@ export default function Modal({ isOpen, onClose, title, children }) {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      // ✅ رفع z-index إلى 100 لضمان ظهوره فوق الشريط السفلي (BottomNav)
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
       onClick={handleBackdropClick}
       // ✅ دلالات الوصول (A11y)
       role="dialog"
@@ -49,12 +51,13 @@ export default function Modal({ isOpen, onClose, title, children }) {
       <div 
         className="bg-[var(--surface)] w-full max-w-md rounded-2xl border border-[var(--border)] p-5 shadow-2xl relative animate-scale-in"
         onClick={(e) => e.stopPropagation()} // منع إغلاق المودال عند النقر بداخله
+        role="document"
       >
         {/* زر الإغلاق */}
         <button 
           type="button" 
           onClick={onClose} 
-          aria-label="إغلاق"
+          aria-label={closeLabel}
           className="absolute top-4 start-4 p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-[var(--text)] active:scale-90 transition-all"
         >
           <X size={18} aria-hidden="true" />
