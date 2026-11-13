@@ -39,10 +39,12 @@ export const fr = {
   noResults: 'Aucun résultat trouvé',
   currency: 'Devise',
   language: 'Langue',
+  exporting: 'Exportation...', // ✅ Ajouté
+  resetting: 'Effacement...', // ✅ Ajouté
 
   // ===================== Onboarding & Welcome =====================
   welcomeMessagePart1: 'Contrôlez les dépenses de votre voiture, suivez son entretien et économisez',
-  welcomeMessagePart2: 'de votre budget intelligemment.',
+  welcomeMessagePart2: 'intelligemment sur votre budget.', // ✅ Amélioration de la fluidité
   startNow: 'Commencer',
   howToCallYou: 'Comment devons-nous vous appeler ?',
   enterName: 'Entrez votre nom...',
@@ -56,7 +58,7 @@ export const fr = {
   skip: 'Passer',
   next: 'Suivant',
   onboardingTitle1: 'Suivez chaque dirham',
-  onboardingDesc1: 'Enregistrez vos dépenses de carburant, d\'entretien et d\'assurance en un seul endroit.',
+  onboardingDesc1: 'Enregistrez vos dépenses de carburant, d\'entretien et d\'assurance en un seul endroit. L\'application calcule le coût par kilomètre automatiquement.', // ✅ Phrase complétée
   onboardingTitle2: 'Entretien Proactif',
   onboardingDesc2: 'N\'attendez pas la panne. Ajoutez des rappels pour l\'huile et les pneus.',
   onboardingTitle3: 'Ne manquez aucune date',
@@ -214,6 +216,9 @@ export const fr = {
   addDocument: 'Ajouter Document',
   documentType: 'Type de document',
   endDate: 'Date d\'expiration',
+  expiryDate: 'Date d\'expiration', // ✅ Ajouté
+  registration: 'Carte Grise (Immatriculation)', // ✅ Ajouté
+  uploadImage: 'Prendre une photo ou télécharger', // ✅ Ajouté
   technicalInspection: 'Contrôle technique',
   license: 'Permis',
   expired: 'Expiré',
@@ -282,6 +287,7 @@ export const fr = {
   recentActivity: 'Activité Récente',
   upcomingMaintenance: 'Prochain Entretien',
   timeline: 'Historique',
+  carTimeline: 'Historique de la Voiture', // ✅ Ajouté
   confirmLowerOdometer: 'Le nouveau compteur est inférieur à l\'actuel. Êtes-vous sûr ?',
 
   // ===================== Reports & Print =====================
@@ -290,6 +296,7 @@ export const fr = {
   comprehensiveFinancialReport: 'Rapport Financier Complet',
   financialSummary: 'Résumé Financier',
   totalExpenses: 'Dépenses Totales',
+  totalFuel: 'Carburant Total', // ✅ Ajouté
   totalFuelCost: 'Coût Total du Carburant',
   expenseDistribution: 'Répartition des Dépenses',
   monthlyExpenses: 'Dépenses mensuelles',
@@ -300,6 +307,9 @@ export const fr = {
   otherExpenses: 'Autres Dépenses',
   fuelLog: 'Journal de Carburant',
   maintenanceLog: 'Journal d\'Entretien',
+  pdfReport: 'Rapport PDF', // ✅ Ajouté
+  noChartData: 'Pas assez de données pour le graphique', // ✅ Ajouté
+  addMoreRecords: 'Ajoutez plus d\'enregistrements pour voir les analyses', // ✅ Ajouté
   printPdf: 'Imprimer / PDF',
   printReport: 'Imprimer',
   shareReport: 'Partager',
@@ -321,7 +331,7 @@ export const fr = {
   resale: 'Revente',
   valuationDesc: 'Entrez les détails de votre voiture pour calculer la valeur marchande estimée selon la dépréciation locale (âge, kilométrage, état).',
   purchasePrice: 'Prix d\'Achat',
-  priceHelper: 'Entrez le montant en Dirham Marocain',
+  priceHelper: 'Entrez le montant', // ✅ Généralisé (car la devise peut changer)
   carCondition: 'État Actuel de la Voiture',
   conditionExcellent: 'Excellent',
   conditionGood: 'Bon',
@@ -366,7 +376,7 @@ export const fr = {
   lightMode: 'Mode Clair',
   selectCurrency: 'Choisir la devise',
   dataProtection: 'Protection des données',
-  backupDesc: 'Vos données sont enregistrées sur votre téléphone uniquement. Exportez-les sous forme de fichier de sauvegarde.',
+  backupDesc: 'Vos données sont enregistrées uniquement sur votre téléphone. Exportez-les sous forme de fichier de sauvegarde.', // ✅ Ajout de "uniquement" pour la clarté
   exportData: 'Exporter les données (JSON)',
   importData: 'Importer des données',
   exportSuccess: 'Données exportées avec succès !',
