@@ -1,7 +1,7 @@
 import { useContext, useState, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
-import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
-import { notificationService } from '../services/notificationService.js'; // ✅ إضافة .js
+import { dbService } from '../services/dbService.js';
+import { notificationService } from '../services/notificationService.js';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
@@ -15,9 +15,7 @@ import { formatDate } from '../shared/utils/formatters.js';
 const EMPTY_TOTALS = { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
 
 const canQuickDone = (alert) =>
-  alert &&
-  alert.recordId &&
-  (alert.sourceTable === 'maintenance' || alert.sourceTable === 'reminder');
+  alert && alert.recordId && (alert.sourceTable === 'maintenance' || alert.sourceTable === 'reminder');
 
 export default function Dashboard() {
   const { currentCar, updateCar, t, currency, user, lang, dataVersion, bumpDataVersion } = useContext(AppContext);
@@ -25,7 +23,7 @@ export default function Dashboard() {
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  // ✅ حالات جديدة لجلب البيانات غير المتزامنة
+  // ✅ حالات جلب البيانات
   const [totals, setTotals] = useState(EMPTY_TOTALS);
   const [avgConsumption, setAvgConsumption] = useState({ value: null, unit: 'L/100km' });
   const [criticalAlerts, setCriticalAlerts] = useState([]);
@@ -138,7 +136,7 @@ export default function Dashboard() {
     }
   }, [newOdo, currentCar, updateCar, t]);
 
-  /* ✅ 4. توزيع الحذف (أصبح async) */
+  /* ✅ توزيع الحذف */
   const handleQuickDone = useCallback(async (e, alert) => {
     e.preventDefault();
     e.stopPropagation();
@@ -153,9 +151,9 @@ export default function Dashboard() {
 
     try {
       if (alert.sourceTable === 'maintenance') {
-        await dbService.deleteMaintenance(alert.recordId); // ✅ أصبح async
+        await dbService.deleteMaintenance(alert.recordId);
       } else if (alert.sourceTable === 'reminder') {
-        await dbService.deleteReminder(alert.recordId); // ✅ أصبح async
+        await dbService.deleteReminder(alert.recordId);
       }
       if (bumpDataVersion) bumpDataVersion();
     } catch (err) {
@@ -181,7 +179,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5 pb-24 px-4 pt-2">
-      
       {/* الشريط العلوي */}
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
@@ -189,21 +186,11 @@ export default function Dashboard() {
           <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <Link
-            to="/notifications"
-            aria-label={t('notifications')}
-            className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative"
-          >
+          <Link to="/notifications" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative">
             <Bell size={18} aria-hidden="true" />
-            {criticalAlerts.length > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--surface)]"></span>
-            )}
+            {criticalAlerts.length > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--surface)]"></span>}
           </Link>
-          <Link
-            to="/settings"
-            aria-label={t('settings')}
-            className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"
-          >
+          <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors">
             <Settings size={18} aria-hidden="true" />
           </Link>
         </div>
@@ -216,10 +203,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3 sm:gap-4 relative z-10">
           <div className="w-16 h-16 sm:w-20 sm:h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
             {currentCar.image ? (
-              <img 
-                src={currentCar.image.startsWith('data:') || currentCar.image.startsWith('http') ? currentCar.image : `${import.meta.env.BASE_URL}${currentCar.image.replace(/^\//, '')}`} 
-                alt="car" className="w-full h-full object-cover" 
-              />
+              <img src={currentCar.image.startsWith('data:') || currentCar.image.startsWith('http') ? currentCar.image : `${import.meta.env.BASE_URL}${currentCar.image.replace(/^\//, '')}`} alt="car" className="w-full h-full object-cover" />
             ) : (
               <Car size={28} className="text-white/50" aria-hidden="true" />
             )}
@@ -246,22 +230,12 @@ export default function Dashboard() {
       {/* التنبيهات */}
       {criticalAlerts.length > 0 && (
         <div className="space-y-2 animate-fade-in">
-          <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">
-            {t('alertsNeedAttention')}
-          </h3>
+          <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">{t('alertsNeedAttention')}</h3>
           {criticalAlerts.map((alert, idx) => {
             const key = alert.id || alert.recordId || `alert-${idx}`;
             const showDoneBtn = canQuickDone(alert);
-
             return (
-              <div
-                key={key}
-                className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
-                  alert.severity === 'critical'
-                    ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
-                    : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
-                }`}
-              >
+              <div key={key} className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${alert.severity === 'critical' ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]'}`}>
                 <Link to={alert.link} className="flex-1 flex items-center gap-3 min-w-0">
                   <div className={`p-2 rounded-xl ${alert.severity === 'critical' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
                     {alert.severity === 'critical' ? <AlertTriangle size={18} aria-hidden="true" /> : <ShieldAlert size={18} aria-hidden="true" />}
@@ -271,19 +245,13 @@ export default function Dashboard() {
                     <p className="text-[11px] opacity-80 truncate mt-0.5">{alert.desc}</p>
                   </div>
                 </Link>
-
                 {showDoneBtn ? (
-                  <button
-                    type="button"
-                    onClick={(e) => handleQuickDone(e, alert)}
-                    aria-label={alert.sourceTable === 'maintenance' ? t('completeMaintenance') : t('completeReminder')}
-                    className="bg-green-500 text-white p-2 rounded-xl shadow-lg hover:bg-green-600 active:scale-90 transition-all flex flex-col items-center justify-center gap-0.5 flex-shrink-0"
-                  >
+                  <button type="button" onClick={(e) => handleQuickDone(e, alert)} className="bg-green-500 text-white p-2 rounded-xl shadow-lg hover:bg-green-600 active:scale-90 transition-all flex flex-col items-center justify-center gap-0.5 flex-shrink-0">
                     <CheckCircle size={16} aria-hidden="true" />
                     <span className="text-[9px] font-bold">{t('done')}</span>
                   </button>
                 ) : (
-                  <Link to={alert.link} aria-label={t('viewDetails')} className="p-2 flex-shrink-0">
+                  <Link to={alert.link} className="p-2 flex-shrink-0">
                     <ChevronLeft size={16} className="opacity-50 rtl:rotate-0 ltr:rotate-180" aria-hidden="true" />
                   </Link>
                 )}
@@ -318,16 +286,14 @@ export default function Dashboard() {
         <div className="bg-[var(--surface)] border border-green-500/20 p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('totalIncome')}</p>
           <p className="text-lg sm:text-xl font-extrabold text-green-500 truncate">
-            {incomeValue.toLocaleString()}{' '}
-            <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
+            {incomeValue.toLocaleString()} <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
           </p>
         </div>
 
         <div className="bg-[var(--surface)] border border-red-500/20 p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('totalExpenses')}</p>
           <p className="text-lg sm:text-xl font-extrabold text-red-500 truncate">
-            {totalValue.toLocaleString()}{' '}
-            <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
+            {totalValue.toLocaleString()} <span className="text-[10px] sm:text-xs font-normal text-[var(--text-muted)]">{currency}</span>
           </p>
         </div>
 
@@ -335,8 +301,7 @@ export default function Dashboard() {
           <div>
             <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('netProfit')}</p>
             <p className={`text-xl sm:text-2xl font-extrabold flex items-center gap-1 ${isNetPositive ? 'text-green-500' : 'text-red-500'}`}>
-              {netValue.toLocaleString()}{' '}
-              <span className="text-xs font-normal">{currency}</span>
+              {netValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span>
             </p>
           </div>
           <TrendingUp size={32} className={isNetPositive ? 'text-green-500/20' : 'text-red-500/20'} aria-hidden="true" />
@@ -346,31 +311,16 @@ export default function Dashboard() {
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('odometer')}</p>
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1">
-              <input
-                type="number" inputMode="numeric" min="0" value={newOdo}
-                onChange={(e) => setNewOdo(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveOdometer()}
-                placeholder={String(odometerValue)} aria-label={t('editOdometer')}
-                className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none" autoFocus
-              />
-              <button type="button" onClick={handleSaveOdometer} aria-label={t('save')} className="text-green-500 p-1 bg-green-500/10 rounded">
-                <Check size={14} aria-hidden="true" />
-              </button>
-              <button type="button" onClick={() => setIsEditingOdo(false)} aria-label={t('cancel')} className="text-red-500 p-1 bg-red-500/10 rounded">
-                <X size={14} aria-hidden="true" />
-              </button>
+              <input type="number" inputMode="numeric" min="0" value={newOdo} onChange={(e) => setNewOdo(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveOdometer()} placeholder={String(odometerValue)} className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none" autoFocus />
+              <button type="button" onClick={handleSaveOdometer} className="text-green-500 p-1 bg-green-500/10 rounded"><Check size={14} aria-hidden="true" /></button>
+              <button type="button" onClick={() => setIsEditingOdo(false)} className="text-red-500 p-1 bg-red-500/10 rounded"><X size={14} aria-hidden="true" /></button>
             </div>
           ) : (
             <div className="flex items-center justify-between mt-1">
               <p className="text-lg sm:text-xl font-extrabold text-blue-500 flex items-center gap-1 truncate">
-                {odometerValue.toLocaleString()}{' '}
-                <span className="text-[10px] sm:text-xs font-normal">{t('km')}</span>
+                {odometerValue.toLocaleString()} <span className="text-[10px] sm:text-xs font-normal">{t('km')}</span>
               </p>
-              <button
-                type="button" onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }}
-                aria-label={t('editOdometer')}
-                className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors flex-shrink-0"
-              >
+              <button type="button" onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors flex-shrink-0">
                 <Pencil size={14} aria-hidden="true" />
               </button>
             </div>
@@ -380,8 +330,7 @@ export default function Dashboard() {
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('avgConsumption')}</p>
           <p className="text-lg sm:text-xl font-extrabold text-yellow-500 flex items-center gap-1">
-            {avgConsumption.value !== null ? avgConsumption.value : '—'}{' '}
-            <span className="text-[10px] sm:text-xs font-normal">{avgConsumption.unit}</span>
+            {avgConsumption.value !== null ? avgConsumption.value : '—'} <span className="text-[10px] sm:text-xs font-normal">{avgConsumption.unit}</span>
           </p>
         </div>
       </div>
@@ -397,9 +346,7 @@ export default function Dashboard() {
 
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
           {recentActivity.length === 0 ? (
-            <div className="p-6 text-center text-xs text-[var(--text-muted)]">
-              {t('noData')}
-            </div>
+            <div className="p-6 text-center text-xs text-[var(--text-muted)]">{t('noData')}</div>
           ) : (
             recentActivity.map((activity, index) => {
               const isFuel = activity.type === 'fuel';
@@ -410,14 +357,10 @@ export default function Dashboard() {
               const Icon = isFuel ? Fuel : isMaint ? Wrench : isIncome ? TrendingUp : Wallet;
               const color = isFuel ? (isElectricFuel ? 'text-green-500' : 'text-blue-500') : isMaint ? 'text-yellow-500' : isIncome ? 'text-green-500' : 'text-purple-500';
               const bg = isFuel ? (isElectricFuel ? 'bg-green-500/10' : 'bg-blue-500/10') : isMaint ? 'bg-yellow-500/10' : isIncome ? 'bg-green-500/10' : 'bg-purple-500/10';
-
               const safeCost = safeNumber(activity.cost);
 
               return (
-                <div
-                  key={activity.id || `act-${index}`}
-                  className={`flex items-center justify-between p-3 ${index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''}`}
-                >
+                <div key={activity.id || `act-${index}`} className={`flex items-center justify-between p-3 ${index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''}`}>
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <div className={`p-2 rounded-lg ${bg} ${color} flex-shrink-0`}>
                       <Icon size={16} aria-hidden="true" />
@@ -432,8 +375,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <p className={`text-xs sm:text-sm font-bold flex-shrink-0 ml-2 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>
-                    {isIncome ? '+' : ''}{safeCost.toLocaleString()}{' '}
-                    <span className="text-[9px] sm:text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
+                    {isIncome ? '+' : ''}{safeCost.toLocaleString()} <span className="text-[9px] sm:text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
                 </div>
               );
