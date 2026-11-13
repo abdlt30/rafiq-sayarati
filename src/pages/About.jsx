@@ -1,23 +1,25 @@
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Car, ShieldCheck, Mail, FileText, Code } from 'lucide-react';
 import { useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, ArrowLeft, Car, ShieldCheck, Mail } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 
-// يمكنك لاحقاً استبدال هذه القيم برابط حقيقي أو جلبها من package.json
+// ⚠️ مهم جداً: يجب أن تكون هذه القيم حقيقية قبل النشر على Google Play
 const APP_VERSION = '1.0.0';
-const DEVELOPER_EMAIL = 'support@rafiq-sayarati.com';
-const PRIVACY_POLICY_URL = 'https://rafiq-sayarati.com/privacy';
+const DEVELOPER_EMAIL = 'abdlt30@example.com'; // ← استبدلها ببريدك الحقيقي
+// ✅ رابط حقيقي يعمل فعلياً (GitHub Pages)
+const PRIVACY_POLICY_URL = 'https://abdlt30.github.io/rafiq-sayarati/privacy.html';
 
 export default function About() {
   const navigate = useNavigate();
   const { t, lang } = useContext(AppContext);
 
-  // ✅ دالة ذكية للرجوع (تتفادى الخطأ إذا لم يكن هناك سجل)
+  // ✅ رجوع محصّن باستخدام history.state.idx (React Router 6)
   const handleBack = () => {
-    if (window.history.length > 2) {
+    const idx = window.history.state?.idx;
+    if (typeof idx === 'number' && idx > 0) {
       navigate(-1);
     } else {
-      navigate('/more'); // المسار الافتراضي
+      navigate('/more', { replace: true });
     }
   };
 
@@ -29,41 +31,43 @@ export default function About() {
         <button 
           type="button"
           onClick={handleBack} 
-          aria-label={t('back') || 'رجوع'}
+          aria-label={t('back')}
           className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] active:scale-90 transition-transform"
         >
-          {lang === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
+          {lang === 'ar' 
+            ? <ArrowRight size={20} aria-hidden="true" /> 
+            : <ArrowLeft size={20} aria-hidden="true" />}
         </button>
         <h1 className="text-2xl font-bold text-[var(--text)]">
-          {t('aboutApp') || 'حول التطبيق'}
+          {t('aboutApp')}
         </h1>
       </div>
 
       {/* بطاقة الشعار */}
       <div className="bg-[var(--surface)] border border-[var(--border)] p-6 rounded-3xl text-center shadow-sm">
         <div className="w-20 h-20 bg-[var(--primary)]/10 text-[var(--primary)] rounded-full flex items-center justify-center mx-auto mb-4">
-          <Car size={40} />
+          <Car size={40} aria-hidden="true" />
         </div>
         <h2 className="text-2xl font-extrabold text-[var(--text)] mb-2">
-          {t('appName') || 'رفيق سيارتي'}
+          {t('appName')}
         </h2>
         <p className="text-sm text-[var(--text-muted)] mb-6 font-mono">
           v{APP_VERSION}
         </p>
         
         <div className="flex items-center justify-center gap-2 text-xs text-green-500 font-bold bg-green-500/10 py-2 px-4 rounded-full w-fit mx-auto">
-          <ShieldCheck size={16} />
-          <span>{t('dataSecureLocally') || 'بياناتك آمنة ومحفوظة محلياً'}</span>
+          <ShieldCheck size={16} aria-hidden="true" />
+          <span>{t('dataSecureLocally')}</span>
         </div>
       </div>
 
       {/* وصف التطبيق */}
       <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl text-sm text-[var(--text-muted)] leading-relaxed">
         <p className="mb-3">
-          {t('appDescription1') || 'تطبيق "رفيق سيارتي" هو رفيقك الذكي لإدارة كل ما يتعلق بسيارتك. من تتبع المصاريف والوقود، إلى تذكيرات الصيانة والوثائق.'}
+          {t('appDescription1')}
         </p>
         <p>
-          {t('appDescription2') || 'تم تصميم هذا التطبيق ليكون سريعاً، آمناً، وسهل الاستخدام، ليوفر عليك الوقت والمال.'}
+          {t('appDescription2')}
         </p>
       </div>
 
@@ -76,10 +80,10 @@ export default function About() {
           className="flex items-center justify-between p-4 border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors"
         >
           <div className="flex items-center gap-3">
-            <ShieldCheck size={18} className="text-blue-500" />
-            <span className="text-sm font-bold text-[var(--text)]">{t('privacyPolicy') || 'سياسة الخصوصية'}</span>
+            <ShieldCheck size={18} className="text-blue-500" aria-hidden="true" />
+            <span className="text-sm font-bold text-[var(--text)]">{t('privacyPolicy')}</span>
           </div>
-          <span className="text-[10px] text-[var(--text-muted)]">{t('opensInBrowser') || 'يفتح في المتصفح'}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{t('opensInBrowser')}</span>
         </a>
 
         <a 
@@ -87,8 +91,8 @@ export default function About() {
           className="flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors"
         >
           <div className="flex items-center gap-3">
-            <Mail size={18} className="text-orange-500" />
-            <span className="text-sm font-bold text-[var(--text)]">{t('contactDeveloper') || 'التواصل مع المطور'}</span>
+            <Mail size={18} className="text-orange-500" aria-hidden="true" />
+            <span className="text-sm font-bold text-[var(--text)]">{t('contactDeveloper')}</span>
           </div>
           <span className="text-[10px] text-[var(--text-muted)] font-mono">{DEVELOPER_EMAIL}</span>
         </a>
@@ -96,7 +100,7 @@ export default function About() {
 
       {/* تذييل */}
       <p className="text-center text-[10px] text-[var(--text-muted)] mt-8">
-        {t('madeWithLove') || 'صُنع بكل حب لخدمة سيارتك'} ❤️
+        {t('madeWithLove')} <span aria-hidden="true">❤️</span>
       </p>
     </div>
   );
