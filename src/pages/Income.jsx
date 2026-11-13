@@ -2,15 +2,19 @@ import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'r
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
-import OptionPicker from '../components/ui/OptionPicker';
-import ConfirmModal from '../components/ui/ConfirmModal';
+
+// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
+import OptionPicker from '../shared/components/ui/OptionPicker';
+import ConfirmModal from '../shared/components/ui/ConfirmModal';
+import { safeNumber } from '../shared/utils/safeNumber';
+import { formatDate } from '../shared/utils/formatters';
 
 const EMPTY_FORM = { date: '', type: 'ride', amount: '', notes: '' };
 const MAX_NOTES_LENGTH = 200;
 const MAX_AMOUNT = 1e12;
 
 export default function Income() {
-  const { currentCar, t, currency, dataVersion, bumpDataVersion } = useContext(AppContext); 
+  const { currentCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,12 +24,14 @@ export default function Income() {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const toastTimeoutRef = useRef(null);
+  const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
+  /* ✅ 2. إزالة الكود الميت (|| 'fallback') */
   const incomeTypes = useMemo(() => [
-    { value: 'ride', label: t('rideIncome') || 'رحلات / توصيل' },
-    { value: 'rental', label: t('rentalIncome') || 'تأجير السيارة' },
-    { value: 'delivery', label: t('deliveryIncome') || 'توصيل طرود' },
-    { value: 'other', label: t('otherIncome') || 'إيراد آخر' }
+    { value: 'ride', label: t('rideIncome') },
+    { value: 'rental', label: t('rentalIncome') },
+    { value: 'delivery', label: t('deliveryIncome') },
+    { value: 'other', label: t('otherIncome') }
   ], [t]);
 
   const validTypes = useMemo(() => new Set(incomeTypes.map(i => i.value)), [incomeTypes]);
@@ -56,7 +62,7 @@ export default function Income() {
         return;
       }
       const allIncomes = dbService.getIncomes() || [];
-      // ✅ إصلاح: استخدام String() لضمان التطابق
+      // ✅ إصلاح أمني: استخدام String() لضمان التطابق
       const carIncomes = allIncomes.filter(r => String(r.carId) === String(currentCar.id));
       
       const sorted = [...carIncomes].sort((a, b) =>
@@ -79,21 +85,20 @@ export default function Income() {
     const isBlank = (v) => v === '' || v === undefined || v === null;
 
     if (isBlank(formData.date) || isBlank(formData.type) || isBlank(formData.amount)) {
-      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
+      return showToast(t('fillRequiredFields'), 'error');
     }
 
     if (!validTypes.has(formData.type)) {
-      // ✅ إصلاح: استخدام مفتاح ترجمة بدلاً من الكود الميت
-      return showToast(t('invalidIncomeType') || 'نوع الإيراد غير صالح.', 'error');
+      return showToast(t('invalidIncomeType'), 'error');
     }
 
     const amountNum = Number(formData.amount);
     if (!Number.isFinite(amountNum) || amountNum < 0) {
-      return showToast(t('invalidNumbers') || 'الرجاء إدخال مبلغ صحيح.', 'error');
+      return showToast(t('invalidNumbers'), 'error');
     }
 
     if (amountNum > MAX_AMOUNT) {
-      return showToast(t('invalidNumbers') || 'المبلغ كبير جداً.', 'error');
+      return showToast(t('invalidNumbers'), 'error');
     }
 
     const notesValue = (formData.notes || '').trim().slice(0, MAX_NOTES_LENGTH);
@@ -115,10 +120,10 @@ export default function Income() {
       loadData();
       bumpDataVersion();
       closeModal();
-      showToast(t('saveSuccess') || 'تم الحفظ بنجاح!', 'success');
+      showToast(t('saveSuccess'), 'success');
     } catch (error) {
       console.error("خطأ في حفظ الإيراد:", error);
-      showToast(t('errorSaving') || "حدث خطأ أثناء الحفظ.", 'error');
+      showToast(t('errorSaving'), 'error');
     }
   };
 
@@ -133,7 +138,7 @@ export default function Income() {
     } catch (e) {
       console.error('deleteIncome failed:', e);
       setDeleteId(null);
-      showToast(t('errorSaving') || 'حدث خطأ أثناء الحذف.', 'error');
+      showToast(t('errorSaving'), 'error');
     }
   };
 
@@ -167,11 +172,9 @@ export default function Income() {
   };
 
   /* ===================== Computed ===================== */
+  // ✅ 3. حساب الإجمالي مع حماية رياضية
   const total = useMemo(() => {
-    return records.reduce((sum, r) => {
-      const v = Number(r.amount);
-      return sum + (Number.isFinite(v) ? v : 0);
-    }, 0);
+    return records.reduce((sum, r) => sum + safeNumber(r.amount), 0);
   }, [records]);
 
   const deleteMessage = useMemo(() => {
@@ -192,25 +195,25 @@ export default function Income() {
       
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
           <button 
             type="button"
             onClick={dismissToast} 
-            aria-label="إغلاق"
+            aria-label={t('close')}
             className="ml-2 opacity-70 hover:opacity-100"
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
       )}
 
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('income') || 'الإيرادات'}</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('income')}</h1>
       </div>
 
       <div className="bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20 p-4 rounded-2xl mb-2">
-        <span className="text-xs text-[var(--text-muted)] block mb-1">{t('totalIncome') || 'إجمالي الإيرادات'}</span>
+        <span className="text-xs text-[var(--text-muted)] block mb-1">{t('totalIncome')}</span>
         <span className="text-2xl font-extrabold text-green-500">
           {total.toLocaleString()} <span className="text-sm font-normal text-[var(--text-muted)]">{currency}</span>
         </span>
@@ -218,26 +221,28 @@ export default function Income() {
 
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
-          <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4"><TrendingUp size={48} className="opacity-40" /></div>
-          <p>{t('noIncome') || 'لا توجد إيرادات مسجلة.'}</p>
+          <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
+            <TrendingUp size={48} className="opacity-40" aria-hidden="true" />
+          </div>
+          <p>{t('noIncome')}</p>
         </div>
       ) : (
         <div className="space-y-2">
           {records.map(record => {
-            const safeAmount = Number(record.amount);
-            const displayAmount = Number.isFinite(safeAmount) ? safeAmount : 0;
+            const displayAmount = safeNumber(record.amount);
             return (
               <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm hover:border-green-500/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp size={18} />
+                    <TrendingUp size={18} aria-hidden="true" />
                   </div>
                   <div>
                     <p className="text-green-500 font-bold text-sm">
                       + {displayAmount.toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                      {record.date} • {getTypeLabel(record.type)}
+                      {/* ✅ 4. استخدام formatDate */}
+                      {formatDate(record.date, todayLocale)} • {getTypeLabel(record.type)}
                       {record.notes ? ` • ${record.notes}` : ''}
                     </p>
                   </div>
@@ -246,18 +251,18 @@ export default function Income() {
                   <button 
                     type="button"
                     onClick={() => openEdit(record)} 
-                    aria-label="تعديل"
+                    aria-label={t('edit')}
                     className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"
                   >
-                    <Edit2 size={14} />
+                    <Edit2 size={14} aria-hidden="true" />
                   </button>
                   <button 
                     type="button"
                     onClick={() => setDeleteId(record.id)} 
-                    aria-label="حذف"
+                    aria-label={t('confirmDelete')}
                     className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -269,20 +274,20 @@ export default function Income() {
       <button 
         type="button"
         onClick={openAddModal} 
-        aria-label="إضافة إيراد"
+        aria-label={t('addIncome')}
         className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-green-500 text-white rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
-        <Plus size={28} />
+        <Plus size={28} aria-hidden="true" />
       </button>
 
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
-        title={t('confirmDelete') || 'تأكيد الحذف'}
+        title={t('confirmDelete')}
         message={deleteMessage}
         variant="danger" 
-        confirmText={t('confirmDeleteBtn') || 'نعم، احذف'} 
+        confirmText={t('confirmDeleteBtn')} 
       />
 
       {isModalOpen && (
@@ -291,18 +296,18 @@ export default function Income() {
             <button 
               type="button" 
               onClick={closeModal} 
-              aria-label="إغلاق"
+              aria-label={t('close')}
               className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white active:scale-90 transition-all z-10"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
-              {editingId ? (t('editIncome') || 'تعديل إيراد') : (t('addIncome') || 'إضافة إيراد')}
+              {editingId ? t('editIncome') : t('addIncome')}
             </h2>
             
             <div className="space-y-3 overflow-y-auto pb-2">
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date')}</label>
                 <input 
                   type="date" 
                   value={formData.date} 
@@ -312,14 +317,14 @@ export default function Income() {
               </div>
               
               <OptionPicker 
-                label={t('incomeType') || 'نوع الإيراد'} 
+                label={t('incomeType')} 
                 options={incomeTypes} 
                 value={formData.type} 
                 onChange={(val) => setFormData({...formData, type: val})} 
               />
 
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('amount') || 'المبلغ'} ({currency})</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('amount')} ({currency})</label>
                 <input 
                   type="number" 
                   inputMode="decimal" 
@@ -334,12 +339,12 @@ export default function Income() {
 
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">
-                  {t('notes') || 'ملاحظات'} ({t('optional') || 'اختياري'})
+                  {t('notes')} ({t('optional')})
                 </label>
                 <input 
                   type="text" 
                   maxLength={MAX_NOTES_LENGTH}
-                  placeholder={t('incomeNotesPlaceholder') || 'مثال: رحلة إلى المطار...'} 
+                  placeholder={t('incomeNotesPlaceholder')} 
                   value={formData.notes} 
                   onChange={e => setFormData({...formData, notes: e.target.value})} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-green-500" 
@@ -352,7 +357,7 @@ export default function Income() {
               </div>
             </div>
             <button type="submit" className="w-full mt-5 bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-green-600 active:scale-[0.98] transition-all">
-              {t('saveIncome') || 'حفظ الإيراد'}
+              {t('saveIncome')}
             </button>
           </form>
         </div>
