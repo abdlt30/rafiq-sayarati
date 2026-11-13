@@ -39,6 +39,8 @@ export const ar = {
   noResults: 'لا توجد نتائج',
   currency: 'العملة',
   language: 'اللغة',
+  exporting: 'جاري التصدير...', // ✅ جديد
+  resetting: 'جاري المسح...', // ✅ جديد
 
   // ===================== Onboarding & Welcome =====================
   welcomeMessagePart1: 'تحكم في مصاريف سيارتك، تابع صيانتها، ووفر',
@@ -214,6 +216,9 @@ export const ar = {
   addDocument: 'إضافة وثيقة',
   documentType: 'نوع الوثيقة',
   endDate: 'تاريخ الانتهاء',
+  expiryDate: 'تاريخ الانتهاء', // ✅ جديد (متوافق مع Documents.jsx)
+  registration: 'رخصة (Carte Grise)', // ✅ جديد
+  uploadImage: 'التقط صورة أو ارفعها', // ✅ جديد
   technicalInspection: 'فحص تقني',
   license: 'رخصة',
   expired: 'منتهية',
@@ -282,6 +287,7 @@ export const ar = {
   recentActivity: 'آخر العمليات',
   upcomingMaintenance: 'الصيانة القادمة',
   timeline: 'سجل السيارة',
+  carTimeline: 'سجل السيارة', // ✅ جديد (متوافق مع Timeline.jsx)
   confirmLowerOdometer: 'العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟',
 
   // ===================== Reports & Print =====================
@@ -290,6 +296,7 @@ export const ar = {
   comprehensiveFinancialReport: 'تقرير مالي شامل',
   financialSummary: 'الملخص المالي',
   totalExpenses: 'إجمالي المصاريف',
+  totalFuel: 'إجمالي الوقود', // ✅ جديد
   totalFuelCost: 'إجمالي الوقود',
   expenseDistribution: 'توزيع المصاريف',
   monthlyExpenses: 'المصاريف الشهرية',
@@ -300,6 +307,9 @@ export const ar = {
   otherExpenses: 'مصاريف أخرى',
   fuelLog: 'سجل الوقود',
   maintenanceLog: 'سجل الصيانة',
+  pdfReport: 'تقرير PDF', // ✅ جديد
+  noChartData: 'لا توجد بيانات كافية للرسم البياني', // ✅ جديد
+  addMoreRecords: 'أضف المزيد من السجلات لعرض التحليلات', // ✅ جديد
   printPdf: 'طباعة / PDF',
   printReport: 'طباعة التقرير',
   shareReport: 'مشاركة التقرير',
@@ -433,7 +443,7 @@ export const ar = {
   currency_TND: 'دينار تونسي', 
   currency_LYD: 'دينار ليبي', 
   currency_USD: 'دولار أمريكي', 
-  currency_EUR: 'يورو', // ✅ تم إضافة الفاصلة المفقودة هنا
+  currency_EUR: 'يورو',
 
   // ===================== About App =====================
   dataSecureLocally: 'بياناتك آمنة ومحفوظة محلياً',
