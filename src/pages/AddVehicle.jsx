@@ -1,10 +1,12 @@
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import OptionPicker from '../components/ui/OptionPicker';
 import { Camera, X } from 'lucide-react';
+
+// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared Components)
+import Input from '../shared/components/ui/Input';
+import Button from '../shared/components/ui/Button';
+import OptionPicker from '../shared/components/ui/OptionPicker';
 
 const EMPTY_CAR = { 
   make: '', model: '', plate: '', odometer: '', 
@@ -26,7 +28,7 @@ const MAX_BATTERY = 250;
 const MIN_YEAR = 1886;                         
 
 export default function AddVehicle() {
-  const { addNewCar, updateCar, vehicles, t } = useContext(AppContext); // ✅ إزالة bumpDataVersion
+  const { addNewCar, updateCar, vehicles, t } = useContext(AppContext); 
   const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
   
@@ -36,7 +38,7 @@ export default function AddVehicle() {
   const [error, setError] = useState('');
   const [car, setCar] = useState(EMPTY_CAR);
 
-  // ✅ إزالة الكود الميت || 'fallback'
+  // ✅ استخدام t() لجلب الترجمة (بدون نصوص احتياطية وهمية)
   const powertrainOptions = [
     { value: 'ice', label: t('ice') },
     { value: 'ev', label: t('ev') },
@@ -79,7 +81,7 @@ export default function AddVehicle() {
     });
   }, [isEditing, editId, vehicles]);
 
-  /* ===================== ضغط الصور ===================== */
+  /* ===================== ضغط الصور (Canvas) ===================== */
   const compressImage = (file, maxDim = MAX_IMAGE_DIM) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -132,7 +134,7 @@ export default function AddVehicle() {
     try {
       const compressed = await compressImage(file);
       setCar(prev => ({ ...prev, image: compressed }));
-      setError(''); // ✅ مسح أي خطأ سابق بنجاح رفع الصورة
+      setError(''); // مسح أي خطأ سابق بنجاح رفع الصورة
     } catch (err) {
       console.error('image compress failed:', err);
       setError(t('imageProcessingFailed'));
@@ -141,7 +143,7 @@ export default function AddVehicle() {
     }
   };
 
-  /* ===================== التحقق الرياضي ===================== */
+  /* ===================== التحقق الرياضي (Math Validation) ===================== */
   const validate = () => {
     const make = (car.make || '').trim();
     const model = (car.model || '').trim();
@@ -189,7 +191,7 @@ export default function AddVehicle() {
     return null;
   };
 
-  /* ===================== الحفظ ===================== */
+  /* ===================== الحفظ (Save) ===================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -232,7 +234,7 @@ export default function AddVehicle() {
       }
     } catch (err) {
       console.error('save failed:', err);
-      // ✅ إصلاح: قراءة الخطأ من AppContext بدقة
+      // قراءة الخطأ من AppContext بدقة
       if (err.code === 'INVALID_ODOMETER') setError(t('invalidOdometer'));
       else if (err.code === 'STORAGE_FULL') setError(t('storageFull'));
       else if (err.code === 'CAR_NOT_FOUND') setError(t('errorSaving'));
