@@ -36,10 +36,11 @@ import Settings from './pages/Settings';
 import Backup from './pages/Backup'; 
 
 /* =========================================================
-   ✅ الحماية
+   ✅ الحماية (Route Guard)
    ========================================================= */
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
+  // إذا لم توجد سيارة، يتم التوجيه لصفحة الترحيب
   return currentCar ? <Outlet /> : <Navigate to="/welcome" replace />;
 };
 
@@ -48,7 +49,10 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] flex justify-center items-center text-[var(--primary)] font-bold text-xl">
+      <div 
+        className="min-h-screen bg-[var(--bg)] flex justify-center items-center text-[var(--primary)] font-bold text-xl"
+        aria-live="polite" // ✅ تحسين الوصولية: إخبار قارئ الشاشة بحالة التحميل
+      >
         {t ? t('loading') : '...'}
       </div>
     );
@@ -58,7 +62,7 @@ export default function App() {
     <HashRouter>
       <Routes>
         {/* =========================================================
-            1. المسارات العامة (لا تحتاج سيارة)
+            1. المسارات العامة (لا تحتاج سيارة ولا Layout)
             ========================================================= */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/onboarding" element={<Onboarding />} />
@@ -95,7 +99,7 @@ export default function App() {
         </Route>
         
         {/* =========================================================
-            3. Fallback
+            3. Fallback (المسارات غير الموجودة)
             ========================================================= */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
