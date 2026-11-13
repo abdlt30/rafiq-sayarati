@@ -1,29 +1,26 @@
 import { useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { AppContext } from '../context/AppContext';
+import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
 import { useNavigate } from 'react-router-dom';
+import localforage from 'localforage'; // ✅ استيراد قاعدة البيانات مباشرة للنسخ الاحتياطي
 import { 
   Moon, Sun, Globe, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, 
   ShieldCheck, Database, BellRing, CheckCircle, XCircle, 
-  Download, Upload, AlertCircle, Info, Trash2, X
+  Download, Upload, AlertCircle, Info, Trash2, X, Loader2
 } from 'lucide-react';
 
-// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
-import CurrencySelector from '../shared/components/ui/CustomSelect'; 
-import { pushService } from '../services/pushService';
+import CurrencySelector from '../shared/components/ui/CustomSelect.jsx'; // ✅ إضافة .jsx
+import { pushService } from '../services/pushService.js'; // ✅ إضافة .js
 
 const APP_VERSION = '1.0.0';
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2; // ✅ تم رفع الإصدار لأن الهيكلة تغيرت
 
-const BACKUP_KEYS = {
+// ✅ إعداد قاعدة البيانات للوصول المباشر للنسخ الاحتياطي
+const db = localforage.createInstance({ name: 'RafiqSayaratiDB', storeName: 'appData' });
+
+// مفاتيح الـ LocalStorage (للإعدادات فقط)
+const LOCAL_STORAGE_KEYS = {
   vehicles: 'vehicles',
   savedCar: 'savedCar',
-  fuel: 'fuel_records',
-  expenses: 'expenses_records',
-  maintenance: 'maintenance_records',
-  documents: 'documents_records',
-  reminders: 'reminders_records',
-  incomes: 'income_records',
-  customTypes: 'custom_maintenance_types',
   user_name: 'user_name',
   theme: 'theme',
   lang: 'lang',
@@ -31,7 +28,11 @@ const BACKUP_KEYS = {
   notificationsEnabled: 'notificationsEnabled',
 };
 
-const ARRAY_KEYS = ['vehicles', 'fuel', 'expenses', 'maintenance', 'documents', 'reminders', 'incomes', 'customTypes'];
+// مفاتيح قاعدة البيانات IndexedDB (للسجلات والبيانات الضخمة)
+const INDEXED_DB_KEYS = [
+  'fuel_records', 'expenses_records', 'maintenance_records', 
+  'documents_records', 'reminders_records', 'income_records', 'custom_maintenance_types'
+];
 
 const safeBoolFromStorage = (key, fallback = true) => {
   try {
@@ -39,18 +40,14 @@ const safeBoolFromStorage = (key, fallback = true) => {
     if (raw === null) return fallback;
     const parsed = JSON.parse(raw);
     return typeof parsed === 'boolean' ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
+  } catch { return fallback; }
 };
 
 const readPushPermission = () => {
   try {
     if (typeof Notification === 'undefined') return 'unsupported';
     return Notification.permission || 'default';
-  } catch {
-    return 'default';
-  }
+  } catch { return 'default'; }
 };
 
 export default function Settings() {
@@ -58,11 +55,15 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() =>
-    safeBoolFromStorage('notificationsEnabled', true)
-  );
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => safeBoolFromStorage('notificationsEnabled', true));
   const [pushPermission, setPushPermission] = useState(readPushPermission);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  
+  // ✅ حالات التحميل للعمليات الثقيلة
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
   const [importConfirm, setImportConfirm] = useState(null);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [lastBackup, setLastBackup] = useState(() => {
@@ -74,6 +75,7 @@ export default function Settings() {
 
   /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
+    // ✅ إصلاح: إلغاء المؤقت السابق لمنع تداخل الرسائل
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
     toastTimeoutRef.current = setTimeout(() => {
@@ -88,9 +90,7 @@ export default function Settings() {
   useEffect(() => {
     try {
       localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
-    } catch (e) {
-      console.error('Save notificationsEnabled failed:', e);
-    }
+    } catch (e) { console.error('Save failed:', e); }
   }, [notificationsEnabled]);
 
   useEffect(() => {
@@ -111,60 +111,57 @@ export default function Settings() {
   const handleEnablePush = async () => {
     try {
       if (!pushService || typeof pushService.requestPermission !== 'function') {
-        showToast(t('pushUnavailable'), 'error');
+        showToast(t('pushUnavailable') || 'الإشعارات غير مدعومة', 'error');
         return;
       }
       const granted = await pushService.requestPermission();
       setPushPermission(readPushPermission());
-
       if (granted) {
         setNotificationsEnabled(true);
-        showToast(t('pushEnabled'), 'success');
+        showToast(t('pushEnabled') || 'تم تفعيل الإشعارات', 'success');
       } else {
-        showToast(t('pushDenied'), 'error');
+        showToast(t('pushDenied') || 'تم رفض الإشعارات', 'error');
       }
     } catch (err) {
-      console.error('Push permission failed:', err);
-      showToast(t('pushError'), 'error');
+      showToast(t('pushError') || 'حدث خطأ', 'error');
     }
   };
 
-  /* ===================== Navigation ===================== */
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1);
     else navigate('/');
   };
 
-  /* ===================== Export ===================== */
-  const handleExport = () => {
+  /* ===================== Export (Async Backup) ===================== */
+  const handleExport = async () => {
+    setIsExporting(true);
     try {
-      const data = {};
-      Object.entries(BACKUP_KEYS).forEach(([key, storageKey]) => {
+      const backupData = { localStorage: {}, indexedDB: {} };
+
+      // 1. جلب إعدادات واجهة المستخدم من LocalStorage
+      Object.entries(LOCAL_STORAGE_KEYS).forEach(([key, storageKey]) => {
         try {
           const raw = localStorage.getItem(storageKey);
-          if (raw === null) return;
-          if (ARRAY_KEYS.includes(key)) {
-            const parsed = JSON.parse(raw);
-            data[key] = Array.isArray(parsed) ? parsed : [];
-          } else if (key === 'savedCar') {
-            data[key] = raw ? JSON.parse(raw) : null;
-          } else if (key === 'notificationsEnabled') {
-            data[key] = safeBoolFromStorage(storageKey, true);
-          } else {
-            data[key] = raw;
+          if (raw !== null) {
+            backupData.localStorage[key] = (key === 'vehicles' || key === 'savedCar') ? JSON.parse(raw) : raw;
           }
-        } catch {
-          data[key] = ARRAY_KEYS.includes(key) ? [] : null;
-        }
+        } catch {}
       });
+
+      // 2. جلب السجلات من IndexedDB (البيانات الحقيقية)
+      for (const key of INDEXED_DB_KEYS) {
+        const data = await db.getItem(key);
+        if (data) backupData.indexedDB[key] = data;
+      }
 
       const backup = {
         appVersion: APP_VERSION,
         backupVersion: BACKUP_VERSION,
         exportDate: new Date().toISOString(),
-        data,
+        data: backupData,
       };
 
+      // 3. تنزيل الملف
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -179,49 +176,38 @@ export default function Settings() {
       const now = new Date().toISOString();
       localStorage.setItem('lastBackupDate', now);
       setLastBackup(now);
-      showToast(t('exportSuccess'), 'success');
+      showToast(t('exportSuccess') || 'تم التصدير بنجاح', 'success');
     } catch (err) {
       console.error('Export failed:', err);
-      showToast(t('errorExport'), 'error');
+      showToast(t('errorExport') || 'فشل التصدير', 'error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  /* ===================== Import ===================== */
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
+  /* ===================== Import (Async Restore) ===================== */
+  const handleImportClick = () => fileInputRef.current?.click();
 
   const handleImportFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      showToast(t('importError'), 'error');
+    if (file.size > 15 * 1024 * 1024) { // ✅ زيادة الحد إلى 15 ميجا بسبب البيانات
+      showToast(t('importError') || 'الملف كبير جداً', 'error');
       e.target.value = null;
       return;
     }
 
     const reader = new FileReader();
-    reader.onerror = () => {
-      showToast(t('importError'), 'error');
-      e.target.value = null;
-    };
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target.result);
-
-        if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
-          showToast(t('importError'), 'error');
-          return;
+        // ✅ التحقق من الهيكلة الجديدة
+        if (!parsed || !parsed.data || !parsed.data.localStorage || !parsed.data.indexedDB) {
+          return showToast(t('importVersionMismatch') || 'ملف غير متوافق', 'error');
         }
-        if (parsed.backupVersion !== BACKUP_VERSION) {
-          showToast(t('importVersionMismatch'), 'error');
-          return;
-        }
-
         setImportConfirm({ fileName: file.name, parsed });
       } catch (err) {
-        showToast(t('importError'), 'error');
+        showToast(t('importError') || 'ملف تالف', 'error');
       } finally {
         e.target.value = null;
       }
@@ -229,30 +215,30 @@ export default function Settings() {
     reader.readAsText(file);
   };
 
-  const handleConfirmImport = () => {
+  const handleConfirmImport = async () => {
     if (!importConfirm) return;
+    setIsImporting(true);
     try {
-      const { data } = importConfirm.parsed;
+      const { localStorage: lsData, indexedDB: idbData } = importConfirm.parsed.data;
 
-      // ✅ التحقق الأمني من نوع البيانات قبل الحفظ
-      Object.entries(BACKUP_KEYS).forEach(([key, storageKey]) => {
-        if (!(key in data)) return;
-        const value = data[key];
-
-        if (ARRAY_KEYS.includes(key)) {
-          if (Array.isArray(value)) localStorage.setItem(storageKey, JSON.stringify(value));
-        } else if (key === 'savedCar') {
-          if (value === null) localStorage.removeItem(storageKey);
-          else if (typeof value === 'object') localStorage.setItem(storageKey, JSON.stringify(value));
-        } else if (key === 'notificationsEnabled') {
-          if (typeof value === 'boolean') localStorage.setItem(storageKey, JSON.stringify(value));
-        } else if (typeof value === 'string') {
-          localStorage.setItem(storageKey, value);
+      // 1. استعادة LocalStorage
+      Object.entries(lsData).forEach(([key, value]) => {
+        const storageKey = LOCAL_STORAGE_KEYS[key];
+        if (storageKey) {
+          if (typeof value === 'object') localStorage.setItem(storageKey, JSON.stringify(value));
+          else localStorage.setItem(storageKey, value);
         }
       });
 
+      // 2. استعادة IndexedDB
+      for (const [key, value] of Object.entries(idbData)) {
+        if (INDEXED_DB_KEYS.includes(key)) {
+          await db.setItem(key, value);
+        }
+      }
+
       bumpDataVersion?.();
-      showToast(t('importSuccess'), 'success');
+      showToast(t('importSuccess') || 'تمت الاستعادة بنجاح!', 'success');
       
       setTimeout(() => {
         navigate('/', { replace: true });
@@ -260,70 +246,63 @@ export default function Settings() {
       }, 1500);
     } catch (err) {
       console.error('Import failed:', err);
-      showToast(t('importError'), 'error');
-    } finally {
+      showToast(t('importError') || 'فشل الاستيراد', 'error');
+      setIsImporting(false);
       setImportConfirm(null);
     }
   };
 
-  /* ===================== Reset ===================== */
-  const handleResetAll = () => {
+  /* ===================== Reset (Danger Zone) ===================== */
+  const handleResetAll = async () => {
+    setIsResetting(true);
     try {
-      Object.values(BACKUP_KEYS).forEach(k => localStorage.removeItem(k));
+      // 1. مسح LocalStorage
+      Object.values(LOCAL_STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
       localStorage.removeItem('lastBackupDate');
-      showToast(t('resetSuccess'), 'success');
+      
+      // 2. مسح IndexedDB بالكامل (الطريقة الآمنة)
+      await db.clear();
+
+      showToast(t('resetSuccess') || 'تم مسح البيانات', 'success');
       setTimeout(() => {
         navigate('/', { replace: true });
         window.location.reload();
       }, 1000);
     } catch (err) {
       console.error('Reset failed:', err);
-      showToast(t('errorSaving'), 'error');
-    } finally {
+      showToast(t('errorSaving') || 'حدث خطأ أثناء المسح', 'error');
+      setIsResetting(false);
       setResetConfirm(false);
     }
   };
 
   /* ===================== Date Display ===================== */
   const lastBackupDisplay = useMemo(() => {
-    if (!lastBackup) return t('never');
+    if (!lastBackup) return t('never') || 'أبداً';
     try {
       const d = new Date(lastBackup);
-      if (isNaN(d.getTime())) return t('never');
+      if (isNaN(d.getTime())) return t('never') || 'أبداً';
       const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
-      return d.toLocaleDateString(localeMap[lang] || 'ar-MA', {
-        year: 'numeric', month: 'short', day: 'numeric',
-      });
-    } catch { return t('never'); }
+      return d.toLocaleDateString(localeMap[lang] || 'ar-MA', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch { return t('never') || 'أبداً'; }
   }, [lastBackup, lang, t]);
 
   return (
     <div className="space-y-3 pb-24 px-4 pt-2">
-
       {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-          {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
-          <button 
-            type="button"
-            onClick={() => setToast({ show: false, message: '', type: 'success' })}
-            aria-label={t('close')}
-            className="ml-2 opacity-70 hover:opacity-100"
-          >
-            <X size={16} aria-hidden="true" />
+          <button type="button" onClick={() => setToast({ show: false, message: '', type: 'success' })} className="ml-2 opacity-70 hover:opacity-100">
+            <X size={16} />
           </button>
         </div>
       )}
 
       <div className="flex items-center gap-4 mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-50">
-        <button 
-          type="button"
-          onClick={handleBack}
-          aria-label={t('back')}
-          className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
-        >
-          {lang === 'ar' ? <ArrowRight size={20} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}
+        <button type="button" onClick={handleBack} className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">
+          {lang === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
         </button>
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('settings')}</h1>
       </div>
@@ -332,61 +311,44 @@ export default function Settings() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-3.5 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]">
-            {theme === 'dark' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
+            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
           </div>
           <span className="font-bold text-sm text-[var(--text)]">
             {theme === 'dark' ? t('darkMode') : t('lightMode')}
           </span>
         </div>
-        <button 
-          type="button"
-          onClick={toggleTheme}
-          role="switch"
-          aria-checked={theme === 'dark'}
-          aria-label={t('toggleTheme')}
-          className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
-        >
+        <button type="button" onClick={toggleTheme} className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}>
           <div className={`w-4 h-4 rounded-full bg-white absolute shadow-sm transition-transform duration-300 ${theme === 'dark' ? (lang === 'ar' ? 'right-1' : 'left-1') : (lang === 'ar' ? 'left-1' : 'right-1')}`} />
         </button>
       </div>
 
       {/* 2. التفضيلات */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
-        <button 
-          type="button"
-          onClick={() => setIsPrefsOpen(!isPrefsOpen)}
-          aria-expanded={isPrefsOpen}
-          className="w-full p-3.5 flex justify-between items-center"
-        >
+        <button type="button" onClick={() => setIsPrefsOpen(!isPrefsOpen)} className="w-full p-3.5 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]">
-              <Globe size={18} aria-hidden="true" />
-            </div>
+            <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><Globe size={18} /></div>
             <div className="text-start">
               <span className="font-bold text-sm text-[var(--text)] block">{t('preferences')}</span>
               <span className="text-[10px] text-[var(--text-muted)] mt-0.5 block font-mono tracking-wider">{lang.toUpperCase()} • {currency}</span>
             </div>
           </div>
-          {isPrefsOpen ? <ChevronUp size={18} className="text-[var(--text-muted)]" aria-hidden="true" /> : <ChevronDown size={18} className="text-[var(--text-muted)]" aria-hidden="true" />}
+          {isPrefsOpen ? <ChevronUp size={18} className="text-[var(--text-muted)]" /> : <ChevronDown size={18} className="text-[var(--text-muted)]" />}
         </button>
 
         {isPrefsOpen && (
           <div className="p-3.5 border-t border-[var(--border)] space-y-5 bg-[var(--surface-2)]/30">
             <div>
-              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5">
-                <Globe size={12} aria-hidden="true" /> {t('language')}
-              </label>
+              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5"><Globe size={12} /> {t('language')}</label>
               <div className="flex gap-1.5 bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)]">
-                <button type="button" onClick={() => changeLang('ar')} aria-pressed={lang === 'ar'} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'ar' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>العربية</button>
-                <button type="button" onClick={() => changeLang('en')} aria-pressed={lang === 'en'} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'en' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>English</button>
-                <button type="button" onClick={() => changeLang('fr')} aria-pressed={lang === 'fr'} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'fr' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>Français</button>
+                {['ar', 'en', 'fr'].map(l => (
+                  <button key={l} type="button" onClick={() => changeLang(l)} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === l ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>
+                    {l === 'ar' ? 'العربية' : l === 'en' ? 'English' : 'Français'}
+                  </button>
+                ))}
               </div>
             </div>
-
             <div>
-              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5">
-                <span className="text-sm font-bold">$</span> {t('currency')}
-              </label>
+              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5"><span className="text-sm font-bold">$</span> {t('currency')}</label>
               <CurrencySelector currentCurrency={currency} onSelect={setCurrency} />
             </div>
           </div>
@@ -397,75 +359,34 @@ export default function Settings() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><BellRing size={18} aria-hidden="true" /></div>
+            <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><BellRing size={18} /></div>
             <div>
               <span className="font-bold text-sm text-[var(--text)] block">{t('externalNotifications')}</span>
-              <span className="text-[10px] text-[var(--text-muted)]">
-                {t('notificationsSubtitle')}
-              </span>
+              <span className="text-[10px] text-[var(--text-muted)]">{t('notificationsSubtitle')}</span>
             </div>
           </div>
-          <button 
-            type="button"
-            onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-            role="switch"
-            aria-checked={notificationsEnabled}
-            aria-label={t('externalNotifications')}
-            className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${notificationsEnabled ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
-          >
+          <button type="button" onClick={() => setNotificationsEnabled(!notificationsEnabled)} className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${notificationsEnabled ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}>
             <div className={`w-4 h-4 rounded-full bg-white absolute shadow-sm transition-transform duration-300 ${notificationsEnabled ? (lang === 'ar' ? 'right-1' : 'left-1') : (lang === 'ar' ? 'left-1' : 'right-1')}`} />
           </button>
         </div>
 
         <div className="pt-3 border-t border-[var(--border)] flex justify-between items-center text-xs">
-          <span className="text-[var(--text-muted)]">
-            {t('browserPermission')}
-          </span>
-
-          {pushPermission === 'granted' && (
-            <span className="flex items-center gap-1 text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded-md">
-              <CheckCircle size={14} aria-hidden="true" /> {t('granted')}
-            </span>
-          )}
-          {pushPermission === 'default' && (
-            <button 
-              type="button"
-              onClick={handleEnablePush}
-              className="bg-[var(--primary)] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-600 transition-colors"
-            >
-              {t('requestPermission')}
-            </button>
-          )}
-          {pushPermission === 'denied' && (
-            <span className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded-md">
-              <XCircle size={14} aria-hidden="true" /> {t('denied')}
-            </span>
-          )}
-          {pushPermission === 'unsupported' && (
-            <span className="flex items-center gap-1 text-slate-500 font-bold bg-slate-500/10 px-2 py-1 rounded-md">
-              <Info size={14} aria-hidden="true" /> {t('unsupported')}
-            </span>
-          )}
+          <span className="text-[var(--text-muted)]">{t('browserPermission')}</span>
+          {pushPermission === 'granted' && <span className="flex items-center gap-1 text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded-md"><CheckCircle size={14} /> {t('granted')}</span>}
+          {pushPermission === 'default' && <button type="button" onClick={handleEnablePush} className="bg-[var(--primary)] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-600 transition-colors">{t('requestPermission')}</button>}
+          {pushPermission === 'denied' && <span className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded-md"><XCircle size={14} /> {t('denied')}</span>}
+          {pushPermission === 'unsupported' && <span className="flex items-center gap-1 text-slate-500 font-bold bg-slate-500/10 px-2 py-1 rounded-md"><Info size={14} /> {t('unsupported')}</span>}
         </div>
-        {pushPermission === 'denied' && (
-          <p className="text-[10px] text-red-400 mt-1">
-            {t('enableFromBrowser')}
-          </p>
-        )}
       </div>
 
       {/* 4. النسخ الاحتياطي */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-3">
-          <Database size={18} className="text-[var(--primary)]" aria-hidden="true" />
-          <h2 className="font-bold text-sm text-[var(--text)]">
-            {t('backupAndExport')}
-          </h2>
+          <Database size={18} className="text-[var(--primary)]" />
+          <h2 className="font-bold text-sm text-[var(--text)]">{t('backupAndExport')}</h2>
         </div>
 
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
-          {t('backupDesc')}
-        </p>
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">{t('backupDesc')}</p>
 
         <div className="text-[11px] text-[var(--text-muted)] mb-3 flex justify-between items-center">
           <span>{t('lastBackup')}</span>
@@ -474,42 +395,37 @@ export default function Settings() {
 
         <div className="space-y-2">
           <button 
-            type="button"
-            onClick={handleExport}
-            className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+            type="button" 
+            onClick={handleExport} 
+            disabled={isExporting}
+            className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
           >
-            <Download size={16} aria-hidden="true" /> {t('exportDataBtn')}
+            {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+            {isExporting ? t('exporting') || 'جاري التصدير...' : t('exportDataBtn')}
           </button>
 
           <button 
-            type="button"
-            onClick={handleImportClick}
-            className="w-full bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl hover:bg-[var(--surface)] border border-[var(--border)] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            type="button" 
+            onClick={handleImportClick} 
+            disabled={isImporting}
+            className="w-full bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl hover:bg-[var(--surface)] border border-[var(--border)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Upload size={16} aria-hidden="true" /> {t('importDataBtn')}
+            <Upload size={16} /> {t('importDataBtn')}
           </button>
 
-          <input 
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            onChange={handleImportFile}
-            className="hidden"
-          />
+          <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportFile} className="hidden" />
         </div>
       </div>
 
       {/* 5. الخصوصية */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-2.5">
-          <ShieldCheck size={18} className="text-green-500" aria-hidden="true" />
+          <ShieldCheck size={18} className="text-green-500" />
           <h2 className="font-bold text-sm text-[var(--text)]">{t('privacyAndSecurity')}</h2>
         </div>
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
-          {t('privacyText')}
-        </p>
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">{t('privacyText')}</p>
         <div className="flex justify-between items-center pt-3 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)]">
-          <span className="flex items-center gap-1.5"><Database size={12} aria-hidden="true" /> {t('version')}</span>
+          <span className="flex items-center gap-1.5"><Database size={12} /> {t('version')}</span>
           <span className="font-mono bg-[var(--surface-2)] px-2 py-0.5 rounded-md">v{APP_VERSION}</span>
         </div>
       </div>
@@ -517,15 +433,17 @@ export default function Settings() {
       {/* 6. منطقة الخطر */}
       <div className="bg-[var(--surface)] border border-red-500/20 rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-2.5">
-          <AlertCircle size={18} className="text-red-500" aria-hidden="true" />
+          <AlertCircle size={18} className="text-red-500" />
           <h2 className="font-bold text-sm text-red-500">{t('dangerZone')}</h2>
         </div>
         <button 
-          type="button"
-          onClick={() => setResetConfirm(true)}
-          className="w-full bg-red-500/10 text-red-500 font-bold py-3 rounded-xl hover:bg-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          type="button" 
+          onClick={() => setResetConfirm(true)} 
+          disabled={isResetting}
+          className="w-full bg-red-500/10 text-red-500 font-bold py-3 rounded-xl hover:bg-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <Trash2 size={16} aria-hidden="true" /> {t('resetApp')}
+          {isResetting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />} 
+          {isResetting ? t('resetting') || 'جاري المسح...' : t('resetApp')}
         </button>
       </div>
 
@@ -533,26 +451,13 @@ export default function Settings() {
       {importConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] shadow-2xl">
-            <h3 className="text-lg font-bold text-center mb-3 text-[var(--text)]">
-              {t('confirmImport')}
-            </h3>
-            <p className="text-xs text-[var(--text-muted)] mb-4 text-center">
-              {importConfirm.fileName}
-            </p>
+            <h3 className="text-lg font-bold text-center mb-3 text-[var(--text)]">{t('confirmImport')}</h3>
+            <p className="text-xs text-[var(--text-muted)] mb-4 text-center">{importConfirm.fileName}</p>
+            <p className="text-xs text-red-500 mb-4 text-center font-bold">تحذير: سيتم استبدال جميع البيانات الحالية!</p>
             <div className="flex gap-2">
-              <button 
-                type="button"
-                onClick={() => setImportConfirm(null)}
-                className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl"
-              >
-                {t('cancel')}
-              </button>
-              <button 
-                type="button"
-                onClick={handleConfirmImport}
-                className="flex-1 bg-[var(--primary)] text-white font-bold py-3 rounded-xl"
-              >
-                {t('confirm')}
+              <button type="button" onClick={() => setImportConfirm(null)} disabled={isImporting} className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl disabled:opacity-50">{t('cancel')}</button>
+              <button type="button" onClick={handleConfirmImport} disabled={isImporting} className="flex-1 bg-[var(--primary)] text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 disabled:opacity-50">
+                {isImporting ? <Loader2 size={16} className="animate-spin" /> : t('confirm')}
               </button>
             </div>
           </div>
@@ -562,26 +467,12 @@ export default function Settings() {
       {resetConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-red-500/30 shadow-2xl">
-            <h3 className="text-lg font-bold text-center mb-3 text-red-500">
-              {t('confirmReset')}
-            </h3>
-            <p className="text-xs text-[var(--text-muted)] mb-4 text-center">
-              {t('resetWarning')}
-            </p>
+            <h3 className="text-lg font-bold text-center mb-3 text-red-500">{t('confirmReset')}</h3>
+            <p className="text-xs text-[var(--text-muted)] mb-4 text-center">{t('resetWarning')}</p>
             <div className="flex gap-2">
-              <button 
-                type="button"
-                onClick={() => setResetConfirm(false)}
-                className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl"
-              >
-                {t('cancel')}
-              </button>
-              <button 
-                type="button"
-                onClick={handleResetAll}
-                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl"
-              >
-                {t('confirmDeleteBtn')}
+              <button type="button" onClick={() => setResetConfirm(false)} disabled={isResetting} className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl disabled:opacity-50">{t('cancel')}</button>
+              <button type="button" onClick={handleResetAll} disabled={isResetting} className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 disabled:opacity-50">
+                {isResetting ? <Loader2 size={16} className="animate-spin" /> : t('confirmDeleteBtn')}
               </button>
             </div>
           </div>
