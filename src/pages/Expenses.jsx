@@ -1,13 +1,13 @@
 import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
-import { AppContext } from '../context/AppContext';
-import { dbService } from '../services/dbService';
+// ✅ إضافة الامتدادات المطلوبة لمنع فشل Vite Build
+import { AppContext } from '../context/AppContext.jsx';
+import { dbService } from '../services/dbService.js';
 import { Plus, Trash2, Edit2, X, Wallet, AlertCircle, CheckCircle } from 'lucide-react';
 
-// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
-import OptionPicker from '../shared/components/ui/OptionPicker';
-import ConfirmModal from '../shared/components/ui/ConfirmModal';
-import { safeNumber } from '../shared/utils/safeNumber';
-import { formatDate } from '../shared/utils/formatters';
+import OptionPicker from '../shared/components/ui/OptionPicker.jsx';
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx';
+import { safeNumber } from '../shared/utils/safeNumber.js';
+import { formatDate } from '../shared/utils/formatters.js';
 
 const EMPTY_FORM = { date: '', type: 'insurance', cost: '' };
 
@@ -15,6 +15,7 @@ export default function Expenses() {
   const { currentCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // ✅ حالة تحميل جديدة
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null); 
@@ -24,7 +25,6 @@ export default function Expenses() {
   const toastTimeoutRef = useRef(null);
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
-  /* ✅ 2. إزالة الكود الميت (|| 'fallback') */
   const expenseTypes = useMemo(() => [
     { value: 'insurance', label: t('insurance') },
     { value: 'taxes', label: t('taxes') },
@@ -57,16 +57,17 @@ export default function Expenses() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   }, []);
 
-  /* ===================== Load Data ===================== */
-  const loadData = useCallback(() => {
+  /* ===================== Load Data (Async) ===================== */
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
       if (!currentCar) {
         setRecords([]);
         return;
       }
-      const allExpenses = dbService.getExpenses() || [];
-      // ✅ إصلاح أمني: استخدام String() لضمان التطابق
-      const carExpenses = allExpenses.filter(r => String(r.carId) === String(currentCar.id));
+      // ✅ إضافة await لجلب البيانات من IndexedDB
+      const allExpenses = await dbService.getExpenses();
+      const carExpenses = (allExpenses || []).filter(r => String(r.carId) === String(currentCar.id));
       
       const sorted = [...carExpenses].sort((a, b) =>
         (b.date || '').localeCompare(a.date || '')
@@ -75,13 +76,15 @@ export default function Expenses() {
     } catch (e) {
       console.error('loadData failed:', e);
       setRecords([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [currentCar]);
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
-  /* ===================== Save ===================== */
-  const handleSave = (e) => {
+  /* ===================== Save (Async) ===================== */
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!currentCar) return;
 
@@ -90,18 +93,15 @@ export default function Expenses() {
       return showToast(t('fillRequiredFields'), 'error');
     }
 
-    // ✅ تحقق أمني: منع الأنواع غير المعروفة
     if (!validTypes.has(formData.type)) {
       return showToast(t('errorSaving'), 'error');
     }
 
-    // ✅ 3. تحقق رياضي صارم (مهندس الرياضيات)
     const costNum = Number(formData.cost);
     if (!Number.isFinite(costNum) || costNum < 0) {
       return showToast(t('invalidNumbers'), 'error');
     }
 
-    // ✅ حد أقصى معقول (1 تريليون) لمنع تخزين Infinity
     if (costNum > 1e12) {
       return showToast(t('invalidNumbers'), 'error');
     }
@@ -114,12 +114,13 @@ export default function Expenses() {
     };
     
     try {
+      // ✅ إضافة await لدوال قاعدة البيانات
       if (editingId) {
-        dbService.updateExpense(editingId, data);
+        await dbService.updateExpense(editingId, data);
       } else {
-        dbService.addExpense(data);
+        await dbService.addExpense(data);
       }
-      loadData();
+      await loadData();
       bumpDataVersion();
       closeModal();
       showToast(t('saveSuccess'), 'success');
@@ -129,12 +130,12 @@ export default function Expenses() {
     }
   };
 
-  /* ===================== Delete ===================== */
-  const handleDelete = () => {
+  /* ===================== Delete (Async) ===================== */
+  const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      dbService.deleteExpense(deleteId);
-      loadData();
+      await dbService.deleteExpense(deleteId); // ✅ إضافة await
+      await loadData();
       bumpDataVersion();
       setDeleteId(null);
     } catch (e) {
@@ -174,12 +175,10 @@ export default function Expenses() {
   /* ✅ 4. حساب الإجمالي مع حماية رياضية */
   const total = useMemo(() => {
     return records.reduce((sum, r) => {
-      // safeNumber يرفض NaN/Infinity ويعيد 0
       return sum + safeNumber(r.cost);
     }, 0);
   }, [records]);
 
-  /* ✅ رسالة الحذف مع fallback صحيح */
   const deleteMessage = useMemo(() => {
     const msg = t('confirmDeleteMsg');
     return msg === 'confirmDeleteMsg' 
@@ -187,12 +186,20 @@ export default function Expenses() {
       : msg;
   }, [t]);
 
-  /* ✅ اسم النوع المعروض */
   const getTypeLabel = (type) => {
     const found = expenseTypes.find(e => e.value === type);
     if (found) return found.label;
     return type || '—';
   };
+
+  // ✅ شاشة التحميل
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64 text-[var(--primary)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
@@ -237,7 +244,6 @@ export default function Expenses() {
       ) : (
         <div className="space-y-2">
           {records.map(record => {
-            // ✅ استخدام safeNumber
             const displayCost = safeNumber(record.cost);
             return (
               <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex items-center justify-between shadow-sm hover:border-purple-500/30 transition-colors">
@@ -250,7 +256,6 @@ export default function Expenses() {
                       {displayCost.toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                      {/* ✅ 5. استخدام formatDate */}
                       {formatDate(record.date, todayLocale)} • {getTypeLabel(record.type)}
                     </p>
                   </div>
@@ -322,7 +327,7 @@ export default function Expenses() {
                 <input 
                   type="date" 
                   value={formData.date} 
-                  onChange={e => setFormData({...formData, date: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, date: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" 
                 />
               </div>
@@ -331,7 +336,7 @@ export default function Expenses() {
                 label={t('expenseType')} 
                 options={expenseTypes} 
                 value={formData.type} 
-                onChange={(val) => setFormData({...formData, type: val})} 
+                onChange={(val) => setFormData(prev => ({...prev, type: val}))} 
               />
 
               <div>
@@ -343,7 +348,7 @@ export default function Expenses() {
                   step="0.01" 
                   placeholder="0.00" 
                   value={formData.cost} 
-                  onChange={e => setFormData({...formData, cost: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, cost: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" 
                 />
               </div>
