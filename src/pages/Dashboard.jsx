@@ -1,5 +1,6 @@
 import { useContext, useMemo, useState, useCallback } from 'react';
-import { AppContext } from '../context/AppContext';
+// ✅ إضافة .jsx لضمان توافقية أعلى مع Vite
+import { AppContext } from '../context/AppContext.jsx';
 import { dbService } from '../services/dbService';
 import { notificationService } from '../services/notificationService';
 import { Link } from 'react-router-dom';
@@ -9,7 +10,7 @@ import {
   AlertTriangle, ShieldAlert, TrendingUp, CheckCircle
 } from 'lucide-react'; 
 
-// ✅ 1. استيراد الدوال المشتركة من الهيكل الجديد
+// ✅ استيراد الدوال المشتركة من الهيكل الجديد
 import { safeNumber } from '../shared/utils/safeNumber';
 import { formatDate } from '../shared/utils/formatters';
 
@@ -22,13 +23,13 @@ const canQuickDone = (alert) =>
   (alert.sourceTable === 'maintenance' || alert.sourceTable === 'reminder');
 
 export default function Dashboard() {
-  // ✅ 2. جلب bumpDataVersion لتحديث الواجهة عند الحذف
   const { currentCar, updateCar, t, currency, user, lang, dataVersion, bumpDataVersion } = useContext(AppContext);
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  const greeting = user?.name ? `مرحباً، ${user.name} 👋` : `مرحباً بك 👋`;
+  // ✅ تحسين: استخدام الترجمة بدلاً من النص الثابت
+  const greeting = user?.name ? (t('welcomeUser') || `مرحباً، ${user.name} 👋`) : (t('welcome') || 'مرحباً بك 👋');
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
   /* ===================== الإحصائيات ===================== */
@@ -157,11 +158,14 @@ export default function Dashboard() {
     if (!alert.recordId || !alert.sourceTable) return;
     if (alert.sourceTable !== 'maintenance' && alert.sourceTable !== 'reminder') return;
 
-    const targetName = alert.sourceTable === 'maintenance' ? 'سجل الصيانة' : 'التذكير';
-    const confirmed = window.confirm(
-      `هل أنت متأكد من إتمام: ${alert.title}؟\nسيتم حذف ${targetName} نهائياً.`
-    );
-    if (!confirmed) return;
+    const targetName = alert.sourceTable === 'maintenance' 
+      ? (t('maintenanceRecord') || 'سجل الصيانة') 
+      : (t('reminder') || 'التذكير');
+
+    const confirmMsg = t('confirmCompleteAction', { title: alert.title, target: targetName }) 
+      || `هل أنت متأكد من إتمام: ${alert.title}؟\nسيتم حذف ${targetName} نهائياً.`;
+
+    if (!window.confirm(confirmMsg)) return;
 
     try {
       if (alert.sourceTable === 'maintenance') {
@@ -174,7 +178,7 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Quick done failed:', err);
     }
-  }, [bumpDataVersion]);
+  }, [bumpDataVersion, t]);
 
   /* ✅ قيم آمنة للعرض */
   const netValue = safeNumber(totals.net);
@@ -364,6 +368,7 @@ export default function Dashboard() {
                 min="0"
                 value={newOdo}
                 onChange={(e) => setNewOdo(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveOdometer()} // ✅ حفظ عند الضغط على Enter
                 placeholder={String(odometerValue)}
                 aria-label={t('editOdometer')}
                 className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none"
@@ -473,7 +478,6 @@ export default function Dashboard() {
                               ? t('income')
                               : t('expense')}
                       </p>
-                      {/* ✅ 5. استخدام دالة formatDate من shared */}
                       <p className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">
                         {activity.date ? formatDate(activity.date, todayLocale) : t('notSpecified')}
                       </p>
