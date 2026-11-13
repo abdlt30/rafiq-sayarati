@@ -1,6 +1,14 @@
+import localforage from 'localforage';
+
 // ==========================================
-// مفاتيح التخزين المحلي
+// ✅ إعداد قاعدة البيانات (IndexedDB)
 // ==========================================
+const db = localforage.createInstance({
+  name: 'RafiqSayaratiDB',
+  storeName: 'appData'
+});
+
+// ✅ مفاتيح التخزين
 const KEYS = {
   FUEL: 'fuel_records',
   EXPENSES: 'expenses_records',
@@ -22,23 +30,17 @@ const EMPTY_TOTALS = {
 // ==========================================
 const generateId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    try {
-      return crypto.randomUUID();
-    } catch (e) {
-      // بعض المتصفحات ترمي في غير HTTPS — نكمل للـ fallback
-    }
+    try { return crypto.randomUUID(); } catch (e) { /* fallback */ }
   }
   return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
 };
 
-// ✅ يرفض NaN, Infinity, -Infinity, ويرجع 0
 const safeNumber = (v) => {
   if (v === null || v === undefined || v === '') return 0;
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
-// ✅ كمية الوقود: يدعم amount الجديد + liters القديم
 const getFuelAmount = (r) => {
   if (r.amount !== undefined && r.amount !== null && r.amount !== '') {
     return safeNumber(r.amount);
@@ -47,21 +49,14 @@ const getFuelAmount = (r) => {
 };
 
 // ==========================================
-// ✅ مصنع التخزين (مع readSafe مركزية)
+// ✅ مصنع التخزين (الآن يعتمد على IndexedDB)
 // ==========================================
-const createLocalStore = (storageKey) => {
+const createIndexedStore = (storageKey) => {
   
-  // ✅ دالة داخلية مركزية: تضمن إرجاع مصفوفة دائماً
-  const readSafe = () => {
+  const get = async () => {
     try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw === null) return [];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        console.warn(`Corrupt data in ${storageKey} — expected array, resetting`);
-        return [];
-      }
-      return parsed;
+      const data = await db.getItem(storageKey);
+      return Array.isArray(data) ? data : [];
     } catch (e) {
       console.error(`Error reading ${storageKey}:`, e);
       return [];
@@ -69,42 +64,30 @@ const createLocalStore = (storageKey) => {
   };
 
   return {
-    get: readSafe,
-
-    add: (record) => {
+    get,
+    
+    add: async (record) => {
       try {
-        if (!record || typeof record !== 'object') {
-          console.warn(`Invalid record for ${storageKey}`);
-          return null;
-        }
-        // ✅ إصلاح حرج: استخدام readSafe بدلاً من JSON.parse مباشرة
-        const records = readSafe();
+        if (!record || typeof record !== 'object') return null;
+        const records = await get();
         const newRecord = { 
           ...record, 
           id: generateId(), 
           createdAt: new Date().toISOString() 
         };
-        localStorage.setItem(storageKey, JSON.stringify([newRecord, ...records]));
+        await db.setItem(storageKey, [newRecord, ...records]);
         return newRecord;
       } catch (e) {
         console.error(`Error adding to ${storageKey}:`, e);
-        if (e.name === 'QuotaExceededError' || String(e).includes('quota')) {
-          const err = new Error('quota_exceeded');
-          err.name = 'QuotaExceededError';
-          throw err;
-        }
         return null;
       }
     },
 
-    update: (id, updates) => {
+    update: async (id, updates) => {
       try {
-        if (!id || !updates || typeof updates !== 'object') {
-          return readSafe(); // ✅ إرجاع البيانات الأصلية بدل []
-        }
+        if (!id || !updates || typeof updates !== 'object') return await get();
+        const records = await get();
         
-        // ✅ إصلاح حرج: استخدام readSafe
-        const records = readSafe();
         if (!records.some(r => r.id === id)) {
           console.warn(`Record ${id} not found in ${storageKey}`);
           return records;
@@ -120,30 +103,24 @@ const createLocalStore = (storageKey) => {
             updatedAt: new Date().toISOString() 
           };
         });
-        localStorage.setItem(storageKey, JSON.stringify(updated));
+        await db.setItem(storageKey, updated);
         return updated;
       } catch (e) {
         console.error(`Error updating ${storageKey}:`, e);
-        if (e.name === 'QuotaExceededError') {
-          const err = new Error('quota_exceeded');
-          err.name = 'QuotaExceededError';
-          throw err;
-        }
-        return readSafe(); // ✅ إصلاح: إرجاع البيانات الأصلية بدل []
+        return await get();
       }
     },
 
-    delete: (id) => {
+    delete: async (id) => {
       try {
-        if (!id) return readSafe(); // ✅ إصلاح
-        // ✅ إصلاح حرج: استخدام readSafe
-        const records = readSafe();
+        if (!id) return await get();
+        const records = await get();
         const updated = records.filter(r => r.id !== id);
-        localStorage.setItem(storageKey, JSON.stringify(updated));
+        await db.setItem(storageKey, updated);
         return updated;
       } catch (e) {
         console.error(`Error deleting from ${storageKey}:`, e);
-        return readSafe(); // ✅ إصلاح
+        return await get();
       }
     },
   };
@@ -152,12 +129,12 @@ const createLocalStore = (storageKey) => {
 // ==========================================
 // إنشاء كائنات الخدمة
 // ==========================================
-const fuelStore = createLocalStore(KEYS.FUEL);
-const expenseStore = createLocalStore(KEYS.EXPENSES);
-const maintenanceStore = createLocalStore(KEYS.MAINTENANCE);
-const documentStore = createLocalStore(KEYS.DOCUMENTS);
-const reminderStore = createLocalStore(KEYS.REMINDERS);
-const incomeStore = createLocalStore(KEYS.INCOMES);
+const fuelStore = createIndexedStore(KEYS.FUEL);
+const expenseStore = createIndexedStore(KEYS.EXPENSES);
+const maintenanceStore = createIndexedStore(KEYS.MAINTENANCE);
+const documentStore = createIndexedStore(KEYS.DOCUMENTS);
+const reminderStore = createIndexedStore(KEYS.REMINDERS);
+const incomeStore = createIndexedStore(KEYS.INCOMES);
 
 // ==========================================
 // ✅ فلتر آمن حسب السيارة
@@ -165,9 +142,7 @@ const incomeStore = createLocalStore(KEYS.INCOMES);
 const filterByCar = (records, carId) => {
   if (!Array.isArray(records) || carId === undefined || carId === null) return [];
   const target = String(carId);
-  return records.filter(r => 
-    r && r.carId != null && String(r.carId) === target
-  );
+  return records.filter(r => r && r.carId != null && String(r.carId) === target);
 };
 
 // ==========================================
@@ -213,46 +188,40 @@ export const dbService = {
   // ==========================================
   // ✅ الأنواع المخصصة للصيانة
   // ==========================================
-  getCustomTypes: () => {
+  getCustomTypes: async () => {
     try {
-      const parsed = JSON.parse(localStorage.getItem(KEYS.CUSTOM_MAINTENANCE));
+      const parsed = await db.getItem(KEYS.CUSTOM_MAINTENANCE);
       if (!Array.isArray(parsed)) return [];
       return parsed.filter(t => typeof t === 'string' && t.trim() !== '');
     } catch (e) {
-      console.error("Error reading custom types:", e);
       return [];
     }
   },
 
-  addCustomType: (typeName) => {
+  addCustomType: async (typeName) => {
     try {
       const trimmed = String(typeName || '').trim();
-      if (!trimmed) return dbService.getCustomTypes();
+      if (!trimmed) return await dbService.getCustomTypes();
 
-      const types = dbService.getCustomTypes();
-      
-      if (types.length >= MAX_CUSTOM_TYPES) {
-        console.warn(`Max custom types (${MAX_CUSTOM_TYPES}) reached`);
-        return types;
-      }
+      const types = await dbService.getCustomTypes();
+      if (types.length >= MAX_CUSTOM_TYPES) return types;
 
       const exists = types.some(t => t.toLowerCase() === trimmed.toLowerCase());
       if (exists) return types;
 
       const updated = [...types, trimmed];
-      localStorage.setItem(KEYS.CUSTOM_MAINTENANCE, JSON.stringify(updated));
+      await db.setItem(KEYS.CUSTOM_MAINTENANCE, updated);
       return updated;
     } catch (e) {
-      console.error("Error adding custom type:", e);
       return [];
     }
   },
 
-  deleteCustomType: (typeName) => {
+  deleteCustomType: async (typeName) => {
     try {
-      const types = dbService.getCustomTypes();
+      const types = await dbService.getCustomTypes();
       const updated = types.filter(t => t !== typeName);
-      localStorage.setItem(KEYS.CUSTOM_MAINTENANCE, JSON.stringify(updated));
+      await db.setItem(KEYS.CUSTOM_MAINTENANCE, updated);
       return updated;
     } catch (e) {
       return [];
@@ -260,52 +229,49 @@ export const dbService = {
   },
 
   // ==========================================
-  // ✅ الإحصائيات العامة
+  // ✅ الإحصائيات العامة (أصبحت async)
   // ==========================================
-  getTotals: (carId) => {
+  getTotals: async (carId) => {
     if (carId === undefined || carId === null) return { ...EMPTY_TOTALS };
 
-    const fuel = filterByCar(fuelStore.get(), carId);
-    const maintenance = filterByCar(maintenanceStore.get(), carId);
-    const expenses = filterByCar(expenseStore.get(), carId);
-    const incomes = filterByCar(incomeStore.get(), carId);
+    try {
+      const fuel = filterByCar(await fuelStore.get(), carId);
+      const maintenance = filterByCar(await maintenanceStore.get(), carId);
+      const expenses = filterByCar(await expenseStore.get(), carId);
+      const incomes = filterByCar(await incomeStore.get(), carId);
 
-    const totalFuel = fuel.reduce((s, r) => s + safeNumber(r.cost), 0);
-    const totalMaint = maintenance.reduce((s, r) => s + safeNumber(r.cost), 0);
-    const totalExp = expenses.reduce((s, r) => s + safeNumber(r.cost), 0);
+      const totalFuel = fuel.reduce((s, r) => s + safeNumber(r.cost), 0);
+      const totalMaint = maintenance.reduce((s, r) => s + safeNumber(r.cost), 0);
+      const totalExp = expenses.reduce((s, r) => s + safeNumber(r.cost), 0);
 
-    let totalLiters = 0;
-    let totalKwh = 0;
-    fuel.forEach(r => {
-      const amt = getFuelAmount(r);
-      const energy = r.energyType || 'gasoline';
-      if (energy === 'electricity') {
-        totalKwh += amt;
-      } else {
-        totalLiters += amt;
-      }
-    });
+      let totalLiters = 0;
+      let totalKwh = 0;
+      fuel.forEach(r => {
+        const amt = getFuelAmount(r);
+        const energy = r.energyType || 'gasoline';
+        if (energy === 'electricity') totalKwh += amt;
+        else totalLiters += amt;
+      });
 
-    const totalIncome = incomes.reduce((s, r) => s + safeNumber(r.amount), 0);
-    const totalExpensesCombined = totalFuel + totalMaint + totalExp;
-    const netProfit = totalIncome - totalExpensesCombined;
+      const totalIncome = incomes.reduce((s, r) => s + safeNumber(r.amount), 0);
+      const totalExpensesCombined = totalFuel + totalMaint + totalExp;
+      const netProfit = totalIncome - totalExpensesCombined;
 
-    return { 
-      fuel: totalFuel, 
-      maintenance: totalMaint, 
-      expenses: totalExp, 
-      total: totalExpensesCombined, 
-      totalLiters,
-      totalKwh,
-      income: totalIncome,
-      net: netProfit
-    };
+      return { 
+        fuel: totalFuel, maintenance: totalMaint, expenses: totalExp, 
+        total: totalExpensesCombined, totalLiters, totalKwh, 
+        income: totalIncome, net: netProfit
+      };
+    } catch (e) {
+      console.error("Error calculating totals:", e);
+      return { ...EMPTY_TOTALS };
+    }
   },
 
   // ==========================================
-  // ✅ حذف جميع بيانات سيارة معينة
+  // ✅ حذف جميع بيانات سيارة معينة (أصبحت async)
   // ==========================================
-  deleteCarData: (carId) => {
+  deleteCarData: async (carId) => {
     if (carId === undefined || carId === null) return false;
 
     const filterOutCar = (records) => {
@@ -315,42 +281,21 @@ export const dbService = {
     };
 
     const stores = [
-      ['FUEL', KEYS.FUEL, fuelStore],
-      ['EXPENSES', KEYS.EXPENSES, expenseStore],
-      ['MAINTENANCE', KEYS.MAINTENANCE, maintenanceStore],
-      ['DOCUMENTS', KEYS.DOCUMENTS, documentStore],
-      ['REMINDERS', KEYS.REMINDERS, reminderStore],
-      ['INCOMES', KEYS.INCOMES, incomeStore],
+      [KEYS.FUEL, fuelStore], [KEYS.EXPENSES, expenseStore],
+      [KEYS.MAINTENANCE, maintenanceStore], [KEYS.DOCUMENTS, documentStore],
+      [KEYS.REMINDERS, reminderStore], [KEYS.INCOMES, incomeStore],
     ];
 
-    let allSucceeded = true;
-    stores.forEach(([name, key, store]) => {
-      try {
-        const filtered = filterOutCar(store.get());
-        localStorage.setItem(key, JSON.stringify(filtered));
-      } catch (e) {
-        console.error(`Error purging ${name}:`, e);
-        allSucceeded = false;
+    try {
+      for (const [key, store] of stores) {
+        const records = await store.get();
+        const filtered = filterOutCar(records);
+        await db.setItem(key, filtered);
       }
-    });
-
-    return allSucceeded;
+      return true;
+    } catch (e) {
+      console.error(`Error purging car data:`, e);
+      return false;
+    }
   },
 };
-
-/* 
-  =========================================================
-  🚀 خطة المستقبل (عند الانتقال إلى Supabase):
-  =========================================================
-  المكونات (Components) لن تحتاج تعديلاً — فقط استبدال الدوال هنا:
-  
-  get: async () => {
-    const { data } = await supabase.from('fuel').select('*').eq('car_id', carId);
-    return data;
-  },
-  add: async (record) => {
-    const { data } = await supabase.from('fuel').insert([record]).select();
-    return data[0];
-  }
-  =========================================================
-*/
