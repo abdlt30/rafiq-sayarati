@@ -1,9 +1,11 @@
 import { useContext, useMemo, useState, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { notificationService } from '../services/notificationService'; 
-import { AlertTriangle, Info, Trash2, Check, ShieldAlert, Sparkles } from 'lucide-react'; // ✅ إزالة Bell
+import { AlertTriangle, Info, Trash2, Check, ShieldAlert, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import ConfirmModal from '../components/ui/ConfirmModal';
+
+// ✅ 1. تحديث المسار إلى الهيكل الجديد (Shared)
+import ConfirmModal from '../shared/components/ui/ConfirmModal';
 
 const READ_IDS_KEY = 'read_notifications';
 const DISMISSED_IDS_KEY = 'dismissed_notifications';
@@ -38,6 +40,7 @@ const safeIdsFromStorage = (key) => {
 
 const saveIds = (key, ids) => {
   try {
+    // ✅ الرياضيات: الاحتفاظ بآخر 200 معرف فقط (FIFO)
     const unique = [...new Set(ids)].slice(-MAX_TRACKED_IDS);
     localStorage.setItem(key, JSON.stringify(unique));
     return unique;
@@ -53,7 +56,7 @@ export default function Notifications() {
   const [readIds, setReadIds] = useState(() => safeIdsFromStorage(READ_IDS_KEY));
   const [dismissedIds, setDismissedIds] = useState(() => safeIdsFromStorage(DISMISSED_IDS_KEY));
 
-  /* ✅ تحسين: استخدام Set للبحث السريع O(1) */
+  /* ✅ استخدام Set للبحث السريع O(1) */
   const readSet = useMemo(() => new Set(readIds), [readIds]);
   const dismissedSet = useMemo(() => new Set(dismissedIds), [dismissedIds]);
 
@@ -106,12 +109,12 @@ export default function Notifications() {
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text)]">
-            {t('notifications') || 'مركز التنبيهات'}
+            {t('notifications')}
           </h1>
           <p className="text-xs text-[var(--text-muted)] mt-1">
             {unreadCount > 0 
-              ? `${unreadCount} ${t('unread') || 'تنبيه جديد'}`
-              : (t('allUnderControl') || 'كل شيء تحت السيطرة')}
+              ? `${unreadCount} ${t('unread')}`
+              : t('allUnderControl')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -120,21 +123,21 @@ export default function Notifications() {
               <button 
                 type="button"
                 onClick={markAllRead} 
-                aria-label={t('markAllRead') || 'تحديد الكل كمقروء'}
-                title={t('markAllRead') || 'تحديد الكل كمقروء'}
-                disabled={unreadCount === 0} // ✅ تعطيل إذا كانت كلها مقروءة
+                aria-label={t('markAllRead')}
+                title={t('markAllRead')}
+                disabled={unreadCount === 0}
                 className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-green-500 disabled:opacity-50 disabled:hover:text-[var(--text-muted)] transition-colors"
               >
-                <Check size={18} />
+                <Check size={18} aria-hidden="true" />
               </button>
               <button 
                 type="button"
                 onClick={() => setShowClearModal(true)} 
-                aria-label={t('clearAll') || 'مسح الكل'}
-                title={t('clearAll') || 'مسح الكل'}
+                aria-label={t('clearAll')}
+                title={t('clearAll')}
                 className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-red-500 transition-colors"
               >
-                <Trash2 size={18} />
+                <Trash2 size={18} aria-hidden="true" />
               </button>
             </>
           )}
@@ -145,13 +148,13 @@ export default function Notifications() {
       {visibleNotifications.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-24 flex flex-col items-center animate-fade-in">
           <div className="p-5 bg-green-500/10 rounded-full mb-4">
-            <ShieldAlert size={56} className="text-green-500 opacity-80" />
+            <ShieldAlert size={56} className="text-green-500 opacity-80" aria-hidden="true" />
           </div>
           <h3 className="text-lg font-bold text-[var(--text)] mb-2">
-            {t('allSafe') || 'سيارتك في أمان تام'}
+            {t('allSafe')}
           </h3>
           <p className="text-sm max-w-xs">
-            {t('noNotifications') || 'لا توجد تنبيهات حالياً. استمر في تسجيل بياناتك لنقدم لك نصائح أذكى! 🚗✨'}
+            {t('noNotifications')}
           </p>
         </div>
       ) : (
@@ -159,7 +162,7 @@ export default function Notifications() {
           {visibleNotifications.map((notif) => {
             const style = getStyle(notif.severity);
             const Icon = style.icon;
-            const isRead = readSet.has(notif.id); // ✅ استخدام Set
+            const isRead = readSet.has(notif.id);
 
             return (
               <Link 
@@ -172,7 +175,7 @@ export default function Notifications() {
                 }`}
               >
                 <div className={`p-3 rounded-xl ${style.bg} ${style.text} flex-shrink-0`}>
-                  <Icon size={20} />
+                  <Icon size={20} aria-hidden="true" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2">
@@ -198,11 +201,11 @@ export default function Notifications() {
         isOpen={showClearModal} 
         onClose={() => setShowClearModal(false)} 
         onConfirm={handleClearAllConfirm} 
-        title={t('clearAllNotifications') || 'مسح جميع التنبيهات'}
-        message={t('clearAllConfirmMsg') || 'هل أنت متأكد من مسح جميع التنبيهات؟ لن تظهر مرة أخرى إلا عند إنشاء تنبيهات جديدة.'}
+        title={t('clearAllNotifications')}
+        message={t('clearAllConfirmMsg')}
         variant="danger"
-        confirmText={t('confirmDeleteBtn') || 'نعم، امسح'}
-        cancelText={t('cancel') || 'إلغاء'}
+        confirmText={t('confirmDeleteBtn')}
+        cancelText={t('cancel')}
       />
     </div>
   );
