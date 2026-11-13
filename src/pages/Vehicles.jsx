@@ -2,14 +2,10 @@ import { useContext, useState, useMemo, useRef, useCallback, useEffect } from 'r
 import { AppContext } from '../context/AppContext';
 import { Car, Plus, CheckCircle, Edit2, Trash2, Zap, Truck, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import ConfirmModal from '../components/ui/ConfirmModal';
 
-/* ✅ مساعد رياضي: يرفض NaN/Infinity/-Infinity/السالب */
-const safeNumber = (v) => {
-  if (v === null || v === undefined || v === '') return 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
+// ✅ 1. تحديث المسارات للهيكل الجديد (Shared)
+import { safeNumber } from '../shared/utils/safeNumber';
+import ConfirmModal from '../shared/components/ui/ConfirmModal';
 
 /* ✅ عداد السيارة الآمن (يدعم الحقل القديم currentOdometer) */
 const getOdometer = (car) => {
@@ -101,7 +97,7 @@ export default function Vehicles() {
   return (
     <div className="space-y-4 pb-24 px-4 pt-6 relative min-h-screen">
       
-      {/* ✅ Toast (جديد - لتغذية راجعة عند الحذف) */}
+      {/* ✅ Toast (تغذية راجعة عند الحذف) */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${
           toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
@@ -159,8 +155,8 @@ export default function Vehicles() {
       ) : (
         <div className="space-y-3" role="list" aria-label={t('vehicles')}>
           {vehicles.map((car, index) => {
-            // ✅ مقارنة String آمنة
-            const isActive = String(currentCar?.id || '') === String(car.id || '');
+            // ✅ 3. إصلاح منطقي: التأكد من وجود الـ id قبل المقارنة
+            const isActive = car.id != null && String(currentCar?.id) === String(car.id);
             const odometerValue = getOdometer(car);
             
             // ✅ بيانات آمنة للعرض
