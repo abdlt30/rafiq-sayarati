@@ -5,18 +5,15 @@ import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { PieChart as PieIcon, BarChart3, Printer } from 'lucide-react';
 
-/* ✅ مساعد رياضي: يرفض NaN, Infinity, -Infinity */
-const safeNumber = (v) => {
-  if (v === null || v === undefined || v === '') return 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
+// ✅ 1. استخدام الدالة المشتركة من الهيكل الجديد
+import { safeNumber } from '../shared/utils/safeNumber';
 
 const EMPTY_TOTALS = { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
 
 export default function Reports() {
   const { currentCar, currency, t, lang, dataVersion } = useContext(AppContext);
   const navigate = useNavigate();
+  const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
   /* ===================== 1. الإجماليات ===================== */
   const totals = useMemo(() => {
@@ -37,12 +34,11 @@ export default function Reports() {
     }
   }, [currentCar, dataVersion]);
 
-  /* ===================== 2. البيانات الشهرية ===================== */
+  /* ===================== 2. البيانات الشهرية (مُحصَّنة رياضياً) ===================== */
   const monthlyData = useMemo(() => {
     if (!currentCar) return [];
 
-    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
-    const formatter = new Intl.DateTimeFormat(localeMap[lang] || 'ar-MA', {
+    const formatter = new Intl.DateTimeFormat(todayLocale, {
       month: 'short',
       year: 'numeric'
     });
@@ -59,6 +55,7 @@ export default function Reports() {
       allRecords.forEach(record => {
         if (!record.date) return;
 
+        // ✅ تصفير منتصف الليل لمنع أخطاء UTC
         const dateStr = String(record.date).includes('T')
           ? record.date
           : `${record.date}T00:00:00`;
@@ -78,6 +75,7 @@ export default function Reports() {
           };
         }
 
+        // ✅ رفض NaN و Infinity و السالب
         const cost = Number(record.cost);
         if (Number.isFinite(cost) && cost >= 0) {
           monthsMap[key].total += cost;
@@ -92,14 +90,15 @@ export default function Reports() {
       console.error('monthlyData aggregation failed:', e);
       return [];
     }
-  }, [currentCar, lang, dataVersion]);
+  }, [currentCar, todayLocale, dataVersion]);
 
   /* ===================== 3. Pie Data ===================== */
   const pieData = useMemo(() => {
+    // ✅ 2. إزالة الكود الميت (|| 'fallback')
     const raw = [
-      { name: t('fuel') || 'الوقود', value: totals.fuel, color: '#3b82f6' },
-      { name: t('maintenance') || 'الصيانة', value: totals.maintenance, color: '#f59e0b' },
-      { name: t('expenses') || 'المصاريف', value: totals.expenses, color: '#a855f7' },
+      { name: t('fuel'), value: totals.fuel, color: '#3b82f6' },
+      { name: t('maintenance'), value: totals.maintenance, color: '#f59e0b' },
+      { name: t('expenses'), value: totals.expenses, color: '#a855f7' },
     ];
     return raw.filter(item => Number.isFinite(item.value) && item.value > 0);
   }, [totals, t]);
@@ -109,8 +108,7 @@ export default function Reports() {
   /* ✅ دالة تنسيق الأرقام للمحور Y (تدعم اللغات) */
   const formatYAxis = (value) => {
     if (value === 0) return '0';
-    const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
-    return new Intl.NumberFormat(localeMap[lang] || 'ar-MA', {
+    return new Intl.NumberFormat(todayLocale, {
       notation: 'compact',
       compactDisplay: 'short',
       maximumFractionDigits: 1
@@ -121,29 +119,29 @@ export default function Reports() {
     <div className="space-y-4 pb-24 px-4 pt-4">
       
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('reports') || 'التقارير'}</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('reports')}</h1>
         
         <button 
           type="button"
           onClick={() => navigate('/report-print')} 
-          aria-label={t('pdfReport') || 'تقرير PDF'}
+          aria-label={t('pdfReport')}
           className="bg-[var(--primary)] text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
         >
           <Printer size={16} aria-hidden="true" /> 
-          {t('pdfReport') || 'تقرير PDF'}
+          {t('pdfReport')}
         </button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <p className="text-xs text-[var(--text-muted)] mb-1">{t('totalExpenses') || 'إجمالي المصاريف'}</p>
+          <p className="text-xs text-[var(--text-muted)] mb-1">{t('totalExpenses')}</p>
           <p className="text-xl font-extrabold text-[var(--text)]">
             {totals.total.toLocaleString()}{' '}
             <span className="text-xs font-normal">{currency}</span>
           </p>
         </div>
         <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl">
-          <p className="text-xs text-[var(--text-muted)] mb-1">{t('totalFuelCost') || 'إجمالي الوقود'}</p>
+          <p className="text-xs text-[var(--text-muted)] mb-1">{t('totalFuelCost')}</p>
           <p className="text-xl font-extrabold text-blue-500">
             {totals.fuel.toLocaleString()}{' '}
             <span className="text-xs font-normal">{currency}</span>
@@ -155,7 +153,7 @@ export default function Reports() {
         <div className="bg-[var(--surface)] border border-[var(--border)] p-6 rounded-2xl text-center">
           <PieIcon className="text-[var(--text-muted)] mx-auto mb-3 opacity-40" size={48} aria-hidden="true" />
           <p className="text-sm text-[var(--text-muted)]">
-            {t('noData') || 'لا توجد بيانات كافية لعرض التقارير.'}
+            {t('noData')}
           </p>
         </div>
       )}
@@ -165,17 +163,17 @@ export default function Reports() {
           <div className="flex items-center gap-2 mb-4">
             <PieIcon className="text-[var(--primary)]" size={20} aria-hidden="true" />
             <h2 className="font-bold text-[var(--text)]">
-              {t('expenseDistribution') || 'توزيع المصاريف'}
+              {t('expenseDistribution')}
             </h2>
           </div>
           
-          {/* ✅ الحل النهائي للوصول: جدول مخفي لقارئات الشاشة */}
+          {/* ✅ جدول مخفي لقارئات الشاشة (WCAG 2.1 AA) */}
           <table className="sr-only">
-            <caption>{t('expenseDistribution') || 'توزيع المصاريف'}</caption>
+            <caption>{t('expenseDistribution')}</caption>
             <thead>
               <tr>
-                <th scope="col">{t('category') || 'الفئة'}</th>
-                <th scope="col">{t('amount') || 'المبلغ'}</th>
+                <th scope="col">{t('category')}</th>
+                <th scope="col">{t('amount')}</th>
               </tr>
             </thead>
             <tbody>
@@ -219,7 +217,7 @@ export default function Reports() {
           <div className="flex justify-center flex-wrap gap-4 mt-2">
             {pieData.map((entry, index) => (
               <div key={index} className="flex items-center gap-1.5 text-xs">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} aria-hidden="true"></span>
                 <span className="text-[var(--text-muted)]">{entry.name}</span>
               </div>
             ))}
@@ -231,23 +229,23 @@ export default function Reports() {
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="text-green-500" size={20} aria-hidden="true" />
           <h2 className="font-bold text-[var(--text)]">
-            {t('monthlyExpenses') || 'المصاريف الشهرية'}
+            {t('monthlyExpenses')}
           </h2>
         </div>
         
         {monthlyData.length === 0 ? (
           <p className="text-center text-sm text-[var(--text-muted)] py-10">
-            {t('noData') || 'لا توجد بيانات كافية لعرض المخطط.'}
+            {t('noData')}
           </p>
         ) : (
           <>
             {/* ✅ جدول مخفي للمخطط الشريطي */}
             <table className="sr-only">
-              <caption>{t('monthlyExpenses') || 'المصاريف الشهرية'}</caption>
+              <caption>{t('monthlyExpenses')}</caption>
               <thead>
                 <tr>
-                  <th scope="col">{t('month') || 'الشهر'}</th>
-                  <th scope="col">{t('amount') || 'المبلغ'}</th>
+                  <th scope="col">{t('month')}</th>
+                  <th scope="col">{t('amount')}</th>
                 </tr>
               </thead>
               <tbody>
