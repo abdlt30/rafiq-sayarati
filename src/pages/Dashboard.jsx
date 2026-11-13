@@ -23,7 +23,6 @@ export default function Dashboard() {
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  // ✅ حالات جلب البيانات
   const [totals, setTotals] = useState(EMPTY_TOTALS);
   const [avgConsumption, setAvgConsumption] = useState({ value: null, unit: 'L/100km' });
   const [criticalAlerts, setCriticalAlerts] = useState([]);
@@ -33,7 +32,6 @@ export default function Dashboard() {
   const greeting = user?.name ? (t('welcomeUser') || `مرحباً، ${user.name} 👋`) : (t('welcome') || 'مرحباً بك 👋');
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
-  /* ===================== جلب البيانات غير المتزامن ===================== */
   useEffect(() => {
     let isMounted = true;
 
@@ -45,10 +43,8 @@ export default function Dashboard() {
       
       setIsLoading(true);
       try {
-        // 1. جلب الإحصائيات
         const fetchedTotals = await dbService.getTotals(currentCar.id);
         
-        // 2. جلب كافة السجلات لآخر العمليات ومتوسط الاستهلاك
         const fuelRecords = await dbService.getFuel();
         const maintenanceRecords = await dbService.getMaintenance();
         const expenseRecords = await dbService.getExpenses();
@@ -57,7 +53,6 @@ export default function Dashboard() {
         const carIdStr = String(currentCar.id);
         const filter = (arr) => (Array.isArray(arr) ? arr : []).filter(r => String(r.carId) === carIdStr);
 
-        // 3. حساب آخر العمليات
         const activities = [
           ...filter(fuelRecords).map(f => ({ ...f, type: 'fuel' })),
           ...filter(maintenanceRecords).map(m => ({ ...m, type: 'maintenance' })),
@@ -65,7 +60,6 @@ export default function Dashboard() {
           ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
         ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 4);
 
-        // 4. حساب متوسط الاستهلاك
         const powertrain = currentCar.powertrain || 'ice';
         const targetEnergy = powertrain === 'ev' ? 'electricity' : 'gasoline';
         const unit = targetEnergy === 'electricity' ? 'kWh/100km' : 'L/100km';
@@ -86,11 +80,9 @@ export default function Dashboard() {
           }
         }
 
-        // 5. التنبيهات
         const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
         const filteredAlerts = (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 3);
 
-        // تحديث الحالة
         if (isMounted) {
           setTotals(fetchedTotals || EMPTY_TOTALS);
           setRecentActivity(activities);
@@ -106,7 +98,7 @@ export default function Dashboard() {
 
     loadDashboardData();
 
-    return () => { isMounted = false; }; // تنظيف الذاكرة
+    return () => { isMounted = false; };
   }, [currentCar, dataVersion, t, lang]);
 
   if (!currentCar) return null;
@@ -115,7 +107,6 @@ export default function Dashboard() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  /* ✅ حماية العداد */
   const handleSaveOdometer = useCallback(() => {
     const raw = String(newOdo).trim();
     if (raw === '') return; 
@@ -136,7 +127,6 @@ export default function Dashboard() {
     }
   }, [newOdo, currentCar, updateCar, t]);
 
-  /* ✅ توزيع الحذف */
   const handleQuickDone = useCallback(async (e, alert) => {
     e.preventDefault();
     e.stopPropagation();
@@ -161,14 +151,12 @@ export default function Dashboard() {
     }
   }, [bumpDataVersion, t]);
 
-  /* ✅ قيم آمنة للعرض */
   const netValue = safeNumber(totals.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals.income);
   const totalValue = safeNumber(totals.total);
   const odometerValue = safeNumber(currentCar.odometer);
 
-  // ✅ شاشة تحميل بسيطة أثناء جلب البيانات
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64 text-[var(--primary)]">
@@ -179,7 +167,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5 pb-24 px-4 pt-2">
-      {/* الشريط العلوي */}
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-extrabold text-[var(--text)] truncate">{greeting}</h1>
@@ -196,7 +183,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* بطاقة السيارة الحالية */}
       <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
         <div className="absolute top-0 right-0 p-4 opacity-5"><Car size={100} aria-hidden="true" /></div>
         <p className="text-xs text-blue-300 font-bold mb-3">{t('currentCar')}</p>
@@ -227,7 +213,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* التنبيهات */}
       {criticalAlerts.length > 0 && (
         <div className="space-y-2 animate-fade-in">
           <h3 className="text-xs font-bold text-[var(--text-muted)] px-1 mb-1">{t('alertsNeedAttention')}</h3>
@@ -261,7 +246,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-4">
         <Link to="/fuel" className="flex flex-col items-center justify-center p-2 sm:p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all">
           <div className="p-1.5 sm:p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1 sm:mb-2"><Fuel size={18} aria-hidden="true" /></div>
@@ -281,7 +265,6 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* بطاقات الإحصائيات */}
       <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="bg-[var(--surface)] border border-green-500/20 p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('totalIncome')}</p>
@@ -335,7 +318,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* آخر العمليات */}
       <div>
         <div className="flex justify-between items-center mb-3 mt-4">
           <h3 className="font-bold text-[var(--text)] text-sm">{t('recentActivity')}</h3>
