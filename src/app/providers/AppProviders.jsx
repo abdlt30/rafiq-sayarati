@@ -1,4 +1,9 @@
-export function AppProviders({ children }) {
-  // هنا سنضع لاحقاً React Query و Zustand و Theme
-  return children;
+import { AppContextProvider } from '../../context/AppContext'; // تأكد من اسم التصدير في ملفك
+
+export default function AppProviders({ children }) {
+  return (
+    <AppContextProvider>
+      {children}
+    </AppContextProvider>
+  );
 }
