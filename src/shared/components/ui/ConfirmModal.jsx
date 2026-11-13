@@ -1,5 +1,6 @@
 import { useContext, useEffect, useId } from 'react';
-import { AppContext } from '../../context/AppContext';
+// ✅ تحديث المسار بناءً على الهيكلة الجديدة (الصعود 3 مستويات للخلف)
+import { AppContext } from '../../../context/AppContext.jsx';
 import { AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
 
 export default function ConfirmModal({ 
@@ -14,7 +15,7 @@ export default function ConfirmModal({
 }) {
   const { t } = useContext(AppContext);
   
-  // ✅ إنشاء معرفات فريدة لربط العنوان والوصف بقارئ الشاشة
+  // ✅ إنشاء معرفات فريدة لربط العنوان والوصف بقارئ الشاشة (A11y)
   const titleId = useId();
   const descId = useId();
 
@@ -35,7 +36,7 @@ export default function ConfirmModal({
     };
     document.addEventListener('keydown', handleKeyDown);
 
-    // التنظيف
+    // التنظيف (Cleanup)
     return () => {
       document.body.style.overflow = originalOverflow;
       document.removeEventListener('keydown', handleKeyDown);
@@ -47,7 +48,8 @@ export default function ConfirmModal({
   const isDanger = variant === 'danger';
   const Icon = isDanger ? AlertTriangle : CheckCircle2;
   const iconBg = isDanger ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500';
-  const btnBg = isDanger ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' : 'bg-[var(--primary)] hover:bg-blue-600 shadow-blue-500/30';
+  // ✅ استخدام opacity بدلاً من اللون الأزرق الثابت للتوافق مع var(--primary)
+  const btnBg = isDanger ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' : 'bg-[var(--primary)] hover:opacity-90 shadow-[var(--primary)]/30';
 
   const handleBackdropClick = (e) => {
     // ✅ التأكد من أن النقر كان على الخلفية نفسها وليس على المحتوى
