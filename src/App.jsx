@@ -1,11 +1,13 @@
-// ✅ استيراد المزودات والموجه من مجلد app
 import AppProviders from './app/providers/AppProviders';
 import AppRoutes from './app/router/AppRoutes';
+import ErrorBoundary from './shared/components/ui/ErrorBoundary'; // ✅ استيراد الدرع
 
 export default function App() {
   return (
-    <AppProviders>
-      <AppRoutes />
-    </AppProviders>
+    <ErrorBoundary> {/* ✅ تغليف التطبيق بالدرع */}
+      <AppProviders>
+        <AppRoutes />
+      </AppProviders>
+    </ErrorBoundary>
   );
 }
