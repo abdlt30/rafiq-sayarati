@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Settings, Bell, Car, Sun, Moon } from 'lucide-react';
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext.jsx';
+// ✅ تحديث المسار بناءً على الهيكلة الجديدة (الصعود 3 مستويات للخلف)
+import { AppContext } from '../../../context/AppContext.jsx';
 
 export default function Header() {
   const { theme, toggleTheme, t } = useContext(AppContext);
