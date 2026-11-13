@@ -1,21 +1,26 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+// ✅ 1. تحديث المسار (الصعود 3 مستويات)
+import { AppContext } from '../../../context/AppContext.jsx';
 import { NavLink } from 'react-router-dom';
 import { Home, Fuel, Wrench, Wallet, Menu } from 'lucide-react';
 
 export default function BottomNav() {
-  const { t } = useContext(AppContext); // ✅ استعادة الترجمة
+  const { t } = useContext(AppContext);
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') || 'الرئيسية' },
     { path: '/expenses', icon: Wallet, label: t('expenses') || 'المصاريف' },
     { path: '/maintenance', icon: Wrench, label: t('maintenance') || 'الصيانة' },
-    { path: '/fuel', icon: Fuel, label: t('fuel') || 'الوقود' }, // ✅ إضافة ممتازة منك
+    { path: '/fuel', icon: Fuel, label: t('fuel') || 'الوقود' },
     { path: '/more', icon: Menu, label: t('more') || 'المزيد' },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-16 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] pb-safe">
+    // ✅ 2. تم إزالة fixed, border-t, pb-safe لأن Layout.jsx يتحكم بها
+    <nav 
+      className="flex justify-around items-center h-16 w-full bg-[var(--surface)]/95 backdrop-blur-md" 
+      aria-label="Mobile Navigation"
+    >
       {navItems.map((item) => (
         <NavLink
           key={item.path}
@@ -30,7 +35,11 @@ export default function BottomNav() {
         >
           {({ isActive }) => (
             <>
-              <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              <item.icon 
+                size={22} 
+                strokeWidth={isActive ? 2.5 : 2} 
+                className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}
+              />
               <span className="text-[10px] font-medium">{item.label}</span>
             </>
           )}
