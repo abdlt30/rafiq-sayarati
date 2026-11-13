@@ -2,13 +2,17 @@ import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'r
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, AlertCircle, CheckCircle, Check } from 'lucide-react';
-import ConfirmModal from '../components/ui/ConfirmModal'; 
-import OptionPicker from '../components/ui/OptionPicker'; 
+
+// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
+import ConfirmModal from '../shared/components/ui/ConfirmModal'; 
+import OptionPicker from '../shared/components/ui/OptionPicker'; 
+import { safeNumber } from '../shared/utils/safeNumber';
+import { formatDate } from '../shared/utils/formatters';
 
 const EMPTY_FORM = { date: '', type: '', cost: '', nextKm: '' };
 
 export default function Maintenance() {
-  const { currentCar, t, currency, dataVersion, bumpDataVersion } = useContext(AppContext);
+  const { currentCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext);
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,6 +26,7 @@ export default function Maintenance() {
   const [newTypeName, setNewTypeName] = useState('');
 
   const toastTimeoutRef = useRef(null);
+  const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
   const isElectric = currentCar?.powertrain === 'ev';
   const isHybrid = currentCar?.powertrain === 'hybrid' || currentCar?.powertrain === 'phev';
@@ -89,6 +94,7 @@ export default function Maintenance() {
     return [...baseTypes, ...custom];
   }, [baseTypes, customTypes]);
 
+  /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
@@ -106,6 +112,7 @@ export default function Maintenance() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   }, []);
 
+  /* ===================== Load Data ===================== */
   const loadData = useCallback(() => {
     try {
       if (!currentCar) {
@@ -129,14 +136,14 @@ export default function Maintenance() {
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
+  /* ===================== Add Custom Type ===================== */
   const handleConfirmAddType = () => {
     const trimmed = newTypeName.trim();
     if (!trimmed) return;
 
     const exists = allTypes.some(t => t.label.toLowerCase() === trimmed.toLowerCase());
     if (exists) {
-      showToast(t('typeAlreadyExists') || 'هذا النوع موجود بالفعل.', 'error');
-      return;
+      return showToast(t('typeAlreadyExists'), 'error');
     }
 
     try {
@@ -147,29 +154,30 @@ export default function Maintenance() {
       setNewTypeName('');
     } catch (e) {
       console.error('addCustomType failed:', e);
-      showToast(t('errorSaving') || 'حدث خطأ أثناء الإضافة.', 'error');
+      showToast(t('errorSaving'), 'error');
     }
   };
 
+  /* ===================== Save ===================== */
   const handleSave = (e) => {
     e.preventDefault();
     if (!currentCar) return;
 
     const isBlank = (v) => v === '' || v === undefined || v === null;
     if (isBlank(formData.date) || isBlank(formData.type) || isBlank(formData.cost)) {
-      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
+      return showToast(t('fillRequiredFields'), 'error');
     }
 
     const costNum = Number(formData.cost);
     if (!Number.isFinite(costNum) || costNum < 0) {
-      return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة.', 'error');
+      return showToast(t('invalidNumbers'), 'error');
     }
 
     let nextKmNum = null;
     if (!isBlank(formData.nextKm)) {
       const n = Number(formData.nextKm);
       if (!Number.isFinite(n) || n < 0) {
-        return showToast(t('invalidNumbers') || 'الرجاء إدخال عداد صحيح للصيانة القادمة.', 'error');
+        return showToast(t('invalidNumbers'), 'error');
       }
       nextKmNum = Math.round(n);
     }
@@ -191,13 +199,14 @@ export default function Maintenance() {
       loadData();
       bumpDataVersion();
       closeModal();
-      showToast(t('saveSuccess') || 'تم الحفظ بنجاح!', 'success');
+      showToast(t('saveSuccess'), 'success');
     } catch (error) {
       console.error("خطأ في حفظ الصيانة:", error);
-      showToast(t('errorSaving') || 'حدث خطأ أثناء الحفظ.', 'error');
+      showToast(t('errorSaving'), 'error');
     }
   };
 
+  /* ===================== Delete ===================== */
   const handleDelete = () => {
     if (!deleteId) return;
     try {
@@ -208,10 +217,11 @@ export default function Maintenance() {
     } catch (e) {
       console.error('deleteMaintenance failed:', e);
       setDeleteId(null);
-      showToast(t('errorSaving') || 'حدث خطأ أثناء الحذف.', 'error');
+      showToast(t('errorSaving'), 'error');
     }
   };
 
+  /* ===================== Modals ===================== */
   const defaultType = baseTypes[0]?.value || 'otherMaintenance';
 
   const openAddModal = () => {
@@ -258,17 +268,18 @@ export default function Maintenance() {
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
+      {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
           <button 
             type="button"
             onClick={dismissToast} 
-            aria-label="إغلاق"
+            aria-label={t('close')}
             className="ml-2 opacity-70 hover:opacity-100"
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -280,7 +291,7 @@ export default function Maintenance() {
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
-            <Wrench size={48} className="opacity-40" />
+            <Wrench size={48} className="opacity-40" aria-hidden="true" />
           </div>
           <p>{t('noMaintenanceRecords')}</p>
         </div>
@@ -291,25 +302,27 @@ export default function Maintenance() {
               
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-yellow-500/10 text-yellow-500 flex items-center justify-center flex-shrink-0">
-                  <Wrench size={18} />
+                  <Wrench size={18} aria-hidden="true" />
                 </div>
                 <div>
                   <p className="font-bold text-[var(--text)] text-sm">
-                    {/* ✅ يعرض النوع المترجم أو النص الخام للنوع المخصص */}
                     {allTypes.find(dt => dt.value === record.type)?.label || record.type}
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date}</p>
+                  {/* ✅ 2. استخدام formatDate */}
+                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                    {formatDate(record.date, todayLocale)}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="text-end">
                   <p className="font-extrabold text-[var(--primary)] text-sm">
-                    {Number(record.cost || 0).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
+                    {safeNumber(record.cost).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                   </p>
-                  {record.nextKm && Number(record.nextKm) > 0 ? (
+                  {record.nextKm && safeNumber(record.nextKm) > 0 ? (
                     <p className="text-[10px] text-[var(--text-muted)] flex items-center justify-end gap-1 mt-0.5">
-                      <Gauge size={10} /> {Number(record.nextKm).toLocaleString()} {t('km')}
+                      <Gauge size={10} aria-hidden="true" /> {safeNumber(record.nextKm).toLocaleString()} {t('km')}
                     </p>
                   ) : (
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t('noNextMaintenance')}</p>
@@ -323,7 +336,7 @@ export default function Maintenance() {
                     aria-label={t('edit')}
                     className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"
                   >
-                    <Edit2 size={14} />
+                    <Edit2 size={14} aria-hidden="true" />
                   </button>
                   <button 
                     type="button"
@@ -331,7 +344,7 @@ export default function Maintenance() {
                     aria-label={t('confirmDelete')}
                     className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -347,7 +360,7 @@ export default function Maintenance() {
         aria-label={t('addMaintenance')}
         className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
       >
-        <Plus size={28} />
+        <Plus size={28} aria-hidden="true" />
       </button>
 
       <ConfirmModal 
@@ -369,7 +382,7 @@ export default function Maintenance() {
               aria-label={t('close')}
               className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white active:scale-90 transition-all z-10"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
               {editingId ? t('edit') : t('addMaintenance')}
@@ -395,7 +408,7 @@ export default function Maintenance() {
                       onClick={() => setIsAddingType(true)} 
                       className="text-xs text-[var(--primary)] flex items-center gap-1 hover:underline"
                     >
-                      <Settings2 size={12} /> {t('addType')}
+                      <Settings2 size={12} aria-hidden="true" /> {t('addType')}
                     </button>
                   )}
                 </div>
@@ -415,14 +428,14 @@ export default function Maintenance() {
                       onClick={handleConfirmAddType}
                       className="bg-green-500 text-white p-2 rounded-xl active:scale-90 transition-transform"
                     >
-                      <Check size={18} />
+                      <Check size={18} aria-hidden="true" />
                     </button>
                     <button 
                       type="button"
                       onClick={() => { setIsAddingType(false); setNewTypeName(''); }}
                       className="bg-red-500/20 text-red-500 p-2 rounded-xl active:scale-90 transition-transform"
                     >
-                      <X size={18} />
+                      <X size={18} aria-hidden="true" />
                     </button>
                   </div>
                 ) : (
