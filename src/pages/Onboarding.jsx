@@ -8,29 +8,34 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
 
-  // ✅ استخدام useMemo لتحسين الأداء
   const slides = useMemo(() => [
     {
-      icon: <Wallet size={80} className="text-blue-500" />,
-      title: t('onboardingTitle1') || 'تتبع كل درهم',
-      desc: t('onboardingDesc1') || 'سجل مصاريف الوقود، الصيانة، والتأمين في مكان واحد. التطبيق يحسب لك تكلفة الكيلومتر تلقائياً.'
+      icon: <Wallet size={80} className="text-blue-500" aria-hidden="true" />,
+      title: t('onboardingTitle1'),
+      desc: t('onboardingDesc1')
     },
     {
-      icon: <Wrench size={80} className="text-yellow-500" />,
-      title: t('onboardingTitle2') || 'صيانة استباقية',
-      desc: t('onboardingDesc2') || 'لا تنتظر حتى تتعطل سيارتك. أضف تذكيرات لتغيير الزيت والإطارات بناءً على المسافة أو التاريخ.'
+      icon: <Wrench size={80} className="text-yellow-500" aria-hidden="true" />,
+      title: t('onboardingTitle2'),
+      desc: t('onboardingDesc2')
     },
     {
-      icon: <Bell size={80} className="text-red-500" />,
-      title: t('onboardingTitle3') || 'لا تفوت أي موعد',
-      desc: t('onboardingDesc3') || 'تنبيهات ذكية قبل انتهاء التأمين أو الفحص التقني. احتفظ بسيارتك آمنة وقانونية دائماً.'
+      icon: <Bell size={80} className="text-red-500" aria-hidden="true" />,
+      title: t('onboardingTitle3'),
+      desc: t('onboardingDesc3')
     }
   ], [t]);
 
-  // ✅ حفظ علم "شاهد التعريف" وتوجيه المستخدم
+  // ✅ حفظ علم "شاهد التعريف" (محصّن ضد فشل التخزين)
   const finishOnboarding = () => {
-    localStorage.setItem('has_seen_onboarding', 'true');
-    navigate('/add-vehicle'); // ✅ تخطي شاشة Login الزائدة
+    try {
+      localStorage.setItem('has_seen_onboarding', 'true');
+    } catch (err) {
+      console.error('Save onboarding flag failed:', err);
+      // نُكمل على أي حال — التنقل لا يعتمد على هذا العلم
+    } finally {
+      navigate('/add-vehicle');
+    }
   };
 
   const handleNext = () => {
@@ -52,9 +57,9 @@ export default function Onboarding() {
           type="button"
           onClick={handleSkip} 
           className="text-[var(--text-muted)] font-bold text-sm px-4 py-2 hover:text-[var(--text)] active:scale-95 transition-all"
-          aria-label={t('skip') || 'تخطي'}
+          aria-label={t('skip')}
         >
-          {t('skip') || 'تخطي'}
+          {t('skip')}
         </button>
       </div>
 
@@ -64,6 +69,7 @@ export default function Onboarding() {
         key={step}
         role="region"
         aria-live="polite"
+        aria-label={`${t('slideProgress') || 'Slide'} ${step + 1} / ${slides.length}`}
       >
         <div className="w-40 h-40 bg-[var(--surface)] border border-[var(--border)] rounded-full flex items-center justify-center mb-10 shadow-xl">
           {slides[step].icon}
@@ -80,7 +86,10 @@ export default function Onboarding() {
       <div className="pb-10 flex flex-col items-center gap-8">
         
         {/* نقاط التقدم */}
-        <div className="flex gap-2" aria-label="Slide progress">
+        <div 
+          className="flex gap-2" 
+          aria-hidden="true"
+        >
           {slides.map((_, idx) => (
             <div 
               key={idx} 
@@ -98,11 +107,11 @@ export default function Onboarding() {
           className="w-full max-w-xs bg-[var(--primary)] text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-[var(--primary)]/30 flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform"
         >
           {step === slides.length - 1 
-            ? (t('startNow') || 'ابدأ الآن') 
-            : (t('next') || 'التالي')}
+            ? t('startNow') 
+            : t('next')}
           {lang === 'ar' 
-            ? <ChevronLeft size={20} /> 
-            : <ChevronRight size={20} />}
+            ? <ChevronLeft size={20} aria-hidden="true" /> 
+            : <ChevronRight size={20} aria-hidden="true" />}
         </button>
       </div>
     </div>
