@@ -1,13 +1,13 @@
 import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
-import { AppContext } from '../context/AppContext';
-import { dbService } from '../services/dbService';
+// ✅ إضافة الامتدادات المطلوبة لمنع فشل Vite Build
+import { AppContext } from '../context/AppContext.jsx';
+import { dbService } from '../services/dbService.js';
 import { Plus, Trash2, Edit2, X, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 
-// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
-import OptionPicker from '../shared/components/ui/OptionPicker';
-import ConfirmModal from '../shared/components/ui/ConfirmModal';
-import { safeNumber } from '../shared/utils/safeNumber';
-import { formatDate } from '../shared/utils/formatters';
+import OptionPicker from '../shared/components/ui/OptionPicker.jsx';
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx';
+import { safeNumber } from '../shared/utils/safeNumber.js';
+import { formatDate } from '../shared/utils/formatters.js';
 
 const EMPTY_FORM = { date: '', type: 'ride', amount: '', notes: '' };
 const MAX_NOTES_LENGTH = 200;
@@ -17,6 +17,7 @@ export default function Income() {
   const { currentCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // ✅ حالة تحميل جديدة
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null); 
@@ -26,7 +27,6 @@ export default function Income() {
   const toastTimeoutRef = useRef(null);
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
-  /* ✅ 2. إزالة الكود الميت (|| 'fallback') */
   const incomeTypes = useMemo(() => [
     { value: 'ride', label: t('rideIncome') },
     { value: 'rental', label: t('rentalIncome') },
@@ -54,16 +54,17 @@ export default function Income() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   }, []);
 
-  /* ===================== Load Data ===================== */
-  const loadData = useCallback(() => {
+  /* ===================== Load Data (Async) ===================== */
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
       if (!currentCar) {
         setRecords([]);
         return;
       }
-      const allIncomes = dbService.getIncomes() || [];
-      // ✅ إصلاح أمني: استخدام String() لضمان التطابق
-      const carIncomes = allIncomes.filter(r => String(r.carId) === String(currentCar.id));
+      // ✅ إضافة await لجلب البيانات من IndexedDB
+      const allIncomes = await dbService.getIncomes();
+      const carIncomes = (allIncomes || []).filter(r => String(r.carId) === String(currentCar.id));
       
       const sorted = [...carIncomes].sort((a, b) =>
         (b.date || '').localeCompare(a.date || '')
@@ -72,13 +73,15 @@ export default function Income() {
     } catch (e) {
       console.error('loadData failed:', e);
       setRecords([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [currentCar]);
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
-  /* ===================== Save ===================== */
-  const handleSave = (e) => {
+  /* ===================== Save (Async) ===================== */
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!currentCar) return;
 
@@ -112,12 +115,13 @@ export default function Income() {
     };
     
     try {
+      // ✅ إضافة await لدوال قاعدة البيانات
       if (editingId) {
-        dbService.updateIncome(editingId, data);
+        await dbService.updateIncome(editingId, data);
       } else {
-        dbService.addIncome(data);
+        await dbService.addIncome(data);
       }
-      loadData();
+      await loadData();
       bumpDataVersion();
       closeModal();
       showToast(t('saveSuccess'), 'success');
@@ -127,12 +131,12 @@ export default function Income() {
     }
   };
 
-  /* ===================== Delete ===================== */
-  const handleDelete = () => {
+  /* ===================== Delete (Async) ===================== */
+  const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      dbService.deleteIncome(deleteId);
-      loadData();
+      await dbService.deleteIncome(deleteId); // ✅ إضافة await
+      await loadData();
       bumpDataVersion();
       setDeleteId(null);
     } catch (e) {
@@ -172,7 +176,6 @@ export default function Income() {
   };
 
   /* ===================== Computed ===================== */
-  // ✅ 3. حساب الإجمالي مع حماية رياضية
   const total = useMemo(() => {
     return records.reduce((sum, r) => sum + safeNumber(r.amount), 0);
   }, [records]);
@@ -189,6 +192,15 @@ export default function Income() {
     if (found) return found.label;
     return type || '—';
   };
+
+  // ✅ شاشة التحميل
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64 text-[var(--primary)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
@@ -241,7 +253,6 @@ export default function Income() {
                       + {displayAmount.toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                      {/* ✅ 4. استخدام formatDate */}
                       {formatDate(record.date, todayLocale)} • {getTypeLabel(record.type)}
                       {record.notes ? ` • ${record.notes}` : ''}
                     </p>
@@ -311,7 +322,7 @@ export default function Income() {
                 <input 
                   type="date" 
                   value={formData.date} 
-                  onChange={e => setFormData({...formData, date: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, date: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-green-500" 
                 />
               </div>
@@ -320,7 +331,7 @@ export default function Income() {
                 label={t('incomeType')} 
                 options={incomeTypes} 
                 value={formData.type} 
-                onChange={(val) => setFormData({...formData, type: val})} 
+                onChange={(val) => setFormData(prev => ({...prev, type: val}))} 
               />
 
               <div>
@@ -332,7 +343,7 @@ export default function Income() {
                   step="0.01" 
                   placeholder="0.00" 
                   value={formData.amount} 
-                  onChange={e => setFormData({...formData, amount: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, amount: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-green-500 outline-none focus:border-green-500" 
                 />
               </div>
@@ -346,7 +357,7 @@ export default function Income() {
                   maxLength={MAX_NOTES_LENGTH}
                   placeholder={t('incomeNotesPlaceholder')} 
                   value={formData.notes} 
-                  onChange={e => setFormData({...formData, notes: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, notes: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-green-500" 
                 />
                 {formData.notes && (
