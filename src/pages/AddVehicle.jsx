@@ -1,9 +1,10 @@
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AppContext } from '../context/AppContext';
+// ✅ إضافة .jsx للتوافقية
+import { AppContext } from '../context/AppContext.jsx';
 import { Camera, X } from 'lucide-react';
 
-// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared Components)
+// ✅ تحديث المسارات إلى الهيكل الجديد (Shared Components)
 import Input from '../shared/components/ui/Input';
 import Button from '../shared/components/ui/Button';
 import OptionPicker from '../shared/components/ui/OptionPicker';
@@ -38,7 +39,6 @@ export default function AddVehicle() {
   const [error, setError] = useState('');
   const [car, setCar] = useState(EMPTY_CAR);
 
-  // ✅ استخدام t() لجلب الترجمة (بدون نصوص احتياطية وهمية)
   const powertrainOptions = [
     { value: 'ice', label: t('ice') },
     { value: 'ev', label: t('ev') },
@@ -133,8 +133,9 @@ export default function AddVehicle() {
 
     try {
       const compressed = await compressImage(file);
+      // ✅ استخدام Functional Update
       setCar(prev => ({ ...prev, image: compressed }));
-      setError(''); // مسح أي خطأ سابق بنجاح رفع الصورة
+      setError(''); 
     } catch (err) {
       console.error('image compress failed:', err);
       setError(t('imageProcessingFailed'));
@@ -234,7 +235,6 @@ export default function AddVehicle() {
       }
     } catch (err) {
       console.error('save failed:', err);
-      // قراءة الخطأ من AppContext بدقة
       if (err.code === 'INVALID_ODOMETER') setError(t('invalidOdometer'));
       else if (err.code === 'STORAGE_FULL') setError(t('storageFull'));
       else if (err.code === 'CAR_NOT_FOUND') setError(t('errorSaving'));
@@ -268,7 +268,8 @@ export default function AddVehicle() {
               <img src={car.image} alt="Car" className="w-full h-full object-cover" />
               <button 
                 type="button" 
-                onClick={() => setCar({...car, image: ''})} 
+                // ✅ استخدام Functional Update
+                onClick={() => setCar(prev => ({...prev, image: ''}))} 
                 aria-label={t('deleteImage')}
                 className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm active:scale-90 transition-transform"
               >
@@ -279,7 +280,14 @@ export default function AddVehicle() {
             <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
               <Camera size={32} className="mb-2" aria-hidden="true" />
               <span className="text-[10px] font-bold">{t('addImage')}</span>
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              {/* ✅ إضافة aria-label للحقل المخفي */}
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageUpload} 
+                className="hidden" 
+                aria-label={t('addImage')} 
+              />
             </label>
           )}
         </div>
@@ -289,14 +297,14 @@ export default function AddVehicle() {
         <Input 
           label={t('carMake')} 
           value={car.make} 
-          onChange={(e) => setCar({...car, make: e.target.value})} 
+          onChange={(e) => setCar(prev => ({...prev, make: e.target.value}))} 
           maxLength={MAX_MAKE_LEN}
           required 
         />
         <Input 
           label={t('carModel')} 
           value={car.model} 
-          onChange={(e) => setCar({...car, model: e.target.value})} 
+          onChange={(e) => setCar(prev => ({...prev, model: e.target.value}))} 
           maxLength={MAX_MODEL_LEN}
           required 
         />
@@ -309,12 +317,12 @@ export default function AddVehicle() {
             min={MIN_YEAR}
             max={new Date().getFullYear() + 1}
             value={car.year || ''} 
-            onChange={(e) => setCar({...car, year: e.target.value})} 
+            onChange={(e) => setCar(prev => ({...prev, year: e.target.value}))} 
           />
           <Input 
             label={t('plateNumber')} 
             value={car.plate} 
-            onChange={(e) => setCar({...car, plate: e.target.value})} 
+            onChange={(e) => setCar(prev => ({...prev, plate: e.target.value}))} 
             maxLength={MAX_PLATE_LEN}
           />
         </div>
@@ -324,7 +332,7 @@ export default function AddVehicle() {
             label={t('vehicleCategory')} 
             options={categoryOptions} 
             value={car.category} 
-            onChange={(val) => setCar({...car, category: val})} 
+            onChange={(val) => setCar(prev => ({...prev, category: val}))} 
           />
         </div>
 
@@ -333,7 +341,7 @@ export default function AddVehicle() {
             label={t('powertrain')} 
             options={powertrainOptions} 
             value={car.powertrain} 
-            onChange={(val) => setCar({...car, powertrain: val})} 
+            onChange={(val) => setCar(prev => ({...prev, powertrain: val}))} 
           />
         </div>
 
@@ -343,7 +351,7 @@ export default function AddVehicle() {
               label={t('fuelType')} 
               options={fuelTypeOptions} 
               value={car.fuelType || 'petrol'} 
-              onChange={(val) => setCar({...car, fuelType: val})} 
+              onChange={(val) => setCar(prev => ({...prev, fuelType: val}))} 
             />
           </div>
         )}
@@ -358,7 +366,7 @@ export default function AddVehicle() {
               min={MIN_BATTERY}
               max={MAX_BATTERY}
               value={car.batteryCapacity || ''} 
-              onChange={(e) => setCar({...car, batteryCapacity: e.target.value})} 
+              onChange={(e) => setCar(prev => ({...prev, batteryCapacity: e.target.value}))} 
             />
           </div>
         )}
@@ -371,7 +379,7 @@ export default function AddVehicle() {
             min="0"
             step="1"
             value={car.odometer} 
-            onChange={(e) => setCar({...car, odometer: e.target.value})} 
+            onChange={(e) => setCar(prev => ({...prev, odometer: e.target.value}))} 
             required 
           />
         </div>
