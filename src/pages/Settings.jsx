@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Moon, Sun, Globe, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, 
   ShieldCheck, Database, BellRing, CheckCircle, XCircle, 
-  Download, Upload, AlertCircle, Info, Trash2, X // ✅ إضافة أيقونة X
+  Download, Upload, AlertCircle, Info, Trash2, X
 } from 'lucide-react';
-import CurrencySelector from '../components/ui/CustomSelect'; 
+
+// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
+import CurrencySelector from '../shared/components/ui/CustomSelect'; 
 import { pushService } from '../services/pushService';
 
 const APP_VERSION = '1.0.0';
@@ -70,6 +72,7 @@ export default function Settings() {
   const toastTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
@@ -104,10 +107,11 @@ export default function Settings() {
     };
   }, []);
 
+  /* ===================== Push Permission ===================== */
   const handleEnablePush = async () => {
     try {
       if (!pushService || typeof pushService.requestPermission !== 'function') {
-        showToast(t('pushUnavailable') || 'خدمة الإشعارات غير متاحة على هذا الجهاز.', 'error');
+        showToast(t('pushUnavailable'), 'error');
         return;
       }
       const granted = await pushService.requestPermission();
@@ -115,21 +119,23 @@ export default function Settings() {
 
       if (granted) {
         setNotificationsEnabled(true);
-        showToast(t('pushEnabled') || 'تم تفعيل الإشعارات بنجاح!', 'success');
+        showToast(t('pushEnabled'), 'success');
       } else {
-        showToast(t('pushDenied') || 'تم رفض الإشعارات. فعّلها من إعدادات المتصفح.', 'error');
+        showToast(t('pushDenied'), 'error');
       }
     } catch (err) {
       console.error('Push permission failed:', err);
-      showToast(t('pushError') || 'تعذر طلب إذن الإشعارات.', 'error');
+      showToast(t('pushError'), 'error');
     }
   };
 
+  /* ===================== Navigation ===================== */
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1);
     else navigate('/');
   };
 
+  /* ===================== Export ===================== */
   const handleExport = () => {
     try {
       const data = {};
@@ -173,13 +179,14 @@ export default function Settings() {
       const now = new Date().toISOString();
       localStorage.setItem('lastBackupDate', now);
       setLastBackup(now);
-      showToast(t('exportSuccess') || 'تم تصدير البيانات بنجاح!', 'success');
+      showToast(t('exportSuccess'), 'success');
     } catch (err) {
       console.error('Export failed:', err);
-      showToast(t('errorExport') || 'حدث خطأ أثناء التصدير.', 'error');
+      showToast(t('errorExport'), 'error');
     }
   };
 
+  /* ===================== Import ===================== */
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -189,14 +196,14 @@ export default function Settings() {
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      showToast(t('importError') || 'الملف كبير جداً أو تالف.', 'error');
+      showToast(t('importError'), 'error');
       e.target.value = null;
       return;
     }
 
     const reader = new FileReader();
     reader.onerror = () => {
-      showToast(t('importError') || 'تعذر قراءة الملف.', 'error');
+      showToast(t('importError'), 'error');
       e.target.value = null;
     };
     reader.onload = (ev) => {
@@ -204,17 +211,17 @@ export default function Settings() {
         const parsed = JSON.parse(ev.target.result);
 
         if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
-          showToast(t('importError') || 'ملف غير صالح.', 'error');
+          showToast(t('importError'), 'error');
           return;
         }
         if (parsed.backupVersion !== BACKUP_VERSION) {
-          showToast(t('importVersionMismatch') || 'إصدار النسخة غير متوافق.', 'error');
+          showToast(t('importVersionMismatch'), 'error');
           return;
         }
 
         setImportConfirm({ fileName: file.name, parsed });
       } catch (err) {
-        showToast(t('importError') || 'ملف تالف أو غير صالح.', 'error');
+        showToast(t('importError'), 'error');
       } finally {
         e.target.value = null;
       }
@@ -227,7 +234,7 @@ export default function Settings() {
     try {
       const { data } = importConfirm.parsed;
 
-      // ✅ إصلاح أمني: التحقق من نوع البيانات قبل الحفظ
+      // ✅ التحقق الأمني من نوع البيانات قبل الحفظ
       Object.entries(BACKUP_KEYS).forEach(([key, storageKey]) => {
         if (!(key in data)) return;
         const value = data[key];
@@ -245,65 +252,66 @@ export default function Settings() {
       });
 
       bumpDataVersion?.();
-      showToast(t('importSuccess') || 'تم الاستيراد! سيتم إعادة التشغيل.', 'success');
+      showToast(t('importSuccess'), 'success');
       
-      // ✅ إعادة تحميل آمنة (Soft Reload)
       setTimeout(() => {
         navigate('/', { replace: true });
-        window.location.reload(); // مطلوب فقط لتحديث state الـ Context
+        window.location.reload(); 
       }, 1500);
     } catch (err) {
       console.error('Import failed:', err);
-      showToast(t('importError') || 'تعذر الاستيراد.', 'error');
+      showToast(t('importError'), 'error');
     } finally {
       setImportConfirm(null);
     }
   };
 
+  /* ===================== Reset ===================== */
   const handleResetAll = () => {
     try {
       Object.values(BACKUP_KEYS).forEach(k => localStorage.removeItem(k));
       localStorage.removeItem('lastBackupDate');
-      showToast(t('resetSuccess') || 'تم مسح جميع البيانات.', 'success');
+      showToast(t('resetSuccess'), 'success');
       setTimeout(() => {
         navigate('/', { replace: true });
         window.location.reload();
       }, 1000);
     } catch (err) {
       console.error('Reset failed:', err);
-      showToast(t('errorSaving') || 'تعذر المسح.', 'error');
+      showToast(t('errorSaving'), 'error');
     } finally {
       setResetConfirm(false);
     }
   };
 
+  /* ===================== Date Display ===================== */
   const lastBackupDisplay = useMemo(() => {
-    if (!lastBackup) return t('never') || 'أبداً';
+    if (!lastBackup) return t('never');
     try {
       const d = new Date(lastBackup);
-      if (isNaN(d.getTime())) return t('never') || 'أبداً';
+      if (isNaN(d.getTime())) return t('never');
       const localeMap = { ar: 'ar-MA', en: 'en-US', fr: 'fr-FR' };
       return d.toLocaleDateString(localeMap[lang] || 'ar-MA', {
         year: 'numeric', month: 'short', day: 'numeric',
       });
-    } catch { return t('never') || 'أبداً'; }
+    } catch { return t('never'); }
   }, [lastBackup, lang, t]);
 
   return (
     <div className="space-y-3 pb-24 px-4 pt-2">
 
-      {/* ✅ إصلاح: استخدام أيقونة X بدلاً من × */}
+      {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
           <button 
             type="button"
             onClick={() => setToast({ show: false, message: '', type: 'success' })}
-            aria-label="إغلاق"
+            aria-label={t('close')}
             className="ml-2 opacity-70 hover:opacity-100"
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -312,22 +320,22 @@ export default function Settings() {
         <button 
           type="button"
           onClick={handleBack}
-          aria-label={t('back') || 'رجوع'}
+          aria-label={t('back')}
           className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
         >
-          {lang === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
+          {lang === 'ar' ? <ArrowRight size={20} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}
         </button>
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('settings') || 'الإعدادات'}</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('settings')}</h1>
       </div>
       
       {/* 1. المظهر */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-3.5 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]">
-            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+            {theme === 'dark' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
           </div>
           <span className="font-bold text-sm text-[var(--text)]">
-            {theme === 'dark' ? (t('darkMode') || 'الوضع الداكن') : (t('lightMode') || 'الوضع الفاتح')}
+            {theme === 'dark' ? t('darkMode') : t('lightMode')}
           </span>
         </div>
         <button 
@@ -335,7 +343,7 @@ export default function Settings() {
           onClick={toggleTheme}
           role="switch"
           aria-checked={theme === 'dark'}
-          aria-label={t('toggleTheme') || 'تبديل المظهر'}
+          aria-label={t('toggleTheme')}
           className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
         >
           <div className={`w-4 h-4 rounded-full bg-white absolute shadow-sm transition-transform duration-300 ${theme === 'dark' ? (lang === 'ar' ? 'right-1' : 'left-1') : (lang === 'ar' ? 'left-1' : 'right-1')}`} />
@@ -352,32 +360,32 @@ export default function Settings() {
         >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]">
-              <Globe size={18} />
+              <Globe size={18} aria-hidden="true" />
             </div>
             <div className="text-start">
-              <span className="font-bold text-sm text-[var(--text)] block">{t('preferences') || 'التفضيلات الإقليمية'}</span>
+              <span className="font-bold text-sm text-[var(--text)] block">{t('preferences')}</span>
               <span className="text-[10px] text-[var(--text-muted)] mt-0.5 block font-mono tracking-wider">{lang.toUpperCase()} • {currency}</span>
             </div>
           </div>
-          {isPrefsOpen ? <ChevronUp size={18} className="text-[var(--text-muted)]" /> : <ChevronDown size={18} className="text-[var(--text-muted)]" />}
+          {isPrefsOpen ? <ChevronUp size={18} className="text-[var(--text-muted)]" aria-hidden="true" /> : <ChevronDown size={18} className="text-[var(--text-muted)]" aria-hidden="true" />}
         </button>
 
         {isPrefsOpen && (
           <div className="p-3.5 border-t border-[var(--border)] space-y-5 bg-[var(--surface-2)]/30">
             <div>
               <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5">
-                <Globe size={12} /> {t('language') || 'لغة التطبيق'}
+                <Globe size={12} aria-hidden="true" /> {t('language')}
               </label>
               <div className="flex gap-1.5 bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)]">
-                <button type="button" onClick={() => changeLang('ar')} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'ar' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>العربية</button>
-                <button type="button" onClick={() => changeLang('en')} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'en' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>English</button>
-                <button type="button" onClick={() => changeLang('fr')} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'fr' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>Français</button>
+                <button type="button" onClick={() => changeLang('ar')} aria-pressed={lang === 'ar'} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'ar' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>العربية</button>
+                <button type="button" onClick={() => changeLang('en')} aria-pressed={lang === 'en'} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'en' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>English</button>
+                <button type="button" onClick={() => changeLang('fr')} aria-pressed={lang === 'fr'} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === 'fr' ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>Français</button>
               </div>
             </div>
 
             <div>
               <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5">
-                <span className="text-sm font-bold">$</span> {t('currency') || 'عملة التطبيق'}
+                <span className="text-sm font-bold">$</span> {t('currency')}
               </label>
               <CurrencySelector currentCurrency={currency} onSelect={setCurrency} />
             </div>
@@ -389,11 +397,11 @@ export default function Settings() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><BellRing size={18} /></div>
+            <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><BellRing size={18} aria-hidden="true" /></div>
             <div>
-              <span className="font-bold text-sm text-[var(--text)] block">{t('externalNotifications') || 'الإشعارات الخارجية'}</span>
+              <span className="font-bold text-sm text-[var(--text)] block">{t('externalNotifications')}</span>
               <span className="text-[10px] text-[var(--text-muted)]">
-                {t('notificationsSubtitle') || 'تنبيهات تظهر على شاشة هاتفك'}
+                {t('notificationsSubtitle')}
               </span>
             </div>
           </div>
@@ -402,7 +410,7 @@ export default function Settings() {
             onClick={() => setNotificationsEnabled(!notificationsEnabled)}
             role="switch"
             aria-checked={notificationsEnabled}
-            aria-label={t('externalNotifications') || 'الإشعارات الخارجية'}
+            aria-label={t('externalNotifications')}
             className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${notificationsEnabled ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
           >
             <div className={`w-4 h-4 rounded-full bg-white absolute shadow-sm transition-transform duration-300 ${notificationsEnabled ? (lang === 'ar' ? 'right-1' : 'left-1') : (lang === 'ar' ? 'left-1' : 'right-1')}`} />
@@ -411,12 +419,12 @@ export default function Settings() {
 
         <div className="pt-3 border-t border-[var(--border)] flex justify-between items-center text-xs">
           <span className="text-[var(--text-muted)]">
-            {t('browserPermission') || 'حالة الإذن من المتصفح:'}
+            {t('browserPermission')}
           </span>
 
           {pushPermission === 'granted' && (
             <span className="flex items-center gap-1 text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded-md">
-              <CheckCircle size={14} /> {t('granted') || 'مفعّل'}
+              <CheckCircle size={14} aria-hidden="true" /> {t('granted')}
             </span>
           )}
           {pushPermission === 'default' && (
@@ -425,23 +433,23 @@ export default function Settings() {
               onClick={handleEnablePush}
               className="bg-[var(--primary)] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-600 transition-colors"
             >
-              {t('requestPermission') || 'طلب الإذن'}
+              {t('requestPermission')}
             </button>
           )}
           {pushPermission === 'denied' && (
             <span className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded-md">
-              <XCircle size={14} /> {t('denied') || 'مرفوض'}
+              <XCircle size={14} aria-hidden="true" /> {t('denied')}
             </span>
           )}
           {pushPermission === 'unsupported' && (
             <span className="flex items-center gap-1 text-slate-500 font-bold bg-slate-500/10 px-2 py-1 rounded-md">
-              <Info size={14} /> {t('unsupported') || 'غير مدعوم'}
+              <Info size={14} aria-hidden="true" /> {t('unsupported')}
             </span>
           )}
         </div>
         {pushPermission === 'denied' && (
           <p className="text-[10px] text-red-400 mt-1">
-            {t('enableFromBrowser') || 'يرجى تفعيل الإشعارات من إعدادات المتصفح.'}
+            {t('enableFromBrowser')}
           </p>
         )}
       </div>
@@ -449,18 +457,18 @@ export default function Settings() {
       {/* 4. النسخ الاحتياطي */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-3">
-          <Database size={18} className="text-[var(--primary)]" />
+          <Database size={18} className="text-[var(--primary)]" aria-hidden="true" />
           <h2 className="font-bold text-sm text-[var(--text)]">
-            {t('backupAndExport') || 'النسخ الاحتياطي والتصدير'}
+            {t('backupAndExport')}
           </h2>
         </div>
 
         <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
-          {t('backupDesc') || 'بياناتك محفوظة على هاتفك فقط. صدّرها كملف احتياطي لضمان عدم ضياعها.'}
+          {t('backupDesc')}
         </p>
 
         <div className="text-[11px] text-[var(--text-muted)] mb-3 flex justify-between items-center">
-          <span>{t('lastBackup') || 'آخر نسخة احتياطية:'}</span>
+          <span>{t('lastBackup')}</span>
           <span className="font-bold text-[var(--text)]">{lastBackupDisplay}</span>
         </div>
 
@@ -470,7 +478,7 @@ export default function Settings() {
             onClick={handleExport}
             className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
           >
-            <Download size={16} /> {t('exportDataBtn') || 'تصدير البيانات'}
+            <Download size={16} aria-hidden="true" /> {t('exportDataBtn')}
           </button>
 
           <button 
@@ -478,7 +486,7 @@ export default function Settings() {
             onClick={handleImportClick}
             className="w-full bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl hover:bg-[var(--surface)] border border-[var(--border)] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
-            <Upload size={16} /> {t('importDataBtn') || 'استيراد البيانات'}
+            <Upload size={16} aria-hidden="true" /> {t('importDataBtn')}
           </button>
 
           <input 
@@ -494,14 +502,14 @@ export default function Settings() {
       {/* 5. الخصوصية */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-2.5">
-          <ShieldCheck size={18} className="text-green-500" />
-          <h2 className="font-bold text-sm text-[var(--text)]">{t('privacyAndSecurity') || 'الخصوصية والأمان'}</h2>
+          <ShieldCheck size={18} className="text-green-500" aria-hidden="true" />
+          <h2 className="font-bold text-sm text-[var(--text)]">{t('privacyAndSecurity')}</h2>
         </div>
         <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
-          {t('privacyText') || 'جميع بياناتك محفوظة على هاتفك فقط. نحن لا نجمع أي بيانات شخصية ولا نرسلها لأي خادم خارجي.'}
+          {t('privacyText')}
         </p>
         <div className="flex justify-between items-center pt-3 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)]">
-          <span className="flex items-center gap-1.5"><Database size={12} /> {t('version') || 'الإصدار'}</span>
+          <span className="flex items-center gap-1.5"><Database size={12} aria-hidden="true" /> {t('version')}</span>
           <span className="font-mono bg-[var(--surface-2)] px-2 py-0.5 rounded-md">v{APP_VERSION}</span>
         </div>
       </div>
@@ -509,24 +517,24 @@ export default function Settings() {
       {/* 6. منطقة الخطر */}
       <div className="bg-[var(--surface)] border border-red-500/20 rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-2.5">
-          <AlertCircle size={18} className="text-red-500" />
-          <h2 className="font-bold text-sm text-red-500">{t('dangerZone') || 'منطقة الخطر'}</h2>
+          <AlertCircle size={18} className="text-red-500" aria-hidden="true" />
+          <h2 className="font-bold text-sm text-red-500">{t('dangerZone')}</h2>
         </div>
         <button 
           type="button"
           onClick={() => setResetConfirm(true)}
           className="w-full bg-red-500/10 text-red-500 font-bold py-3 rounded-xl hover:bg-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
-          <Trash2 size={16} /> {t('resetApp') || 'مسح جميع البيانات'}
+          <Trash2 size={16} aria-hidden="true" /> {t('resetApp')}
         </button>
       </div>
 
-      {/* Modals (Import & Reset) */}
+      {/* Modals */}
       {importConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] shadow-2xl">
             <h3 className="text-lg font-bold text-center mb-3 text-[var(--text)]">
-              {t('confirmImport') || 'تحذير: سيتم استبدال جميع بياناتك.'}
+              {t('confirmImport')}
             </h3>
             <p className="text-xs text-[var(--text-muted)] mb-4 text-center">
               {importConfirm.fileName}
@@ -537,14 +545,14 @@ export default function Settings() {
                 onClick={() => setImportConfirm(null)}
                 className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl"
               >
-                {t('cancel') || 'إلغاء'}
+                {t('cancel')}
               </button>
               <button 
                 type="button"
                 onClick={handleConfirmImport}
                 className="flex-1 bg-[var(--primary)] text-white font-bold py-3 rounded-xl"
               >
-                {t('confirm') || 'تأكيد'}
+                {t('confirm')}
               </button>
             </div>
           </div>
@@ -555,10 +563,10 @@ export default function Settings() {
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-red-500/30 shadow-2xl">
             <h3 className="text-lg font-bold text-center mb-3 text-red-500">
-              {t('confirmReset') || 'هل أنت متأكد؟'}
+              {t('confirmReset')}
             </h3>
             <p className="text-xs text-[var(--text-muted)] mb-4 text-center">
-              {t('resetWarning') || 'سيتم حذف جميع السيارات والسجلات نهائياً. لا يمكن التراجع.'}
+              {t('resetWarning')}
             </p>
             <div className="flex gap-2">
               <button 
@@ -566,14 +574,14 @@ export default function Settings() {
                 onClick={() => setResetConfirm(false)}
                 className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl"
               >
-                {t('cancel') || 'إلغاء'}
+                {t('cancel')}
               </button>
               <button 
                 type="button"
                 onClick={handleResetAll}
                 className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl"
               >
-                {t('confirmDeleteBtn') || 'مسح'}
+                {t('confirmDeleteBtn')}
               </button>
             </div>
           </div>
