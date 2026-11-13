@@ -1,53 +1,84 @@
 import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useContext } from 'react';
+// ✅ تصحيح المسار (الصعود مستويين للخلف للوصول لـ src)
 import { AppContext } from '../../context/AppContext';
 
-// استيراد المكونات المشتركة من المسار الجديد
+// ✅ 1. الهيكل الجديد (shared)
 import Layout from '../../shared/components/layout/Layout';
 
-// استيراد الصفحات
+// ✅ 2. صفحات التسويق (متاحة للجميع)
 import Welcome from '../../pages/Welcome';
 import Onboarding from '../../pages/Onboarding';
 import Login from '../../pages/Login';
 import AddVehicle from '../../pages/AddVehicle';
 import About from '../../pages/About'; 
+
+// ✅ 3. الصفحات الأساسية (تتطلب سيارة)
 import Dashboard from '../../pages/Dashboard';
-import Vehicles from '../../pages/Vehicles';
 import Fuel from '../../pages/Fuel';
 import Maintenance from '../../pages/Maintenance';
 import Expenses from '../../pages/Expenses';
 import Income from '../../pages/Income'; 
 import Documents from '../../pages/Documents'; 
 import Reminders from '../../pages/Reminders'; 
+import Vehicles from '../../pages/Vehicles';
 import More from '../../pages/More';
+
+// ✅ 4. الصفحات المتقدمة (تتطلب سيارة)
 import Notifications from '../../pages/Notifications';
 import Reports from '../../pages/Reports';
 import Timeline from '../../pages/Timeline';
 import Valuation from '../../pages/Valuation'; 
 import FuelStations from '../../pages/FuelStations'; 
 import ReportPrint from '../../pages/ReportPrint'; 
+
+// ✅ 5. الصفحات النظامية (لا تتطلب سيارة)
 import Settings from '../../pages/Settings'; 
 import Backup from '../../pages/Backup'; 
 
+/* =========================================================
+   ✅ الحماية (Route Guard)
+   ========================================================= */
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
+  // إذا لم توجد سيارة، يتم التوجيه لصفحة الترحيب
   return currentCar ? <Outlet /> : <Navigate to="/welcome" replace />;
 };
 
 export default function AppRoutes() {
+  const { isLoading, t } = useContext(AppContext);
+
+  if (isLoading) {
+    return (
+      <div 
+        className="min-h-screen bg-[var(--bg)] flex justify-center items-center text-[var(--primary)] font-bold text-xl"
+        aria-live="polite"
+      >
+        {t ? t('loading') : '...'}
+      </div>
+    );
+  }
+
   return (
     <HashRouter>
       <Routes>
-        {/* 1. المسارات العامة */}
+        {/* =========================================================
+            1. المسارات العامة (لا تحتاج سيارة ولا Layout)
+            ========================================================= */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
+        
+        {/* ✅ إصلاح حرج: /add-vehicle يجب أن يكون عاماً (لإنشاء السيارة الأولى) */}
         <Route path="/add-vehicle" element={<AddVehicle />} />
+        
         <Route path="/settings" element={<Settings />} />
         <Route path="/backup" element={<Backup />} />
         <Route path="/about" element={<About />} />
 
-        {/* 2. المسارات المحمية */}
+        {/* =========================================================
+            2. المسارات المحمية (تتطلب وجود سيارة + Layout)
+            ========================================================= */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
@@ -68,7 +99,9 @@ export default function AppRoutes() {
           </Route>
         </Route>
         
-        {/* 3. Fallback */}
+        {/* =========================================================
+            3. Fallback (المسارات غير الموجودة)
+            ========================================================= */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </HashRouter>
