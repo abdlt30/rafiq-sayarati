@@ -1,24 +1,26 @@
-import { useContext, useState, useCallback, useMemo } from 'react';
+import { useContext, useState, useCallback } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, Pencil, Check, X, Bell, Settings,
-  AlertTriangle, ShieldAlert, TrendingUp, CheckCircle
+  AlertTriangle, ShieldAlert, TrendingUp, Activity
 } from 'lucide-react'; 
 import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 
-const EMPTY_TOTALS = { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
-
 export default function Dashboard() {
   // ✅ جلب البيانات من المخ المركزي
-  const { currentCar, updateCar, t, currency, user, lang, dataVersion, totals, recentActivity } = useContext(AppContext);
+  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity } = useContext(AppContext);
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
+  // ✅ إصلاح كلمة welcomeUser
+  const greeting = user?.name && user.name.trim() !== '' 
+    ? `مرحباً، ${user.name} 👋` 
+    : 'مرحباً بك 👋';
+
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
   const today = new Date().toLocaleDateString(todayLocale, {
@@ -49,10 +51,13 @@ export default function Dashboard() {
   const incomeValue = safeNumber(totals?.income);
   const totalValue = safeNumber(totals?.total);
   const odometerValue = safeNumber(currentCar.odometer);
+  
+  // ✅ استخدام متوسط الاستهلاك من المخ المركزي (أو عرض شرطة إذا لم تكن هناك بيانات كافية)
+  const avgValue = totals?.avgConsumption || null;
+  const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
 
   return (
     <div className="space-y-5 pb-24 px-4 pt-2">
-      {/* ... (نفس تصميم الـ Dashboard السابق، فقط احذف منه حساب الـ avgConsumption لأننا سنتركه للسيارة الحالية) */}
       {/* الشريط العلوي */}
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
@@ -123,6 +128,14 @@ export default function Dashboard() {
               <button type="button" onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md"><Pencil size={14} /></button>
             </div>
           )}
+        </div>
+
+        {/* ✅ بطاقة متوسط الاستهلاك (تمت إعادتها) */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl">
+          <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('avgConsumption')}</p>
+          <p className="text-lg font-extrabold text-yellow-500 flex items-center gap-1 mt-1">
+            {avgValue !== null ? avgValue : '—'} <span className="text-[10px] font-normal text-[var(--text-muted)]">{avgUnit}</span>
+          </p>
         </div>
       </div>
 
