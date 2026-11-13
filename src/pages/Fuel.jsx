@@ -2,13 +2,17 @@ import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'r
 import { AppContext } from '../context/AppContext';
 import { dbService } from '../services/dbService';
 import { Plus, Trash2, Edit2, X, Fuel as FuelIcon, Gauge, Activity, Zap, BatteryCharging, AlertCircle, CheckCircle } from 'lucide-react';
-import ConfirmModal from '../components/ui/ConfirmModal'; 
-import OptionPicker from '../components/ui/OptionPicker'; 
+
+// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
+import ConfirmModal from '../shared/components/ui/ConfirmModal'; 
+import OptionPicker from '../shared/components/ui/OptionPicker'; 
+import { safeNumber } from '../shared/utils/safeNumber';
+import { formatDate } from '../shared/utils/formatters';
 
 const EMPTY_FORM = { date: '', odometer: '', energyType: 'gasoline', amount: '', cost: '' };
 
 export default function Fuel() {
-  const { currentCar, updateCar, t, currency, dataVersion, bumpDataVersion } = useContext(AppContext); 
+  const { currentCar, updateCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,16 +22,19 @@ export default function Fuel() {
   const [formData, setFormData] = useState(EMPTY_FORM);
 
   const toastTimeoutRef = useRef(null);
-
+  
+  const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
   const powertrain = currentCar?.powertrain || 'ice'; 
   const isElectric = powertrain === 'ev';
   const isHybrid = powertrain === 'hybrid' || powertrain === 'phev';
 
+  // ✅ 2. إزالة الكود الميت (|| 'fallback')
   const energyOptions = [
-    { value: 'gasoline', label: t('gasoline') || 'بنزين' },
-    { value: 'electricity', label: t('electricity') || 'كهرباء (شحن)' }
+    { value: 'gasoline', label: t('gasoline') },
+    { value: 'electricity', label: t('electricity') }
   ];
 
+  /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
@@ -45,12 +52,11 @@ export default function Fuel() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   }, []);
 
+  /* ===================== Load Data ===================== */
   const loadData = useCallback(() => {
     try {
       if (currentCar) {
-        // ✅ إصلاح: استخدام String() للتطابق
         const allFuel = dbService.getFuel()?.filter(r => String(r.carId) === String(currentCar.id)) || [];
-        // ✅ ترتيب مستقر
         setRecords([...allFuel].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))));
       } else {
         setRecords([]); 
@@ -63,6 +69,7 @@ export default function Fuel() {
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
+  /* ===================== Math: Consumption ===================== */
   const recordsWithConsumption = useMemo(() => {
     if (records.length === 0) return [];
 
@@ -74,13 +81,13 @@ export default function Fuel() {
 
     const consumptionById = {};
     Object.values(groups).forEach(group => {
-      const sorted = [...group].sort((a, b) => Number(a.odometer) - Number(b.odometer));
+      const sorted = [...group].sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
       for (let i = 1; i < sorted.length; i++) {
         const prev = sorted[i - 1];
         const curr = sorted[i];
-        const distance = Number(curr.odometer) - Number(prev.odometer);
-        const amount = Number(curr.amount ?? curr.liters) || 0;
-        if (Number.isFinite(distance) && distance > 0 && amount > 0) {
+        const distance = safeNumber(curr.odometer) - safeNumber(prev.odometer);
+        const amount = safeNumber(curr.amount ?? curr.liters);
+        if (distance > 0 && amount > 0) {
           const c = (amount / distance) * 100;
           if (Number.isFinite(c) && c > 0) {
             consumptionById[curr.id] = c.toFixed(1);
@@ -94,13 +101,14 @@ export default function Fuel() {
       .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   }, [records]);
 
+  /* ===================== Save ===================== */
   const handleSave = (e) => {
     e.preventDefault();
     if (!currentCar) return;
 
     const isBlank = (v) => v === '' || v === undefined || v === null;
     if (!formData.date || isBlank(formData.odometer) || isBlank(formData.amount) || isBlank(formData.cost)) {
-      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
+      return showToast(t('fillRequiredFields'), 'error');
     }
 
     const odoNum = Number(formData.odometer);
@@ -109,14 +117,14 @@ export default function Fuel() {
 
     if (!Number.isFinite(odoNum) || !Number.isFinite(amountNum) || !Number.isFinite(costNum) ||
         odoNum < 0 || amountNum <= 0 || costNum < 0) {
-      return showToast(t('invalidNumbers') || 'الرجاء إدخال أرقام صحيحة أكبر من صفر.', 'error');
+      return showToast(t('invalidNumbers'), 'error');
     }
 
     if (!editingId) {
-      const maxFuelOdo = records.reduce((m, r) => Math.max(m, Number(r.odometer) || 0), 0);
-      const maxOdo = Math.max(Number(currentCar.odometer) || 0, maxFuelOdo);
+      const maxFuelOdo = records.reduce((m, r) => Math.max(m, safeNumber(r.odometer)), 0);
+      const maxOdo = Math.max(safeNumber(currentCar.odometer), maxFuelOdo);
       if (odoNum < maxOdo) {
-        return showToast(t('invalidOdometer') || 'العداد لا يمكن أن يكون أقل من العداد السابق.', 'error');
+        return showToast(t('invalidOdometer'), 'error');
       }
     }
 
@@ -140,7 +148,7 @@ export default function Fuel() {
         dbService.addFuel(data);
       }
 
-      if (data.odometer > (Number(currentCar.odometer) || 0)) {
+      if (data.odometer > safeNumber(currentCar.odometer)) {
         updateCar(currentCar.id, { odometer: data.odometer });
       } else {
         bumpDataVersion();
@@ -148,13 +156,14 @@ export default function Fuel() {
 
       loadData(); 
       closeModal();
-      showToast(t('saveSuccess') || 'تم حفظ البيانات بنجاح!', 'success');
+      showToast(t('saveSuccess'), 'success');
     } catch (error) {
       console.error("خطأ أثناء حفظ البيانات:", error);
-      showToast(t('errorSaving') || "حدث خطأ أثناء الحفظ.", 'error');
+      showToast(t('errorSaving'), 'error');
     }
   };
 
+  /* ===================== Delete ===================== */
   const handleDelete = () => {
     if (!deleteId) return;
     try {
@@ -165,10 +174,11 @@ export default function Fuel() {
     } catch (e) {
       console.error('deleteFuel failed:', e);
       setDeleteId(null);
-      showToast(t('errorSaving') || 'حدث خطأ أثناء الحذف.', 'error');
+      showToast(t('errorSaving'), 'error');
     }
   };
 
+  /* ===================== Modals ===================== */
   const openEdit = (record) => {
     setEditingId(record.id);
     setFormData({ 
@@ -202,33 +212,34 @@ export default function Fuel() {
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
+      {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
           <button 
             type="button"
             onClick={dismissToast} 
-            aria-label="إغلاق الإشعار"
+            aria-label={t('close')}
             className="ml-2 opacity-70 hover:opacity-100"
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
       )}
 
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">
-          {isElectric ? (t('chargingLog') || 'سجل الشحن') : (t('fuel') || 'سجل الوقود')}
+          {isElectric ? t('chargingLog') : t('fuel')}
         </h1>
       </div>
 
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
-            {isElectric ? <BatteryCharging size={48} className="opacity-40" /> : <FuelIcon size={48} className="opacity-40" />}
+            {isElectric ? <BatteryCharging size={48} className="opacity-40" aria-hidden="true" /> : <FuelIcon size={48} className="opacity-40" aria-hidden="true" />}
           </div>
-          <p>{isElectric ? (t('noChargingRecords') || 'لا توجد سجلات شحن.') : (t('noFuelRecords') || 'لا توجد سجلات وقود.')}</p>
+          <p>{isElectric ? t('noChargingRecords') : t('noFuelRecords')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -242,29 +253,29 @@ export default function Fuel() {
                 
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isEnergyElectric ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                    {isEnergyElectric ? <Zap size={18} /> : <FuelIcon size={18} />}
+                    {isEnergyElectric ? <Zap size={18} aria-hidden="true" /> : <FuelIcon size={18} aria-hidden="true" />}
                   </div>
                   <div>
-                    {/* ✅ إصلاح NaN: إضافة || 0 */}
                     <p className="font-bold text-[var(--text)] text-sm">
-                      {Number(record.cost || 0).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
+                      {safeNumber(record.cost).toLocaleString()} <span className="text-[10px] font-normal text-[var(--text-muted)]">{currency}</span>
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{record.date} • {amountToShow} {unit}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                      {formatDate(record.date, todayLocale)} • {amountToShow} {unit}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <div className="text-end">
                     <p className="text-[10px] font-bold text-[var(--text-muted)] flex items-center justify-end gap-1">
-                      {/* ✅ إصلاح NaN: إضافة || 0 */}
-                      <Gauge size={10} /> {Number(record.odometer || 0).toLocaleString()} KM
+                      <Gauge size={10} aria-hidden="true" /> {safeNumber(record.odometer).toLocaleString()} {t('km')}
                     </p>
                     {record.consumption ? (
                       <p className={`text-[10px] font-bold mt-1 flex items-center justify-end gap-1 ${isEnergyElectric ? 'text-green-500' : 'text-blue-500'}`}>
-                        <Activity size={10} /> {record.consumption} {isEnergyElectric ? 'kWh/100km' : 'L/100km'}
+                        <Activity size={10} aria-hidden="true" /> {record.consumption} {isEnergyElectric ? 'kWh/100km' : 'L/100km'}
                       </p>
                     ) : (
-                      <p className="text-[10px] text-[var(--text-muted)] mt-1">{isEnergyElectric ? 'أول شحن' : 'أول تعبئة'}</p>
+                      <p className="text-[10px] text-[var(--text-muted)] mt-1">{isEnergyElectric ? t('firstFill') : t('firstFill')}</p>
                     )}
                   </div>
                   
@@ -272,18 +283,18 @@ export default function Fuel() {
                     <button 
                       type="button"
                       onClick={() => openEdit(record)} 
-                      aria-label="تعديل السجل"
+                      aria-label={t('edit')}
                       className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg hover:bg-blue-500/20 active:scale-90 transition-all"
                     >
-                      <Edit2 size={14} />
+                      <Edit2 size={14} aria-hidden="true" />
                     </button>
                     <button 
                       type="button"
                       onClick={() => setDeleteId(record.id)} 
-                      aria-label="حذف السجل"
+                      aria-label={t('confirmDelete')}
                       className="text-red-500 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -294,52 +305,50 @@ export default function Fuel() {
         </div>
       )}
 
-      {/* ✅ إصلاح rtl:auto -> rtl:right-auto */}
       <button 
         type="button"
         onClick={openAddModal} 
-        aria-label="إضافة سجل جديد"
+        aria-label={isElectric ? t('addCharging') : t('addFuel')}
         className={`fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 ${isElectric ? 'bg-green-500 shadow-green-500/40' : 'bg-[var(--primary)] shadow-blue-500/40'}`}
       >
-        <Plus size={28} />
+        <Plus size={28} aria-hidden="true" />
       </button>
 
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
-        title={t('confirmDelete') || 'تأكيد الحذف'}
-        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذا السجل؟'}
+        title={t('confirmDelete')}
+        message={t('confirmDeleteMsg')}
         variant="danger"
-        confirmText={t('confirmDeleteBtn') || 'نعم، احذف'}
+        confirmText={t('confirmDeleteBtn')}
       />
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} noValidate className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
-            {/* ✅ إصلاح RTL لزر الإغلاق */}
             <button 
               type="button" 
               onClick={closeModal} 
-              aria-label="إغلاق"
+              aria-label={t('close')}
               className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
             <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
-              {editingId ? (t('edit') || 'تعديل') : (isElectric ? (t('addCharging') || 'إضافة شحن') : (t('addFuel') || 'إضافة تعبئة'))}
+              {editingId ? t('edit') : (isElectric ? t('addCharging') : t('addFuel'))}
             </h2>
             
             <div className="space-y-3 overflow-y-auto pb-2">
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date') || 'التاريخ'}</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('date')}</label>
                 <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
               
               {isHybrid && (
                 <div className="animate-fade-in">
                   <OptionPicker 
-                    label={t('energySource') || 'مصدر الطاقة'} 
+                    label={t('energySource')} 
                     options={energyOptions} 
                     value={formData.energyType} 
                     onChange={(val) => setFormData({...formData, energyType: val})} 
@@ -348,25 +357,25 @@ export default function Fuel() {
               )}
 
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد'} (KM)</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('odometer')} ({t('km')})</label>
                 <input type="number" inputMode="numeric" min="0" placeholder="0" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
               
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">
-                  {(isElectric || formData.energyType === 'electricity') ? (t('kwh') || 'كيلوواط/ساعة (kWh)') : (t('liters') || 'اللترات')}
+                  {(isElectric || formData.energyType === 'electricity') ? t('kwh') : t('liters')}
                 </label>
                 <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost') || 'التكلفة'} ({currency})</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('cost')} ({currency})</label>
                 <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" />
               </div>
             </div>
             
             <button type="submit" className={`w-full mt-5 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-[0.98] transition-all flex-shrink-0 ${isElectric || formData.energyType === 'electricity' ? 'bg-green-500 hover:bg-green-600' : 'bg-[var(--primary)] hover:bg-blue-600'}`}>
-              {t('save') || 'حفظ البيانات'}
+              {t('save')}
             </button>
           </form>
         </div>
