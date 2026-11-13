@@ -1,13 +1,13 @@
 import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
-import { AppContext } from '../context/AppContext';
-import { dbService } from '../services/dbService';
+// ✅ إضافة الامتدادات المطلوبة لمنع فشل Vite Build
+import { AppContext } from '../context/AppContext.jsx';
+import { dbService } from '../services/dbService.js';
 import { Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, AlertCircle, CheckCircle, Check } from 'lucide-react';
 
-// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
-import ConfirmModal from '../shared/components/ui/ConfirmModal'; 
-import OptionPicker from '../shared/components/ui/OptionPicker'; 
-import { safeNumber } from '../shared/utils/safeNumber';
-import { formatDate } from '../shared/utils/formatters';
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx'; 
+import OptionPicker from '../shared/components/ui/OptionPicker.jsx'; 
+import { safeNumber } from '../shared/utils/safeNumber.js';
+import { formatDate } from '../shared/utils/formatters.js';
 
 const EMPTY_FORM = { date: '', type: '', cost: '', nextKm: '' };
 
@@ -15,6 +15,7 @@ export default function Maintenance() {
   const { currentCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext);
   
   const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // ✅ حالة تحميل جديدة
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -112,32 +113,36 @@ export default function Maintenance() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   }, []);
 
-  /* ===================== Load Data ===================== */
-  const loadData = useCallback(() => {
+  /* ===================== Load Data (Async) ===================== */
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
       if (!currentCar) {
         setRecords([]);
         setCustomTypes([]);
         return;
       }
-      const allMaintenance = dbService.getMaintenance() || [];
-      const carMaintenance = allMaintenance.filter(r => String(r.carId) === String(currentCar.id));
+      // ✅ إضافة await لأن dbService أصبح يعتمد على IndexedDB
+      const allMaintenance = await dbService.getMaintenance();
+      const carMaintenance = (allMaintenance || []).filter(r => String(r.carId) === String(currentCar.id));
       const sorted = [...carMaintenance].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       setRecords(sorted);
 
-      const types = dbService.getCustomTypes() || [];
+      const types = await dbService.getCustomTypes();
       setCustomTypes(Array.isArray(types) ? types : []);
     } catch (e) {
       console.error('loadData failed:', e);
       setRecords([]);
       setCustomTypes([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [currentCar]);
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
-  /* ===================== Add Custom Type ===================== */
-  const handleConfirmAddType = () => {
+  /* ===================== Add Custom Type (Async) ===================== */
+  const handleConfirmAddType = async () => {
     const trimmed = newTypeName.trim();
     if (!trimmed) return;
 
@@ -147,7 +152,8 @@ export default function Maintenance() {
     }
 
     try {
-      const updatedTypes = dbService.addCustomType(trimmed);
+      // ✅ إضافة await
+      const updatedTypes = await dbService.addCustomType(trimmed);
       setCustomTypes(Array.isArray(updatedTypes) ? updatedTypes : []);
       setFormData(prev => ({ ...prev, type: trimmed }));
       setIsAddingType(false);
@@ -158,8 +164,8 @@ export default function Maintenance() {
     }
   };
 
-  /* ===================== Save ===================== */
-  const handleSave = (e) => {
+  /* ===================== Save (Async) ===================== */
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!currentCar) return;
 
@@ -191,12 +197,13 @@ export default function Maintenance() {
     };
     
     try {
+      // ✅ إضافة await لدوال قاعدة البيانات
       if (editingId) {
-        dbService.updateMaintenance(editingId, data);
+        await dbService.updateMaintenance(editingId, data);
       } else {
-        dbService.addMaintenance(data);
+        await dbService.addMaintenance(data);
       }
-      loadData();
+      await loadData();
       bumpDataVersion();
       closeModal();
       showToast(t('saveSuccess'), 'success');
@@ -206,12 +213,12 @@ export default function Maintenance() {
     }
   };
 
-  /* ===================== Delete ===================== */
-  const handleDelete = () => {
+  /* ===================== Delete (Async) ===================== */
+  const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      dbService.deleteMaintenance(deleteId);
-      loadData();
+      await dbService.deleteMaintenance(deleteId); // ✅ إضافة await
+      await loadData();
       bumpDataVersion();
       setDeleteId(null);
     } catch (e) {
@@ -265,6 +272,14 @@ export default function Maintenance() {
       : msg;
   }, [t]);
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64 text-[var(--primary)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
@@ -308,7 +323,6 @@ export default function Maintenance() {
                   <p className="font-bold text-[var(--text)] text-sm">
                     {allTypes.find(dt => dt.value === record.type)?.label || record.type}
                   </p>
-                  {/* ✅ 2. استخدام formatDate */}
                   <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                     {formatDate(record.date, todayLocale)}
                   </p>
@@ -394,7 +408,7 @@ export default function Maintenance() {
                 <input 
                   type="date" 
                   value={formData.date} 
-                  onChange={e => setFormData({...formData, date: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, date: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-[var(--primary)]" 
                 />
               </div>
@@ -442,7 +456,7 @@ export default function Maintenance() {
                   <OptionPicker 
                     options={allTypes} 
                     value={formData.type} 
-                    onChange={(val) => setFormData({...formData, type: val})} 
+                    onChange={(val) => setFormData(prev => ({...prev, type: val}))} 
                   />
                 )}
               </div>
@@ -456,7 +470,7 @@ export default function Maintenance() {
                   step="0.01" 
                   placeholder="0.00" 
                   value={formData.cost} 
-                  onChange={e => setFormData({...formData, cost: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, cost: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold text-[var(--text)] outline-none focus:border-[var(--primary)]" 
                 />
               </div>
@@ -470,7 +484,7 @@ export default function Maintenance() {
                   step="1" 
                   placeholder={t('optional')} 
                   value={formData.nextKm} 
-                  onChange={e => setFormData({...formData, nextKm: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, nextKm: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
                 />
               </div>
