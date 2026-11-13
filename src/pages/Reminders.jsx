@@ -1,23 +1,25 @@
 import { useState, useEffect, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
-import { dbService } from '../services/dbService';
+import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
+import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
 import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, AlertTriangle } from 'lucide-react';
-import ConfirmModal from '../components/ui/ConfirmModal'; // ✅ استدعاء نافذة التأكيد
+
+// 🔴 إصلاح حرج: تحديث المسار إلى الهيكل الجديد وإضافة .jsx
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx'; 
 
 export default function Reminders() {
   const { currentCar, t } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null); // ✅ حالة الحذف المخصصة
+  const [deleteId, setDeleteId] = useState(null); 
   
   const [formData, setFormData] = useState({ type: 'oil', date: '', odometer: '' });
+  const [errorMsg, setErrorMsg] = useState('');
 
   const loadData = () => {
     if (currentCar) {
-      // ✅ إصلاح حرج: منع انهيار التطبيق إذا كانت قاعدة البيانات فارغة
       const allReminders = dbService.getReminders() || [];
-      const carReminders = allReminders.filter(r => r.carId === currentCar.id);
+      const carReminders = allReminders.filter(r => String(r.carId) === String(currentCar.id));
       setRecords(carReminders);
     } else {
       setRecords([]);
@@ -28,8 +30,11 @@ export default function Reminders() {
 
   const handleSave = (e) => {
     e.preventDefault();
+    setErrorMsg(''); // مسح الخطأ السابق
+
     if (!formData.date && !formData.odometer) {
-      return alert(t('fillRequiredFields') || 'الرجاء إدخال التاريخ أو العداد على الأقل.');
+      setErrorMsg(t('fillRequiredFields') || 'الرجاء إدخال التاريخ أو العداد على الأقل.');
+      return;
     }
 
     try {
@@ -42,25 +47,25 @@ export default function Reminders() {
 
       dbService.addReminder(data);
       
-      // ✅ إعادة جلب البيانات لضمان التحديث الفوري
       loadData(); 
       
       setIsModalOpen(false);
       setFormData({ type: 'oil', date: '', odometer: '' }); 
     } catch (error) {
       console.error("خطأ في حفظ التذكير:", error);
+      setErrorMsg(t('errorSaving') || 'حدث خطأ أثناء الحفظ.');
     }
   };
 
   const handleDelete = () => {
     if (deleteId) {
       dbService.deleteReminder(deleteId);
-      loadData(); // إعادة جلب البيانات بعد الحذف
+      loadData(); 
       setDeleteId(null);
     }
   };
 
-  // 🧠 الخوارزمية الذكية (ممتازة كما هي)
+  // 🧠 الخوارزمية الذكية
   const getSmartStatus = (record) => {
     const now = new Date();
     let daysLeft = null;
@@ -70,8 +75,9 @@ export default function Reminders() {
       daysLeft = Math.ceil((new Date(record.date) - now) / (1000 * 60 * 60 * 24));
     }
     
-    if (record.odometer && currentCar?.currentOdometer) {
-      kmLeft = Number(record.odometer) - Number(currentCar.currentOdometer);
+    // ✅ إصلاح حرج: الحقل الصحيح هو odometer وليس currentOdometer
+    if (record.odometer && currentCar?.odometer) {
+      kmLeft = Number(record.odometer) - Number(currentCar.odometer);
     }
 
     if (daysLeft === null && kmLeft === null) {
@@ -116,7 +122,11 @@ export default function Reminders() {
       {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('reminders') || 'التذكيرات'}</h1>
-        <button onClick={() => setIsModalOpen(true)} className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform">
+        <button 
+          type="button"
+          onClick={() => { setIsModalOpen(true); setErrorMsg(''); }} 
+          className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 transition-transform"
+        >
           <Plus size={24} />
         </button>
       </div>
@@ -152,7 +162,8 @@ export default function Reminders() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => setDeleteId(record.id)} // ✅ استخدام حالة الحذف المخصصة
+                  type="button"
+                  onClick={() => setDeleteId(record.id)} 
                   className="text-red-500 p-2 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
                 >
                   <Trash2 size={18} />
@@ -163,7 +174,7 @@ export default function Reminders() {
         </div>
       )}
 
-      {/* ✅ نافذة تأكيد الحذف الاحترافية */}
+      {/* ✅ نافذة تأكيد الحذف */}
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
@@ -182,6 +193,13 @@ export default function Reminders() {
                 <X size={20} />
               </button>
             </div>
+
+            {/* ✅ عرض رسالة الخطأ داخل النافذة بدلاً من alert */}
+            {errorMsg && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-2 rounded-lg text-xs font-bold text-center">
+                {errorMsg}
+              </div>
+            )}
             
             <div className="grid grid-cols-3 gap-2">
               <button type="button" onClick={() => setFormData({...formData, type: 'oil'})} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'oil' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('oil') || 'زيت'}</button>
@@ -195,7 +213,7 @@ export default function Reminders() {
                 <input 
                   type="date" 
                   value={formData.date} 
-                  onChange={e => setFormData({...formData, date: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, date: e.target.value}))} 
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none [color-scheme:dark] focus:border-[var(--primary)]" 
                 />
               </div>
@@ -203,8 +221,9 @@ export default function Reminders() {
                 <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('odometer') || 'العداد (اختياري)'}</label>
                 <input 
                   type="number" 
+                  min="0"
                   value={formData.odometer} 
-                  onChange={e => setFormData({...formData, odometer: e.target.value})} 
+                  onChange={e => setFormData(prev => ({...prev, odometer: e.target.value}))} 
                   placeholder="مثال: 95000"
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
                 />
