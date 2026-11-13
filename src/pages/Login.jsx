@@ -7,29 +7,34 @@ export default function Login() {
   const { t, lang, setUser } = useContext(AppContext);
   const navigate = useNavigate();
 
-  // دالة الدخول كزائر
+  // ✅ الدخول كزائر (محصّن + اسم مترجم)
   const handleGuestLogin = () => {
-    // حفظ حالة المستخدم (يمكنك تعديلها لاحقاً عند ربط Supabase)
-    if (setUser) {
-      setUser({ name: 'زائر', isGuest: true });
+    try {
+      if (setUser) {
+        setUser({ name: t('guest'), isGuest: true });
+      }
+    } catch (err) {
+      console.error('setUser failed:', err);
+      // نكمل على أي حال: المستخدم يستطيع التجربة بدون اسم
+    } finally {
+      navigate('/add-vehicle');
     }
-    navigate('/add-vehicle');
   };
 
   return (
     <div className="min-h-screen bg-[var(--bg)] flex flex-col justify-center items-center p-6 text-center">
       
-      {/* أيقونة احترافية بدلاً من الإيموجي */}
+      {/* أيقونة */}
       <div className="w-24 h-24 bg-[var(--primary)]/10 rounded-full flex items-center justify-center mb-6 shadow-inner">
-        <ShieldCheck size={48} className="text-[var(--primary)]" />
+        <ShieldCheck size={48} className="text-[var(--primary)]" aria-hidden="true" />
       </div>
 
       <h1 className="text-2xl font-bold text-[var(--text)] mb-3">
-        {t('loginTitle') || 'مرحباً بك مجدداً'}
+        {t('loginTitle')}
       </h1>
       
       <p className="text-sm text-[var(--text-muted)] mb-8 max-w-xs leading-relaxed">
-        {t('loginSubtitle') || 'يمكنك تجربة التطبيق كزائر الآن، أو تسجيل الدخول لحفظ بياناتك في السحابة (قريباً).'}
+        {t('loginSubtitle')}
       </p>
       
       {/* زر الدخول كزائر */}
@@ -38,23 +43,27 @@ export default function Login() {
         onClick={handleGuestLogin} 
         className="w-full max-w-xs bg-[var(--primary)] text-white font-bold py-4 rounded-xl shadow-lg shadow-[var(--primary)]/30 hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-4"
       >
-        <UserPlus size={20} />
-        {t('continueAsGuest') || 'المتابعة كزائر'}
+        <UserPlus size={20} aria-hidden="true" />
+        {t('continueAsGuest')}
       </button>
 
-      {/* زر ثانوي (اختياري) - لربطه لاحقاً */}
+      {/* زر ثانوي (قريباً) - disabled */}
       <button 
         type="button"
-        onClick={() => {}} // سيتم ربطه بـ Supabase لاحقاً
         disabled
+        aria-label={t('signInWithEmail')}
         className="w-full max-w-xs bg-[var(--surface-2)] text-[var(--text-muted)] font-bold py-4 rounded-xl cursor-not-allowed opacity-60 flex items-center justify-center gap-2"
       >
-        {t('signInWithEmail') || 'تسجيل الدخول بالبريد'}
-        {lang === 'ar' ? <ChevronLeft size={18} /> : <ChevronLeft size={18} className="rotate-180" />}
+        {t('signInWithEmail')}
+        <ChevronLeft 
+          size={18} 
+          className={lang === 'ar' ? '' : 'rotate-180'} 
+          aria-hidden="true" 
+        />
       </button>
       
       <p className="text-[10px] text-[var(--text-muted)] mt-8">
-        {t('dataPrivacyText') || 'بياناتك تبقى على جهازك في وضع الزائر.'}
+        {t('dataPrivacyText')}
       </p>
     </div>
   );
