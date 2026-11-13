@@ -5,9 +5,10 @@ import { AppContext } from '../context/AppContext.jsx';
 import { Camera, X } from 'lucide-react';
 
 // ✅ تحديث المسارات إلى الهيكل الجديد (Shared Components)
-import Input from '../shared/components/ui/Input';
-import Button from '../shared/components/ui/Button';
-import OptionPicker from '../shared/components/ui/OptionPicker';
+// 🔴 إصلاح حرج: إضافة .jsx لمنع فشل البناء (Build Failure)
+import Input from '../shared/components/ui/Input.jsx';
+import Button from '../shared/components/ui/Button.jsx';
+import OptionPicker from '../shared/components/ui/OptionPicker.jsx';
 
 const EMPTY_CAR = { 
   make: '', model: '', plate: '', odometer: '', 
@@ -268,7 +269,6 @@ export default function AddVehicle() {
               <img src={car.image} alt="Car" className="w-full h-full object-cover" />
               <button 
                 type="button" 
-                // ✅ استخدام Functional Update
                 onClick={() => setCar(prev => ({...prev, image: ''}))} 
                 aria-label={t('deleteImage')}
                 className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm active:scale-90 transition-transform"
@@ -280,7 +280,6 @@ export default function AddVehicle() {
             <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
               <Camera size={32} className="mb-2" aria-hidden="true" />
               <span className="text-[10px] font-bold">{t('addImage')}</span>
-              {/* ✅ إضافة aria-label للحقل المخفي */}
               <input 
                 type="file" 
                 accept="image/*" 
