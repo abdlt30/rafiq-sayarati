@@ -1,11 +1,11 @@
 import { useContext, useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { AppContext } from '../context/AppContext';
+// ✅ إضافة الامتدادات المطلوبة لمنع فشل Vite Build
+import { AppContext } from '../context/AppContext.jsx';
 import { Car, Plus, CheckCircle, Edit2, Trash2, Zap, Truck, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// ✅ 1. تحديث المسارات للهيكل الجديد (Shared)
-import { safeNumber } from '../shared/utils/safeNumber';
-import ConfirmModal from '../shared/components/ui/ConfirmModal';
+import { safeNumber } from '../shared/utils/safeNumber.js';
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx';
 
 /* ✅ عداد السيارة الآمن (يدعم الحقل القديم currentOdometer) */
 const getOdometer = (car) => {
@@ -39,6 +39,7 @@ export default function Vehicles() {
 
   /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
+    // ✅ إصلاح: استخدام useRef لمسح المؤقت السابق ومنع تداخل الرسائل
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
     toastTimeoutRef.current = setTimeout(() => {
@@ -56,11 +57,12 @@ export default function Vehicles() {
     setDeleteId(id); 
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteId) return;
     try {
+      // ✅ ملاحظة: deleteCar في AppContext تقوم بتحديث الحالة (State) فوراً وتطلق عملية الحذف من IndexedDB في الخلفية
       const ok = deleteCar(deleteId);
-      if (!ok) {
+      if (ok === false) {
         showToast(t('errorSaving') || 'فشل حذف السيارة. تحقق من المساحة.', 'error');
       } else {
         showToast(t('deleteSuccess') || 'تم حذف السيارة بنجاح.', 'success');
@@ -79,7 +81,6 @@ export default function Vehicles() {
   };
 
   const handleKeyDown = (e, car) => {
-    // ✅ Space يمرر الصفحة افتراضياً — منع ذلك
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
       handleSelectCar(car);
@@ -97,7 +98,7 @@ export default function Vehicles() {
   return (
     <div className="space-y-4 pb-24 px-4 pt-6 relative min-h-screen">
       
-      {/* ✅ Toast (تغذية راجعة عند الحذف) */}
+      {/* ✅ Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${
           toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
@@ -155,11 +156,9 @@ export default function Vehicles() {
       ) : (
         <div className="space-y-3" role="list" aria-label={t('vehicles')}>
           {vehicles.map((car, index) => {
-            // ✅ 3. إصلاح منطقي: التأكد من وجود الـ id قبل المقارنة
             const isActive = car.id != null && String(currentCar?.id) === String(car.id);
             const odometerValue = getOdometer(car);
             
-            // ✅ بيانات آمنة للعرض
             const make = (car.make || '').trim() || '—';
             const model = (car.model || '').trim() || '';
             const title = `${make} ${model}`.trim() || '—';
@@ -169,12 +168,10 @@ export default function Vehicles() {
             
             const plateDisplay = (car.plate || '').trim() || null;
 
-            // ✅ أيقونة حسب نوع المحرك
             const PowertrainIcon = getPowertrainIcon(car.powertrain);
             const isElectric = car.powertrain === 'ev';
             const isTruck = car.category === 'truck';
 
-            // ✅ key محصّن ضد التصادم (id + index كـ fallback)
             const key = car.id ? String(car.id) : `fallback-${index}-${car.make}-${car.model}`;
 
             return (
@@ -256,7 +253,7 @@ export default function Vehicles() {
                   </div>
                   
                   <div className="flex justify-between items-end mt-3">
-                    {/* العداد - مع وحدة مترجمة */}
+                    {/* العداد */}
                     <span className="text-xs font-bold text-[var(--text)] bg-[var(--surface-2)] px-2.5 py-1 rounded-md border border-[var(--border)]">
                       {odometerValue.toLocaleString()} {t('km')}
                     </span>
