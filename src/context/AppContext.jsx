@@ -68,19 +68,23 @@ export const AppProvider = ({ children }) => {
   });
 
   /* ===================== UI ===================== */
-  const [isLoading] = useState(false); // محجوز للمستقبل
+  // ✅ تحديث: إضافة setIsLoading لتتمكن من التحكم بها من الخدمات
+  const [isLoading, setIsLoading] = useState(false); 
+  
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem('theme');
       return saved === 'light' || saved === 'dark' ? saved : 'dark';
     } catch { return 'dark'; }
   });
+  
   const [lang, setLang] = useState(() => {
     try {
       const saved = localStorage.getItem('lang');
       return ['ar', 'en', 'fr'].includes(saved) ? saved : 'ar';
     } catch { return 'ar'; }
   });
+  
   const [currency, setCurrencyRaw] = useState(() => {
     try {
       const saved = localStorage.getItem('currency');
@@ -173,6 +177,8 @@ export const AppProvider = ({ children }) => {
       localStorage.setItem('savedCar', JSON.stringify(newCar));
       localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
       
+      // ⚠️ ملاحظة: يجب هنا استدعاء dbService.saveCar(newCar) إذا كانت قاعدة البيانات الأساسية
+      
       setCurrentCar(newCar);
       setVehicles(updatedVehicles);
       bumpDataVersion();
@@ -238,10 +244,16 @@ export const AppProvider = ({ children }) => {
     if (!id) return false;
 
     try {
-      // حذف بيانات السيارة المرتبطة (best-effort)
+      // ✅ حذف بيانات السيارة المرتبطة (دعم الدوال غير المتزامنة)
       if (dbService?.deleteCarData) {
-        try { dbService.deleteCarData(id); }
-        catch (dbErr) { console.error('dbService.deleteCarData failed:', dbErr); }
+        try { 
+          const res = dbService.deleteCarData(id);
+          if (res instanceof Promise) {
+            res.catch(dbErr => console.error('dbService.deleteCarData failed:', dbErr));
+          }
+        } catch (dbErr) { 
+          console.error('dbService.deleteCarData failed:', dbErr); 
+        }
       }
 
       const updatedVehicles = vehicles.filter(v => String(v.id) !== String(id));
@@ -284,7 +296,9 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{ 
       currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, 
-      isLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
+      // ✅ إضافة setIsLoading
+      isLoading, setIsLoading, 
+      theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
       user, setUser, dataVersion, bumpDataVersion,
     }}>
       {children}
