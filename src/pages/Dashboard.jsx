@@ -1,8 +1,7 @@
-import { useContext, useMemo, useState, useCallback } from 'react';
-// ✅ إضافة .jsx لضمان توافقية أعلى مع Vite
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
-import { dbService } from '../services/dbService';
-import { notificationService } from '../services/notificationService';
+import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
+import { notificationService } from '../services/notificationService.js'; // ✅ إضافة .js
 import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
@@ -10,13 +9,11 @@ import {
   AlertTriangle, ShieldAlert, TrendingUp, CheckCircle
 } from 'lucide-react'; 
 
-// ✅ استيراد الدوال المشتركة من الهيكل الجديد
-import { safeNumber } from '../shared/utils/safeNumber';
-import { formatDate } from '../shared/utils/formatters';
+import { safeNumber } from '../shared/utils/safeNumber.js';
+import { formatDate } from '../shared/utils/formatters.js';
 
 const EMPTY_TOTALS = { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 };
 
-/* ✅ فحص سريع: هل التنبيه يدعم "إنجاز"؟ */
 const canQuickDone = (alert) =>
   alert &&
   alert.recordId &&
@@ -28,100 +25,91 @@ export default function Dashboard() {
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  // ✅ تحسين: استخدام الترجمة بدلاً من النص الثابت
+  // ✅ حالات جديدة لجلب البيانات غير المتزامنة
+  const [totals, setTotals] = useState(EMPTY_TOTALS);
+  const [avgConsumption, setAvgConsumption] = useState({ value: null, unit: 'L/100km' });
+  const [criticalAlerts, setCriticalAlerts] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const greeting = user?.name ? (t('welcomeUser') || `مرحباً، ${user.name} 👋`) : (t('welcome') || 'مرحباً بك 👋');
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
-  /* ===================== الإحصائيات ===================== */
-  const totals = useMemo(() => {
-    if (!currentCar) return EMPTY_TOTALS;
-    try {
-      return dbService.getTotals(currentCar.id) || EMPTY_TOTALS;
-    } catch (e) {
-      console.error('getTotals failed:', e);
-      return EMPTY_TOTALS;
-    }
-  }, [currentCar, dataVersion]);
+  /* ===================== جلب البيانات غير المتزامن ===================== */
+  useEffect(() => {
+    let isMounted = true;
 
-  /* ✅ متوسط الاستهلاك */
-  const avgConsumption = useMemo(() => {
-    if (!currentCar) return { value: null, unit: 'L/100km' };
-
-    const powertrain = currentCar.powertrain || 'ice';
-    const targetEnergy = powertrain === 'ev' ? 'electricity' : 'gasoline';
-    const unit = targetEnergy === 'electricity' ? 'kWh/100km' : 'L/100km';
-
-    try {
-      const carIdStr = String(currentCar.id);
-      const fuelRecords = (dbService.getFuel() || [])
-        .filter(f => String(f.carId) === carIdStr)
-        .filter(f => (f.energyType || 'gasoline') === targetEnergy);
-
-      if (fuelRecords.length < 2) return { value: null, unit };
-
-      const normalized = fuelRecords
-        .map(f => ({ ...f, _odo: safeNumber(f.odometer) }))
-        .filter(f => f._odo > 0)
-        .sort((a, b) => a._odo - b._odo);
-
-      let totalAmount = 0;
-      let totalDistance = 0;
-
-      for (let i = 1; i < normalized.length; i++) {
-        const dist = normalized[i]._odo - normalized[i - 1]._odo;
-        const amount = safeNumber(normalized[i].amount ?? normalized[i].liters);
-        if (dist > 0 && amount > 0) {
-          totalDistance += dist;
-          totalAmount += amount;
-        }
+    const loadDashboardData = async () => {
+      if (!currentCar) {
+        if (isMounted) setIsLoading(false);
+        return;
       }
+      
+      setIsLoading(true);
+      try {
+        // 1. جلب الإحصائيات
+        const fetchedTotals = await dbService.getTotals(currentCar.id);
+        
+        // 2. جلب كافة السجلات لآخر العمليات ومتوسط الاستهلاك
+        const fuelRecords = await dbService.getFuel();
+        const maintenanceRecords = await dbService.getMaintenance();
+        const expenseRecords = await dbService.getExpenses();
+        const incomeRecords = await dbService.getIncomes();
 
-      if (totalDistance <= 0) return { value: null, unit };
+        const carIdStr = String(currentCar.id);
+        const filter = (arr) => (Array.isArray(arr) ? arr : []).filter(r => String(r.carId) === carIdStr);
 
-      const result = (totalAmount / totalDistance) * 100;
-      if (!Number.isFinite(result) || result <= 0) return { value: null, unit };
+        // 3. حساب آخر العمليات
+        const activities = [
+          ...filter(fuelRecords).map(f => ({ ...f, type: 'fuel' })),
+          ...filter(maintenanceRecords).map(m => ({ ...m, type: 'maintenance' })),
+          ...filter(expenseRecords).map(e => ({ ...e, type: 'expense' })),
+          ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
+        ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 4);
 
-      return { value: Number(result.toFixed(1)), unit };
-    } catch (e) {
-      console.error('avgConsumption calculation failed:', e);
-      return { value: null, unit };
-    }
-  }, [currentCar, dataVersion]);
+        // 4. حساب متوسط الاستهلاك
+        const powertrain = currentCar.powertrain || 'ice';
+        const targetEnergy = powertrain === 'ev' ? 'electricity' : 'gasoline';
+        const unit = targetEnergy === 'electricity' ? 'kWh/100km' : 'L/100km';
+        
+        const carFuel = filter(fuelRecords).filter(f => (f.energyType || 'gasoline') === targetEnergy);
+        let avgVal = null;
+        if (carFuel.length >= 2) {
+          const normalized = carFuel.map(f => ({ ...f, _odo: safeNumber(f.odometer) })).filter(f => f._odo > 0).sort((a, b) => a._odo - b._odo);
+          let tAmt = 0, tDist = 0;
+          for (let i = 1; i < normalized.length; i++) {
+            const dist = normalized[i]._odo - normalized[i - 1]._odo;
+            const amt = safeNumber(normalized[i].amount ?? normalized[i].liters);
+            if (dist > 0 && amt > 0) { tDist += dist; tAmt += amt; }
+          }
+          if (tDist > 0) {
+            const res = (tAmt / tDist) * 100;
+            if (Number.isFinite(res) && res > 0) avgVal = Number(res.toFixed(1));
+          }
+        }
 
-  /* ===================== التنبيهات ===================== */
-  const criticalAlerts = useMemo(() => {
-    if (!currentCar) return [];
-    try {
-      const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
-      return (alerts || [])
-        .filter(a => a.severity === 'critical' || a.severity === 'warning')
-        .slice(0, 3);
-    } catch (e) {
-      console.error('generateSmartAlerts failed:', e);
-      return [];
-    }
-  }, [currentCar, t, lang, dataVersion]);
+        // 5. التنبيهات
+        const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
+        const filteredAlerts = (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning').slice(0, 3);
 
-  /* ===================== آخر العمليات ===================== */
-  const recentActivity = useMemo(() => {
-    if (!currentCar) return [];
-    try {
-      const carIdStr = String(currentCar.id);
-      const filter = (arr) => (Array.isArray(arr) ? arr : []).filter(r => String(r.carId) === carIdStr);
+        // تحديث الحالة
+        if (isMounted) {
+          setTotals(fetchedTotals || EMPTY_TOTALS);
+          setRecentActivity(activities);
+          setAvgConsumption({ value: avgVal, unit });
+          setCriticalAlerts(filteredAlerts);
+        }
+      } catch (error) {
+        console.error("Dashboard data load failed:", error);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
 
-      const fuel = filter(dbService.getFuel()).map(f => ({ ...f, type: 'fuel' }));
-      const maintenance = filter(dbService.getMaintenance()).map(m => ({ ...m, type: 'maintenance' }));
-      const expenses = filter(dbService.getExpenses()).map(e => ({ ...e, type: 'expense' }));
-      const incomes = filter(dbService.getIncomes()).map(i => ({ ...i, type: 'income', cost: i.amount }));
+    loadDashboardData();
 
-      return [...fuel, ...maintenance, ...expenses, ...incomes]
-        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
-        .slice(0, 4);
-    } catch (e) {
-      console.error('recentActivity load failed:', e);
-      return [];
-    }
-  }, [currentCar, dataVersion]);
+    return () => { isMounted = false; }; // تنظيف الذاكرة
+  }, [currentCar, dataVersion, t, lang]);
 
   if (!currentCar) return null;
 
@@ -129,7 +117,7 @@ export default function Dashboard() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  /* ✅ 3. حماية العداد مع معالجة الأخطاء (Error Handling) */
+  /* ✅ حماية العداد */
   const handleSaveOdometer = useCallback(() => {
     const raw = String(newOdo).trim();
     if (raw === '') return; 
@@ -146,34 +134,29 @@ export default function Dashboard() {
       setIsEditingOdo(false);
     } catch (error) {
       console.error("Failed to update odometer:", error);
-      alert(t('errorSaving') || 'حدث خطأ أثناء حفظ العداد. قد تكون المساحة ممتلئة.');
+      alert(t('errorSaving') || 'حدث خطأ أثناء حفظ العداد.');
     }
   }, [newOdo, currentCar, updateCar, t]);
 
-  /* ✅ 4. توزيع الحذف حسب sourceTable + تحديث الواجهة (bumpDataVersion) */
-  const handleQuickDone = useCallback((e, alert) => {
+  /* ✅ 4. توزيع الحذف (أصبح async) */
+  const handleQuickDone = useCallback(async (e, alert) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!alert.recordId || !alert.sourceTable) return;
     if (alert.sourceTable !== 'maintenance' && alert.sourceTable !== 'reminder') return;
 
-    const targetName = alert.sourceTable === 'maintenance' 
-      ? (t('maintenanceRecord') || 'سجل الصيانة') 
-      : (t('reminder') || 'التذكير');
-
-    const confirmMsg = t('confirmCompleteAction', { title: alert.title, target: targetName }) 
-      || `هل أنت متأكد من إتمام: ${alert.title}؟\nسيتم حذف ${targetName} نهائياً.`;
+    const targetName = alert.sourceTable === 'maintenance' ? (t('maintenanceRecord') || 'سجل الصيانة') : (t('reminder') || 'التذكير');
+    const confirmMsg = t('confirmCompleteAction', { title: alert.title, target: targetName }) || `هل أنت متأكد من إتمام: ${alert.title}؟\nسيتم حذف ${targetName} نهائياً.`;
 
     if (!window.confirm(confirmMsg)) return;
 
     try {
       if (alert.sourceTable === 'maintenance') {
-        dbService.deleteMaintenance(alert.recordId);
+        await dbService.deleteMaintenance(alert.recordId); // ✅ أصبح async
       } else if (alert.sourceTable === 'reminder') {
-        dbService.deleteReminder(alert.recordId);
+        await dbService.deleteReminder(alert.recordId); // ✅ أصبح async
       }
-      // ✅ إصلاح حرج: إبلاغ Context لتحديث الواجهة فوراً
       if (bumpDataVersion) bumpDataVersion();
     } catch (err) {
       console.error('Quick done failed:', err);
@@ -186,6 +169,15 @@ export default function Dashboard() {
   const incomeValue = safeNumber(totals.income);
   const totalValue = safeNumber(totals.total);
   const odometerValue = safeNumber(currentCar.odometer);
+
+  // ✅ شاشة تحميل بسيطة أثناء جلب البيانات
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64 text-[var(--primary)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 pb-24 px-4 pt-2">
@@ -225,13 +217,8 @@ export default function Dashboard() {
           <div className="w-16 h-16 sm:w-20 sm:h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
             {currentCar.image ? (
               <img 
-                src={
-                  currentCar.image.startsWith('data:') || currentCar.image.startsWith('http')
-                    ? currentCar.image 
-                    : `${import.meta.env.BASE_URL}${currentCar.image.replace(/^\//, '')}`
-                } 
-                alt="car" 
-                className="w-full h-full object-cover" 
+                src={currentCar.image.startsWith('data:') || currentCar.image.startsWith('http') ? currentCar.image : `${import.meta.env.BASE_URL}${currentCar.image.replace(/^\//, '')}`} 
+                alt="car" className="w-full h-full object-cover" 
               />
             ) : (
               <Car size={28} className="text-white/50" aria-hidden="true" />
@@ -328,7 +315,6 @@ export default function Dashboard() {
 
       {/* بطاقات الإحصائيات */}
       <div className="grid grid-cols-2 gap-3 mt-4">
-        
         <div className="bg-[var(--surface)] border border-green-500/20 p-3 sm:p-4 rounded-2xl">
           <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('totalIncome')}</p>
           <p className="text-lg sm:text-xl font-extrabold text-green-500 truncate">
@@ -345,9 +331,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className={`col-span-2 border p-3 sm:p-4 rounded-2xl flex justify-between items-center ${
-          isNetPositive ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
-        }`}>
+        <div className={`col-span-2 border p-3 sm:p-4 rounded-2xl flex justify-between items-center ${isNetPositive ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
           <div>
             <p className="text-[10px] sm:text-[11px] text-[var(--text-muted)] font-bold mb-1">{t('netProfit')}</p>
             <p className={`text-xl sm:text-2xl font-extrabold flex items-center gap-1 ${isNetPositive ? 'text-green-500' : 'text-red-500'}`}>
@@ -363,31 +347,16 @@ export default function Dashboard() {
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1">
               <input
-                type="number"
-                inputMode="numeric"
-                min="0"
-                value={newOdo}
+                type="number" inputMode="numeric" min="0" value={newOdo}
                 onChange={(e) => setNewOdo(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveOdometer()} // ✅ حفظ عند الضغط على Enter
-                placeholder={String(odometerValue)}
-                aria-label={t('editOdometer')}
-                className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none"
-                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveOdometer()}
+                placeholder={String(odometerValue)} aria-label={t('editOdometer')}
+                className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold text-[var(--text)] outline-none" autoFocus
               />
-              <button
-                type="button"
-                onClick={handleSaveOdometer}
-                aria-label={t('save')}
-                className="text-green-500 p-1 bg-green-500/10 rounded"
-              >
+              <button type="button" onClick={handleSaveOdometer} aria-label={t('save')} className="text-green-500 p-1 bg-green-500/10 rounded">
                 <Check size={14} aria-hidden="true" />
               </button>
-              <button
-                type="button"
-                onClick={() => setIsEditingOdo(false)}
-                aria-label={t('cancel')}
-                className="text-red-500 p-1 bg-red-500/10 rounded"
-              >
+              <button type="button" onClick={() => setIsEditingOdo(false)} aria-label={t('cancel')} className="text-red-500 p-1 bg-red-500/10 rounded">
                 <X size={14} aria-hidden="true" />
               </button>
             </div>
@@ -398,8 +367,7 @@ export default function Dashboard() {
                 <span className="text-[10px] sm:text-xs font-normal">{t('km')}</span>
               </p>
               <button
-                type="button"
-                onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }}
+                type="button" onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }}
                 aria-label={t('editOdometer')}
                 className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md hover:bg-[var(--primary)]/20 transition-colors flex-shrink-0"
               >
@@ -440,29 +408,15 @@ export default function Dashboard() {
               const isElectricFuel = isFuel && activity.energyType === 'electricity';
 
               const Icon = isFuel ? Fuel : isMaint ? Wrench : isIncome ? TrendingUp : Wallet;
-              const color = isFuel
-                ? (isElectricFuel ? 'text-green-500' : 'text-blue-500')
-                : isMaint
-                  ? 'text-yellow-500'
-                  : isIncome
-                    ? 'text-green-500'
-                    : 'text-purple-500';
-              const bg = isFuel
-                ? (isElectricFuel ? 'bg-green-500/10' : 'bg-blue-500/10')
-                : isMaint
-                  ? 'bg-yellow-500/10'
-                  : isIncome
-                    ? 'bg-green-500/10'
-                    : 'bg-purple-500/10';
+              const color = isFuel ? (isElectricFuel ? 'text-green-500' : 'text-blue-500') : isMaint ? 'text-yellow-500' : isIncome ? 'text-green-500' : 'text-purple-500';
+              const bg = isFuel ? (isElectricFuel ? 'bg-green-500/10' : 'bg-blue-500/10') : isMaint ? 'bg-yellow-500/10' : isIncome ? 'bg-green-500/10' : 'bg-purple-500/10';
 
               const safeCost = safeNumber(activity.cost);
 
               return (
                 <div
                   key={activity.id || `act-${index}`}
-                  className={`flex items-center justify-between p-3 ${
-                    index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''
-                  }`}
+                  className={`flex items-center justify-between p-3 ${index !== recentActivity.length - 1 ? 'border-b border-[var(--border)]' : ''}`}
                 >
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <div className={`p-2 rounded-lg ${bg} ${color} flex-shrink-0`}>
@@ -470,13 +424,7 @@ export default function Dashboard() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] sm:text-xs font-bold text-[var(--text)] truncate">
-                        {isFuel
-                          ? (isElectricFuel ? t('chargingSession') : t('fuel'))
-                          : isMaint
-                            ? t('maintenance')
-                            : isIncome
-                              ? t('income')
-                              : t('expense')}
+                        {isFuel ? (isElectricFuel ? t('chargingSession') : t('fuel')) : isMaint ? t('maintenance') : isIncome ? t('income') : t('expense')}
                       </p>
                       <p className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">
                         {activity.date ? formatDate(activity.date, todayLocale) : t('notSpecified')}
