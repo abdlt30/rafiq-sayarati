@@ -38,4 +38,7 @@ const Button = forwardRef(function Button(
   );
 });
 
+// ✅ إضافة اسم للمكون لتسهيل تصحيح الأخطاء في React DevTools
+Button.displayName = 'Button';
+
 export default Button;
