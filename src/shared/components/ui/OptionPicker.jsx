@@ -1,11 +1,15 @@
 import { useState, useContext, useEffect, useId } from 'react';
-import { AppContext } from '../../context/AppContext';
+// ✅ تحديث المسار بناءً على الهيكلة الجديدة
+import { AppContext } from '../../../context/AppContext.jsx';
 import { Check, ChevronDown, X } from 'lucide-react';
 
 export default function OptionPicker({ label, options = [], value, onChange }) {
   const { t } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // ✅ معرفات فريدة للوصولية (A11y)
   const titleId = useId();
+  const buttonId = useId();
 
   // ✅ اختيار آمن مع حماية من القائمة الفارغة
   const selectedOption = options.find(o => o.value === value) || options[0] || null;
@@ -40,13 +44,15 @@ export default function OptionPicker({ label, options = [], value, onChange }) {
   return (
     <div className="w-full">
       {label && (
-        <label className="text-xs font-bold text-[var(--text-muted)] mb-1 block">
+        // ✅ ربط التسمية بالزر برمجياً
+        <label htmlFor={buttonId} className="text-xs font-bold text-[var(--text-muted)] mb-1 block">
           {label}
         </label>
       )}
       
       <button 
         type="button" 
+        id={buttonId}
         onClick={() => setIsOpen(true)}
         // ✅ دلالات الوصول
         aria-haspopup="listbox"
@@ -70,7 +76,7 @@ export default function OptionPicker({ label, options = [], value, onChange }) {
           aria-labelledby={titleId}
         >
           <div 
-            className="bg-[var(--surface)] w-full max-w-md mx-auto rounded-t-3xl border-t border-[var(--border)] animate-slide-up flex flex-col max-h-[70vh]"
+            className="bg-[var(--surface)] w-full max-w-md mx-auto rounded-t-3xl border-t border-[var(--border)] animate-slide-up flex flex-col max-h-[70vh] pb-[env(safe-area-inset-bottom)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
