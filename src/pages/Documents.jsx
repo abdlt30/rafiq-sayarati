@@ -1,19 +1,21 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
-import { AppContext } from '../context/AppContext';
-import { dbService } from '../services/dbService';
-import { Bell, Plus, X, Trash2, Wrench, Shield, Calendar, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
+import { AppContext } from '../context/AppContext.jsx';
+import { dbService } from '../services/dbService.js';
+import { Plus, Trash2, X, FileText, Camera, AlertCircle, CheckCircle, Download } from 'lucide-react';
 
-// ✅ 1. تحديث المسارات إلى الهيكل الجديد (Shared)
-import ConfirmModal from '../shared/components/ui/ConfirmModal';
-import { safeNumber } from '../shared/utils/safeNumber';
-import { formatDate } from '../shared/utils/formatters';
+import OptionPicker from '../shared/components/ui/OptionPicker.jsx';
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx';
+import { formatDate } from '../shared/utils/formatters.js';
 
-const EMPTY_FORM = { type: 'oil', date: '', odometer: '' };
+const EMPTY_FORM = { type: 'insurance', date: '', image: '' };
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_DIM = 800;
 
-export default function Reminders() {
+export default function Documents() {
   const { currentCar, t, lang, dataVersion, bumpDataVersion } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null); 
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -21,51 +23,93 @@ export default function Reminders() {
 
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
-  /* ===================== Toast ===================== */
+  const docTypes = [
+    { value: 'insurance', label: t('insurance') || 'تأمين' },
+    { value: 'registration', label: t('registration') || 'رخصة (Carte Grise)' },
+    { value: 'license', label: t('license') || 'رخصة السياقة' },
+    { value: 'inspection', label: t('inspection') || 'فحص تقني' },
+    { value: 'other', label: t('other') || 'أخرى' }
+  ];
+
   const showToast = useCallback((message, type = 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   }, []);
 
   /* ===================== Load Data ===================== */
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
       if (!currentCar) {
         setRecords([]);
         return;
       }
-      const allReminders = dbService.getReminders() || [];
-      // ✅ إصلاح أمني: استخدام String() للتطابق
-      const carReminders = allReminders.filter(r => String(r.carId) === String(currentCar.id));
-      // ✅ ترتيب مستقر
-      setRecords([...carReminders].sort((a, b) => (b.date || '').localeCompare(a.date || '')));
+      const allDocs = await dbService.getDocuments();
+      const carDocs = (allDocs || []).filter(r => String(r.carId) === String(currentCar.id));
+      setRecords([...carDocs].sort((a, b) => (b.date || '').localeCompare(a.date || '')));
     } catch (e) {
       console.error('loadData failed:', e);
       setRecords([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [currentCar]);
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
+  /* ===================== Image Compression ===================== */
+  const compressImage = (file, maxDim = MAX_IMAGE_DIM) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('read_failed'));
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('image_load_failed'));
+        img.onload = () => {
+          try {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+              else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error('canvas_context_failed'));
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.6));
+          } catch (err) { reject(err); }
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return showToast(t('invalidFileType') || 'ملف غير صالح', 'error');
+    if (file.size > MAX_IMAGE_SIZE) return showToast(t('imageTooLarge') || 'الصورة كبيرة جداً', 'error');
+
+    try {
+      const compressed = await compressImage(file);
+      setFormData(prev => ({ ...prev, image: compressed }));
+      e.target.value = null;
+    } catch (err) {
+      showToast(t('imageProcessingFailed') || 'فشل معالجة الصورة', 'error');
+    }
+  };
+
   /* ===================== Save ===================== */
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!currentCar) return;
 
-    const isBlank = (v) => v === '' || v === undefined || v === null;
-    
-    if (isBlank(formData.date) && isBlank(formData.odometer)) {
-      return showToast(t('fillRequiredFields') || 'الرجاء إدخال التاريخ أو العداد على الأقل.', 'error');
-    }
-
-    // ✅ التحقق الرياضي من العداد
-    let odoNum = null;
-    if (!isBlank(formData.odometer)) {
-      const n = Number(formData.odometer);
-      if (!Number.isFinite(n) || n < 0) {
-        return showToast(t('invalidNumbers') || 'الرجاء إدخال عداد صحيح.', 'error');
-      }
-      odoNum = Math.round(n);
+    if (!formData.image) {
+      return showToast(t('imageRequired') || 'الرجاء رفع صورة الوثيقة', 'error');
     }
 
     try {
@@ -73,235 +117,177 @@ export default function Reminders() {
         carId: currentCar.id, 
         type: formData.type, 
         date: formData.date || null, 
-        odometer: odoNum 
+        image: formData.image
       };
 
-      dbService.addReminder(data);
-      loadData(); 
-      bumpDataVersion(); // ✅ تحديث الواجهة
+      await dbService.addDocument(data);
+      await loadData(); 
+      bumpDataVersion(); 
       
       setIsModalOpen(false);
       setFormData(EMPTY_FORM); 
-      showToast(t('saveSuccess') || 'تم حفظ التذكير!', 'success');
+      showToast(t('saveSuccess') || 'تم حفظ الوثيقة!', 'success');
     } catch (error) {
-      console.error("خطأ في حفظ التذكير:", error);
+      console.error("خطأ في حفظ الوثيقة:", error);
       showToast(t('errorSaving') || 'حدث خطأ أثناء الحفظ.', 'error');
     }
   };
 
   /* ===================== Delete ===================== */
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      dbService.deleteReminder(deleteId);
-      loadData();
-      bumpDataVersion(); // ✅ تحديث الواجهة
+      await dbService.deleteDocument(deleteId);
+      await loadData();
+      bumpDataVersion(); 
       setDeleteId(null);
     } catch (e) {
-      console.error('deleteReminder failed:', e);
+      console.error('deleteDocument failed:', e);
       setDeleteId(null);
       showToast(t('errorSaving') || 'حدث خطأ أثناء الحذف.', 'error');
     }
   };
 
-  /* ===================== 🧠 الخوارزمية الذكية (مُصححة رياضياً) ===================== */
-  const getSmartStatus = useCallback((record) => {
-    // ✅ إصلاح حرج: استخدام الحقل الصحيح odometer بدلاً من currentOdometer
-    const carOdo = safeNumber(currentCar?.odometer);
-    const reminderOdo = safeNumber(record.odometer);
-    
-    // ✅ إصلاح حرج: حساب الأيام بتصفير الوقت لضمان الدقة
-    let daysLeft = null;
-    if (record.date) {
-      const dateStr = String(record.date).includes('T') ? record.date : `${record.date}T00:00:00`;
-      const target = new Date(dateStr);
-      if (!isNaN(target.getTime())) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        target.setHours(0, 0, 0, 0);
-        daysLeft = Math.round((target - today) / (1000 * 60 * 60 * 24));
-      }
-    }
-    
-    let kmLeft = record.odometer ? reminderOdo - carOdo : null;
+  const getTypeLabel = (type) => docTypes.find(d => d.value === type)?.label || type;
 
-    if (daysLeft === null && kmLeft === null) {
-      return { label: t('active') || 'نشط', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Bell };
-    }
-
-    const isOverdue = (daysLeft !== null && daysLeft < 0) || (kmLeft !== null && kmLeft < 0);
-    if (isOverdue) {
-      return { label: t('overdue') || 'متأخر', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
-    }
-
-    // حالة "مستحق اليوم/الآن"
-    if (daysLeft === 0 || kmLeft === 0) {
-      return { label: t('dueToday') || 'مستحق اليوم', color: 'text-red-500', bg: 'bg-red-500/10', icon: AlertTriangle };
-    }
-
-    let message = '';
-    let isSoon = false;
-
-    if (daysLeft !== null && kmLeft !== null) {
-      if (daysLeft <= 7 || kmLeft <= 500) isSoon = true;
-      message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'} / ${kmLeft} ${t('km') || 'كم'}`;
-    } else if (daysLeft !== null) {
-      if (daysLeft <= 7) isSoon = true;
-      message = `${t('after') || 'بعد'} ${daysLeft} ${t('days') || 'يوم'}`;
-    } else if (kmLeft !== null) {
-      if (kmLeft <= 500) isSoon = true;
-      message = `${t('after') || 'بعد'} ${kmLeft} ${t('km') || 'كم'}`;
-    }
-
-    return {
-      label: message,
-      color: isSoon ? 'text-yellow-500' : 'text-green-500',
-      bg: isSoon ? 'bg-yellow-500/10' : 'bg-green-500/10',
-      icon: isSoon ? AlertTriangle : Shield
-    };
-  }, [currentCar?.odometer, t]);
-
-  const getRecordIcon = (type) => {
-    if (type === 'oil') return <Wrench size={20} aria-hidden="true" />;
-    if (type === 'insurance') return <Shield size={20} aria-hidden="true" />;
-    return <Calendar size={20} aria-hidden="true" />;
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64 text-[var(--primary)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4 pb-24 px-4">
+    <div className="space-y-4 pb-24 px-4 relative min-h-screen">
       
       {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
-          <button 
-            type="button"
-            onClick={() => setToast({ show: false, message: '', type: 'success' })} 
-            aria-label={t('close')}
-            className="ml-2 opacity-70 hover:opacity-100"
-          >
+          <button type="button" onClick={() => setToast({ show: false, message: '', type: 'success' })} aria-label={t('close')} className="ml-2 opacity-70 hover:opacity-100">
             <X size={16} aria-hidden="true" />
           </button>
         </div>
       )}
 
       {/* الشريط العلوي */}
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('reminders')}</h1>
-        <button 
-          type="button"
-          onClick={() => setIsModalOpen(true)} 
-          aria-label={t('addReminder')}
-          className="bg-[var(--primary)] p-3 rounded-full text-white shadow-lg hover:scale-105 active:scale-95 transition-transform"
-        >
-          <Plus size={24} aria-hidden="true" />
-        </button>
+      <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
       </div>
 
-      {/* قائمة التذكيرات */}
+      {/* القائمة */}
       {records.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
           <div className="p-4 bg-[var(--surface-2)] rounded-full mb-4">
-            <Bell size={48} className="opacity-40" aria-hidden="true" />
+            <FileText size={48} className="opacity-40" aria-hidden="true" />
           </div>
-          <p>{t('noReminders')}</p>
+          <p>{t('noDocuments') || 'لا توجد وثائق مرفوعة.'}</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {records.map(record => {
-            const status = getSmartStatus(record);
-            const StatusIcon = status.icon;
-            
-            return (
-              <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl flex justify-between items-center transition-colors hover:border-[var(--primary)]/30">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-xl ${status.bg} ${status.color}`}>
-                    {getRecordIcon(record.type)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {records.map(record => (
+            <div key={record.id} className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl flex flex-col gap-3 shadow-sm hover:border-green-500/30 transition-colors">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center flex-shrink-0">
+                    <FileText size={16} />
                   </div>
                   <div>
-                    <p className="font-bold text-[var(--text)] text-lg">
-                      {t(record.type) || record.type}
-                    </p>
-                    <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${status.color}`}>
-                      <StatusIcon size={14} aria-hidden="true" />
-                      {status.label}
-                    </div>
+                    <p className="font-bold text-[var(--text)] text-sm">{getTypeLabel(record.type)}</p>
+                    {record.date && <p className="text-[10px] text-[var(--text-muted)]">{formatDate(record.date, todayLocale)}</p>}
                   </div>
                 </div>
-                <button 
-                  type="button"
-                  onClick={() => setDeleteId(record.id)} 
-                  aria-label={t('confirmDelete')}
-                  className="text-red-500 p-2 bg-red-500/10 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all"
-                >
-                  <Trash2 size={18} aria-hidden="true" />
+                <button type="button" onClick={() => setDeleteId(record.id)} aria-label={t('confirmDelete')} className="text-red-500 p-1.5 bg-red-500/10 rounded-lg hover:bg-red-500/20 active:scale-90 transition-all">
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
               </div>
-            );
-          })}
+              
+              <div className="relative w-full h-32 bg-[var(--surface-2)] rounded-xl overflow-hidden border border-[var(--border)] group">
+                <img src={record.image} alt="doc" className="w-full h-full object-cover" />
+                <a 
+                  href={record.image} 
+                  download={`document_${record.id}.jpg`}
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity backdrop-blur-sm"
+                >
+                  <Download size={24} />
+                </a>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* نافذة تأكيد الحذف */}
+      <button 
+        type="button"
+        onClick={() => { setIsModalOpen(true); setFormData(EMPTY_FORM); }} 
+        aria-label={t('addDocument') || 'إضافة وثيقة'}
+        className="fixed bottom-24 right-6 rtl:left-6 rtl:right-auto w-14 h-14 bg-green-500 text-white rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+      >
+        <Plus size={28} aria-hidden="true" />
+      </button>
+
       <ConfirmModal 
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleDelete} 
         title={t('confirmDelete')}
-        message={t('confirmDeleteMsg')}
-        variant="danger"
-        confirmText={t('confirmDeleteBtn')}
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟'}
+        variant="danger" 
+        confirmText={t('confirmDeleteBtn')} 
       />
 
-      {/* نافذة الإضافة */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
-          <form onSubmit={handleSave} noValidate className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] w-full max-w-sm space-y-4">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-xl font-bold text-[var(--text)]">{t('addReminder')}</h2>
-              <button 
-                type="button" 
-                onClick={() => setIsModalOpen(false)} 
-                aria-label={t('close')}
-                className="p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-red-500 active:scale-90 transition-all"
-              >
-                <X size={20} aria-hidden="true" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <form onSubmit={handleSave} noValidate className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative max-h-[90vh] flex flex-col shadow-2xl">
+            <button type="button" onClick={() => setIsModalOpen(false)} aria-label={t('close')} className="absolute top-4 left-4 rtl:right-4 rtl:left-auto p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)] hover:text-white transition-colors z-10">
+              <X size={20} aria-hidden="true" />
+            </button>
+            <h2 className="text-lg font-bold text-center mb-5 text-[var(--text)] mt-1">
+              {t('addDocument') || 'إضافة وثيقة'}
+            </h2>
             
-            <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => setFormData({...formData, type: 'oil'})} aria-pressed={formData.type === 'oil'} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'oil' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('oil')}</button>
-              <button type="button" onClick={() => setFormData({...formData, type: 'insurance'})} aria-pressed={formData.type === 'insurance'} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'insurance' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('insurance')}</button>
-              <button type="button" onClick={() => setFormData({...formData, type: 'inspection'})} aria-pressed={formData.type === 'inspection'} className={`p-3 rounded-xl border text-sm font-bold transition-colors ${formData.type === 'inspection' ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>{t('inspection')}</button>
-            </div>
-            
-            <div className="space-y-3 pt-2">
+            <div className="space-y-4 overflow-y-auto pb-2">
+              <OptionPicker 
+                label={t('documentType') || 'نوع الوثيقة'} 
+                options={docTypes} 
+                value={formData.type} 
+                onChange={(val) => setFormData(prev => ({ ...prev, type: val }))} 
+              />
+
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('endDate')} ({t('optional')})</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('expiryDate') || 'تاريخ الانتهاء (اختياري)'}</label>
                 <input 
                   type="date" 
                   value={formData.date} 
-                  onChange={e => setFormData({...formData, date: e.target.value})} 
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none [color-scheme:dark] focus:border-[var(--primary)]" 
+                  onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))} 
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm text-[var(--text)] [color-scheme:dark] outline-none focus:border-green-500" 
                 />
               </div>
+
               <div>
-                <label className="text-xs text-[var(--text-muted)] mb-1 block">{t('odometer')} ({t('optional')})</label>
-                <input 
-                  type="number" 
-                  inputMode="numeric"
-                  min="0"
-                  value={formData.odometer} 
-                  onChange={e => setFormData({...formData, odometer: e.target.value})} 
-                  placeholder="95000"
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-[var(--text)] outline-none focus:border-[var(--primary)]" 
-                />
+                <label className="text-[11px] font-bold text-[var(--text-muted)] mb-1 block">{t('documentImage') || 'صورة الوثيقة'}</label>
+                <div className="relative w-full h-40 rounded-xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-green-500 transition-colors">
+                  {formData.image ? (
+                    <>
+                      <img src={formData.image} alt="doc" className="w-full h-full object-contain" />
+                      <button type="button" onClick={() => setFormData(prev => ({...prev, image: ''}))} className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm active:scale-90">
+                        <X size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-green-500 transition-colors">
+                      <Camera size={32} className="mb-2" aria-hidden="true" />
+                      <span className="text-xs font-bold">{t('uploadImage') || 'التقط صورة أو ارفعها'}</span>
+                      <input type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" />
+                    </label>
+                  )}
+                </div>
               </div>
-              <p className="text-[10px] text-[var(--text-muted)] text-center">{t('reminderHint') || 'التطبيق سينبهك بأيهما يأتي أولاً.'}</p>
             </div>
             
-            <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl mt-4 shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all">
+            <button type="submit" className="w-full mt-5 bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-green-600 active:scale-[0.98] transition-all flex-shrink-0">
               {t('save')}
             </button>
           </form>
