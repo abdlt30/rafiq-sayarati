@@ -1,12 +1,13 @@
 import { useContext, useMemo } from 'react';
-import { AppContext } from '../../context/AppContext';
+// ✅ تحديث المسار بناءً على الهيكلة الجديدة (الصعود 3 مستويات للخلف)
+import { AppContext } from '../../../context/AppContext.jsx';
 import { NavLink } from 'react-router-dom';
 import { Home, Wallet, Wrench, Menu, Fuel } from 'lucide-react'; 
 
 export default function BottomNav() {
   const { t } = useContext(AppContext);
 
-  // ✅ 1. استخدام useMemo لتحسين الأداء وإزالة Fallback الخاطئ
+  // ✅ 1. استخدام useMemo لتحسين الأداء ومنع إعادة البناء عند كل رندر
   const navItems = useMemo(() => [
     { path: '/', icon: Home, label: t('home') },
     { path: '/fuel', icon: Fuel, label: t('fuel') },
@@ -16,7 +17,7 @@ export default function BottomNav() {
   ], [t]);
 
   return (
-    // ✅ 2. إزالة border-t لأن Layout.jsx يضيفها بالفعل (لمنع الخط المزدوج)
+    // ✅ 2. تم إزالة border-t لأن Layout.jsx يضيفها بالفعل لمنع الخط المزدوج
     <nav className="flex justify-around items-center h-16 w-full bg-[var(--surface)]/95 backdrop-blur-md" aria-label="Mobile Navigation">
       {navItems.map((item) => (
         <NavLink
@@ -31,7 +32,7 @@ export default function BottomNav() {
         >
           {({ isActive }) => (
             <>
-              {/* مؤشر التحديد العلوي */}
+              {/* مؤشر التحديد العلوي (Active Indicator) */}
               {isActive && (
                 <span className="absolute top-0 w-8 h-[3px] rounded-b-md bg-[var(--primary)] transition-all duration-300"></span>
               )}
