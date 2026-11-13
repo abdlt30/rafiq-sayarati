@@ -1,16 +1,18 @@
 import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useContext } from 'react';
 import { AppContext } from './context/AppContext';
-import Layout from './components/layout/Layout';
 
-// ✅ 1. صفحات التسويق والتأسيس (متاحة للجميع)
+// ✅ 1. الهيكل الجديد (shared)
+import Layout from './shared/components/layout/Layout';
+
+// ✅ 2. صفحات التسويق (متاحة للجميع)
 import Welcome from './pages/Welcome';
 import Onboarding from './pages/Onboarding';
 import Login from './pages/Login';
 import AddVehicle from './pages/AddVehicle';
 import About from './pages/About'; 
 
-// ✅ 2. الصفحات الأساسية (تتطلب سيارة)
+// ✅ 3. الصفحات الأساسية (تتطلب سيارة)
 import Dashboard from './pages/Dashboard';
 import Fuel from './pages/Fuel';
 import Maintenance from './pages/Maintenance';
@@ -21,7 +23,7 @@ import Reminders from './pages/Reminders';
 import Vehicles from './pages/Vehicles';
 import More from './pages/More';
 
-// ✅ 3. الصفحات المتقدمة (تتطلب سيارة)
+// ✅ 4. الصفحات المتقدمة (تتطلب سيارة)
 import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 import Timeline from './pages/Timeline';
@@ -29,13 +31,12 @@ import Valuation from './pages/Valuation';
 import FuelStations from './pages/FuelStations'; 
 import ReportPrint from './pages/ReportPrint'; 
 
-// ✅ 4. الصفحات النظامية (لا تتطلب سيارة بالضرورة)
+// ✅ 5. الصفحات النظامية (لا تتطلب سيارة)
 import Settings from './pages/Settings'; 
 import Backup from './pages/Backup'; 
 
 /* =========================================================
-   ✅ مكون الحماية (ProtectedRoute)
-   يمنع الدخول للصفحات التي تحتاج سيارة إذا لم تكن مضافة
+   ✅ الحماية
    ========================================================= */
 const ProtectedRoute = () => {
   const { currentCar } = useContext(AppContext);
@@ -43,12 +44,12 @@ const ProtectedRoute = () => {
 };
 
 export default function App() {
-  const { isLoading } = useContext(AppContext);
+  const { isLoading, t } = useContext(AppContext);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex justify-center items-center text-[var(--primary)] font-bold text-xl">
-        جاري التحميل...
+        {t ? t('loading') : '...'}
       </div>
     );
   }
@@ -63,7 +64,9 @@ export default function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
         
-        {/* ✅ الإعدادات و حول التطبيق متاحة دائماً حتى لو لم يضف المستخدم سيارة */}
+        {/* ✅ إصلاح حرج: /add-vehicle يجب أن يكون عاماً (لإنشاء السيارة الأولى) */}
+        <Route path="/add-vehicle" element={<AddVehicle />} />
+        
         <Route path="/settings" element={<Settings />} />
         <Route path="/backup" element={<Backup />} />
         <Route path="/about" element={<About />} />
@@ -74,8 +77,6 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/add-vehicle" element={<AddVehicle />} />
-            
             <Route path="/vehicles" element={<Vehicles />} />
             <Route path="/fuel" element={<Fuel />} />
             <Route path="/maintenance" element={<Maintenance />} />
@@ -84,8 +85,6 @@ export default function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/more" element={<More />} />
-            
-            {/* ✅ المسارات المتقدمة */}
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/timeline" element={<Timeline />} />
@@ -96,7 +95,7 @@ export default function App() {
         </Route>
         
         {/* =========================================================
-            3. إعادة التوجيه لأي مسار غير معروف (Fallback)
+            3. Fallback
             ========================================================= */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
