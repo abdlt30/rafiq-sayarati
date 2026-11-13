@@ -1,10 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
-import { AppProvider } from './context/AppContext.jsx';
+// ✅ ملاحظة: إذا كان App.jsx يحتوي على <AppProviders>، فلا داعي لاستدعاء AppProvider هنا لتجنب التكرار.
 import './index.css';
+import { AlertTriangle } from 'lucide-react';
 
-// حاجز الأخطاء (Error Boundary)
+// ✅ حاجز الأخطاء (Error Boundary) المحصن
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -25,12 +26,14 @@ class ErrorBoundary extends React.Component {
       return (
         <div 
           role="alert"
-          className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center p-6 text-center"
+          className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center p-6 text-center font-sans"
         >
-          <div className="text-6xl mb-4" aria-hidden="true">🚧</div>
+          <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+            <AlertTriangle size={40} className="text-red-500" aria-hidden="true" />
+          </div>
           <h1 className="text-2xl font-bold mb-2">عذراً، حدث خطأ غير متوقع</h1>
-          <p className="text-[var(--text-muted)] mb-6 text-sm">
-            واجه التطبيق مشكلة أثناء العمل. يرجى إعادة المحاولة.
+          <p className="text-[var(--text-muted)] mb-6 text-sm max-w-sm">
+            واجه التطبيق مشكلة تقنية أثناء العمل. بياناتك محفوظة بأمان. يرجى إعادة المحاولة.
           </p>
           
           {/* ✅ الإصلاح الأمني: عرض تفاصيل الخطأ فقط في بيئة التطوير */}
@@ -44,9 +47,9 @@ class ErrorBoundary extends React.Component {
           <button 
             type="button"
             onClick={() => window.location.reload()} 
-            className="px-6 py-3 bg-[var(--primary)] text-white font-bold rounded-xl hover:opacity-90 transition-colors shadow-lg active:scale-95"
+            className="px-8 py-3 bg-[var(--primary)] text-white font-bold rounded-xl hover:opacity-90 transition-colors shadow-lg active:scale-95"
           >
-            إعادة المحاولة
+            إعادة تحميل التطبيق
           </button>
         </div>
       );
@@ -58,25 +61,42 @@ class ErrorBoundary extends React.Component {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <AppProvider>
-        <App />
-      </AppProvider>
+      {/* ✅ تم إزالة AppProvider لأن App.jsx يتكفل به */}
+      <App />
     </ErrorBoundary>
   </React.StrictMode>
 );
 
-// ✅ تسجيل Service Worker (ضروري جداً لـ PWABuilder وللعمل بدون إنترنت)
+// ✅ تسجيل Service Worker (ميزة PWA للعمل بدون إنترنت)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // ✅ استخدام BASE_URL ليتكيف المسار تلقائياً مع GitHub Pages أو الدومين المخصص
     const swUrl = `${import.meta.env.BASE_URL}sw.js`;
     
     navigator.serviceWorker.register(swUrl)
       .then(registration => {
         console.log('SW registered successfully:', registration.scope);
+        
+        // ✅ ميزة الشركات الكبرى: إشعار المستخدم بوجود تحديث للتطبيق
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker == null) return;
+          
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === 'installed') {
+              if (navigator.serviceWorker.controller) {
+                // يوجد نسخة جديدة، يمكنك هنا إظهار Toast للمستخدم
+                console.log('New content is available; please refresh.');
+                // يمكنك استخدام CustomEvent هنا لربطها بواجهة المستخدم لاحقاً
+                window.dispatchEvent(new CustomEvent('swUpdateAvailable'));
+              } else {
+                console.log('Content is cached for offline use.');
+              }
+            }
+          };
+        };
       })
       .catch(registrationError => {
-        console.log('SW registration failed:', registrationError);
+        console.error('SW registration failed:', registrationError);
       });
   });
 }
