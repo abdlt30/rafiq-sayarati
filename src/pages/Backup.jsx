@@ -1,12 +1,12 @@
 import { useContext, useRef, useState, useEffect, useCallback } from 'react';
-import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
-import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
+import { AppContext } from '../context/AppContext.jsx';
+import { dbService } from '../services/dbService.js';
 import { useNavigate } from 'react-router-dom'; 
 import { 
   FileSpreadsheet, FileText, X, CheckCircle, AlertTriangle, ChevronRight, Settings as SettingsIcon
 } from 'lucide-react'; 
 
-import { safeNumber } from '../shared/utils/safeNumber.js'; // ✅ إضافة .js
+import { safeNumber } from '../shared/utils/safeNumber.js';
 
 /* ✅ حماية CSV من الحقن (CSV Injection) */
 const escapeCSV = (value) => {
@@ -47,19 +47,19 @@ export default function Backup() {
   };
 
   /* ✅ تصدير CSV (محمي + محصّن + غير متزامن) */
-  const exportCSV = async () => { // ✅ إضافة async
+  const exportCSV = async () => {
     if (!currentCar) return;
     
     try {
       const carIdStr = String(currentCar.id);
       
-      // ✅ إصلاح حرج: إضافة await لجلب البيانات من IndexedDB
-      const allFuel = await dbService.getFuel();
-      const allMaint = await dbService.getMaintenance();
-      const allExp = await dbService.getExpenses();
-      const allInc = await dbService.getIncomes();
+      // جلب البيانات من IndexedDB
+      const allFuel = await dbService.getFuel() || [];
+      const allMaint = await dbService.getMaintenance() || [];
+      const allExp = await dbService.getExpenses() || [];
+      const allInc = await dbService.getIncomes() || [];
 
-      const fuel = (allFuel || [])
+      const fuel = allFuel
         .filter(f => String(f.carId) === carIdStr)
         .map(f => ({ 
           date: f.date, 
@@ -69,31 +69,31 @@ export default function Backup() {
           notes: getFuelInfo(f)
         }));
         
-      const maint = (allMaint || [])
+      const maint = allMaint
         .filter(m => String(m.carId) === carIdStr)
         .map(m => ({ 
           date: m.date, 
-          type: t(m.type) || m.type, 
+          type: t(m.type) || m.type || 'صيانة', 
           amount: safeNumber(m.cost), 
           odometer: safeNumber(m.nextKm), 
           notes: '' 
         }));
         
-      const exp = (allExp || [])
+      const exp = allExp
         .filter(e => String(e.carId) === carIdStr)
         .map(e => ({ 
           date: e.date, 
-          type: t(e.type) || e.type, 
+          type: t(e.type) || e.type || 'مصروف', 
           amount: safeNumber(e.cost), 
           odometer: 0, 
           notes: '' 
         }));
         
-      const inc = (allInc || [])
+      const inc = allInc
         .filter(i => String(i.carId) === carIdStr)
         .map(i => ({ 
           date: i.date, 
-          type: t(i.type) || i.type, 
+          type: t(i.type) || i.type || 'إيراد', 
           amount: safeNumber(i.amount), 
           odometer: 0, 
           notes: i.notes || '' 
@@ -102,6 +102,11 @@ export default function Backup() {
       const allData = [...fuel, ...maint, ...exp, ...inc].sort((a, b) => 
         String(b.date || '').localeCompare(String(a.date || ''))
       );
+
+      // ✅ إضافة تحسين: منع تصدير ملف فارغ
+      if (allData.length === 0) {
+        return showToast('error', t('noData') || 'لا توجد بيانات لتصديرها.');
+      }
 
       const headers = [
         t('date') || 'التاريخ', 
@@ -150,7 +155,10 @@ export default function Backup() {
       
       {/* Toast */}
       {toast.show && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+        <div 
+          aria-live="polite"
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
+        >
           {toast.type === 'success' 
             ? <CheckCircle size={18} aria-hidden="true" /> 
             : <AlertTriangle size={18} aria-hidden="true" />}
