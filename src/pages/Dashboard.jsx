@@ -4,7 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, Pencil, Check, X, Bell, Settings,
-  TrendingUp, Activity, Plus, ShieldCheck, ChevronDown, CheckCircle
+  TrendingUp, Activity, Plus, ShieldCheck, ChevronDown, CheckCircle,
+  AlertTriangle // ✅ إضافة أيقونة الإنقاذ
 } from 'lucide-react'; 
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
@@ -16,7 +17,7 @@ export default function Dashboard() {
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
-  const [isCarModalOpen, setIsCarModalOpen] = useState(false); // ✅ حالة نافذة تبديل السيارة
+  const [isCarModalOpen, setIsCarModalOpen] = useState(false);
 
   const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
@@ -27,8 +28,8 @@ export default function Dashboard() {
     if (raw === '') return; 
     const val = Number(raw);
     if (!Number.isFinite(val) || val < 0) return;
-    if (val < safeNumber(currentCar.odometer) && !window.confirm(t('confirmLowerOdometer'))) return;
-    try { updateCar(currentCar.id, { odometer: val }); setIsEditingOdo(false); } catch (error) { alert(t('errorSaving')); }
+    if (val < safeNumber(currentCar.odometer) && !window.confirm(t('confirmLowerOdometer') || 'هل أنت متأكد؟')) return;
+    try { updateCar(currentCar.id, { odometer: val }); setIsEditingOdo(false); } catch (error) { alert(t('errorSaving') || 'حدث خطأ'); }
   }, [newOdo, currentCar, updateCar, t]);
 
   const handleSelectCar = (car) => {
@@ -43,7 +44,7 @@ export default function Dashboard() {
   const odometerValue = safeNumber(currentCar?.odometer);
   const avgValue = totals?.avgConsumption || null;
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
-  const healthScore = 100; // يمكن ربطها لاحقاً بالتنبيهات
+  const healthScore = 100; 
 
   if (isLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-40 bg-[var(--surface-2)] rounded-3xl"></div><div className="h-24 bg-[var(--surface-2)] rounded-2xl"></div></div>;
   if (!currentCar) return null;
@@ -62,14 +63,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ✅ بطاقة السيارة الجديدة (Futuristic Car Card) */}
+      {/* ✅ بطاقة السيارة (Futuristic Car Card) */}
       <div className="relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-blue-900/60 via-[var(--surface)] to-[var(--surface)] border border-blue-500/20 shadow-xl">
-        {/* خلفية زخرفية */}
         <div className="absolute -right-10 -top-10 text-white opacity-5 pointer-events-none"><Car size={180} /></div>
 
         <div className="flex justify-between items-center mb-4 relative z-10">
           <span className="text-[10px] font-bold text-blue-300 tracking-wider uppercase">{t('carDetails') || 'تفاصيل السيارة'}</span>
-          {/* ✅ زر يفتح النافذة السفلية بدلاً من تداخل المكونات */}
           <button onClick={() => setIsCarModalOpen(true)} className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg text-white text-xs font-bold transition-all active:scale-95">
             {t('switchCar') || 'تبديل'} <ChevronDown size={14} />
           </button>
@@ -80,7 +79,8 @@ export default function Dashboard() {
             {currentCar.image ? <img src={currentCar.image} alt="car" className="w-full h-full object-cover" /> : <Car size={36} className="text-white/30" />}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-extrabold text-white leading-tight truncate">{currentCar.make} {currentCar.model}</h2>
+            {/* ✅ إصلاح: استخدام break-words بدلاً من truncate لعرض الاسم كاملاً */}
+            <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-tight break-words">{currentCar.make} {currentCar.model}</h2>
             <p className="text-xs font-mono text-blue-100 mt-1.5 bg-blue-500/30 px-2.5 py-1 rounded-md inline-block truncate max-w-full backdrop-blur-sm border border-blue-400/20">{currentCar.plate || t('noPlate')}</p>
           </div>
         </div>
@@ -104,6 +104,12 @@ export default function Dashboard() {
         <Link to="/expenses" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all"><div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-2"><Wallet size={18}/></div><span className="text-[10px] font-bold">{t('expenses')}</span></Link>
         <Link to="/documents" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all"><div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-2"><FileText size={18}/></div><span className="text-[10px] font-bold">{t('documents')}</span></Link>
       </div>
+
+      {/* ✅ إضافة زر الإنقاذ (SOS) - هذا هو الزر الذي كان مفقوداً */}
+      <Link to="/assistance" className="flex items-center justify-center gap-2 p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl hover:bg-red-500/20 active:scale-[0.98] transition-all mt-2 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+        <AlertTriangle size={20} className="text-red-500 animate-pulse" />
+        <span className="text-sm font-bold text-red-500">{t('emergencySOS') || 'إنقاذ طارئ (SOS) - سيارة معطلة؟'}</span>
+      </Link>
 
       {/* الإحصائيات */}
       <div className="grid grid-cols-2 gap-3 mt-4">
