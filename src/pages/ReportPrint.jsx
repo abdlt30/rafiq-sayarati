@@ -1,11 +1,11 @@
 import { useContext, useMemo, useState, useEffect } from 'react';
-import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
-import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
+import { AppContext } from '../context/AppContext.jsx'; 
+import { dbService } from '../services/dbService.js'; 
 import { Link } from 'react-router-dom';
 import { ArrowRight, Printer, FileText, Loader2 } from 'lucide-react';
 
-import { safeNumber } from '../shared/utils/safeNumber.js'; // ✅ إضافة .js
-import { formatDate as formatDateShared } from '../shared/utils/formatters.js'; // ✅ إضافة .js
+import { safeNumber } from '../shared/utils/safeNumber.js'; 
+import { formatDate as formatDateShared } from '../shared/utils/formatters.js'; 
 
 /* ✅ كمية الوقود: يدعم amount الجديد + liters القديم */
 const getFuelAmount = (r) => {
@@ -28,13 +28,12 @@ export default function ReportPrint() {
   const { currentCar, t, currency, lang, dataVersion } = useContext(AppContext);
   const [period, setPeriod] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(''); // ✅ حالة لالتقاط أخطاء الجلب
   
-  // ✅ حالة البيانات (تم فصلها عن useMemo لحل مشكلة Async)
   const [data, setData] = useState({ fuel: [], maintenance: [], expenses: [], incomes: [] });
 
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
-  /* ✅ بيانات آمنة للعرض */
   const carMake = (currentCar?.make || '').trim();
   const carModel = (currentCar?.model || '').trim();
   const carTitle = `${carMake} ${carModel}`.trim() || '—';
@@ -56,8 +55,8 @@ export default function ReportPrint() {
         return;
       }
       setIsLoading(true);
+      setErrorMsg('');
       try {
-        // ✅ جلب البيانات من IndexedDB
         const allFuel = await dbService.getFuel() || [];
         const allMaint = await dbService.getMaintenance() || [];
         const allExp = await dbService.getExpenses() || [];
@@ -107,15 +106,16 @@ export default function ReportPrint() {
         }
       } catch (e) {
         console.error('Report data load failed:', e);
+        if (isMounted) setErrorMsg(t('errorSaving') || 'حدث خطأ أثناء تحميل البيانات.');
       } finally {
         if (isMounted) setIsLoading(false);
       }
     };
     loadData();
     return () => { isMounted = false; };
-  }, [currentCar, period, dataVersion]);
+  }, [currentCar, period, dataVersion, t]);
 
-  /* ===================== الإجماليات (مع رفض السالب) ===================== */
+  /* ===================== الإجماليات ===================== */
   const totals = useMemo(() => {
     const sum = (arr, key) => arr.reduce((s, r) => {
       const val = safeNumber(r?.[key]);
@@ -163,8 +163,18 @@ export default function ReportPrint() {
   // ✅ شاشة تحميل أثناء جلب البيانات
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64 text-[var(--primary)]">
-        <Loader2 className="animate-spin" size={32} />
+      <div className="flex flex-col justify-center items-center h-64 text-[var(--primary)]" aria-live="polite">
+        <Loader2 className="animate-spin mb-4" size={32} />
+        <p className="text-sm font-bold text-[var(--text-muted)]">{t('loading') || 'جاري التحميل...'}</p>
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64 p-6 text-center">
+        <p className="text-red-500 font-bold mb-4">{errorMsg}</p>
+        <button onClick={() => setPeriod('all')} className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg">{t('retry') || 'إعادة المحاولة'}</button>
       </div>
     );
   }
@@ -217,8 +227,8 @@ export default function ReportPrint() {
         </div>
       </div>
 
-      {/* ✅ التقرير القابل للطباعة */}
-      <div className="print-container bg-white text-black p-6 sm:p-10 mx-auto max-w-4xl my-4 shadow-2xl rounded-2xl" style={{ direction: dir }}>
+      {/* ✅ التقرير القابل للطباعة (إضافة print-color-adjust لضمان ظهور الألوان في PDF) */}
+      <div className="print-container bg-white text-black p-6 sm:p-10 mx-auto max-w-4xl my-4 shadow-2xl rounded-2xl" style={{ direction: dir, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
         
         {/* الترويسة */}
         <div className="flex justify-between items-center border-b-4 border-blue-600 pb-6 mb-8">
