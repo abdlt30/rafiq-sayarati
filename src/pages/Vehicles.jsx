@@ -1,5 +1,4 @@
 import { useContext, useState, useMemo, useRef, useCallback, useEffect } from 'react';
-// ✅ إضافة الامتدادات المطلوبة لمنع فشل Vite Build
 import { AppContext } from '../context/AppContext.jsx';
 import { Car, Plus, CheckCircle, Edit2, Trash2, Zap, Truck, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -39,7 +38,6 @@ export default function Vehicles() {
 
   /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
-    // ✅ إصلاح: استخدام useRef لمسح المؤقت السابق ومنع تداخل الرسائل
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
     toastTimeoutRef.current = setTimeout(() => {
@@ -60,7 +58,6 @@ export default function Vehicles() {
   const handleConfirmDelete = async () => {
     if (!deleteId) return;
     try {
-      // ✅ ملاحظة: deleteCar في AppContext تقوم بتحديث الحالة (State) فوراً وتطلق عملية الحذف من IndexedDB في الخلفية
       const ok = deleteCar(deleteId);
       if (ok === false) {
         showToast(t('errorSaving') || 'فشل حذف السيارة. تحقق من المساحة.', 'error');
@@ -116,10 +113,10 @@ export default function Vehicles() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-[var(--text)]">
-              {t('vehicles')}
+              {t('vehicles') || 'سياراتي'}
             </h1>
             <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-              {t('manageFleet')}
+              {t('manageFleet') || 'إدارة أسطول سياراتك'}
             </p>
           </div>
         </div>
@@ -127,34 +124,30 @@ export default function Vehicles() {
         <button 
           type="button"
           onClick={() => navigate('/add-vehicle')} 
-          aria-label={t('add')}
+          aria-label={t('add') || 'إضافة'}
           className="flex items-center gap-1.5 bg-[var(--primary)] text-white px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-600 active:scale-95 transition-all text-sm font-bold"
         >
-          <Plus size={18} aria-hidden="true" /> {t('add')}
+          <Plus size={18} aria-hidden="true" /> {t('add') || 'إضافة'}
         </button>
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="text-center text-[var(--text-muted)] mt-20 flex flex-col items-center">
-          <div className="p-5 bg-[var(--surface-2)] rounded-full mb-4">
-            <Car size={48} className="opacity-30" aria-hidden="true" />
+        // ✅ تصميم حالة الفراغ المحدث (متطابق مع باقي الصفحات)
+        <div className="flex flex-col items-center justify-center mt-20 p-6 text-center animate-fade-in">
+          <div className="relative w-24 h-24 flex items-center justify-center mb-6">
+            <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping opacity-50"></div>
+            <div className="relative w-20 h-20 bg-[var(--surface-2)] rounded-full flex items-center justify-center border border-[var(--border)]">
+              <Car size={36} className="text-blue-500" />
+            </div>
           </div>
-          <p className="font-bold text-lg">
-            {t('noVehiclesAdded')}
-          </p>
-          <p className="text-sm mt-1 mb-6 text-center max-w-[250px]">
-            {t('addFirstCarHint')}
-          </p>
-          <button 
-            type="button"
-            onClick={() => navigate('/add-vehicle')} 
-            className="text-white font-bold text-sm bg-[var(--primary)] px-6 py-3 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"
-          >
-            {t('addFirstCar')}
+          <h3 className="text-lg font-bold text-[var(--text)] mb-2">{t('noVehiclesAdded') || 'لا توجد سيارات مضافة'}</h3>
+          <p className="text-sm text-[var(--text-muted)] mb-6 max-w-xs">{t('addFirstCarHint') || 'أضف سيارتك الأولى لتبدأ في تتبع مصاريفك وصياناتك.'}</p>
+          <button onClick={() => navigate('/add-vehicle')} className="flex items-center gap-2 text-white bg-[var(--primary)] px-6 py-3 rounded-xl hover:bg-blue-600 active:scale-95 transition-all shadow-lg shadow-blue-500/20">
+            <Plus size={18} /> {t('addFirstCar') || 'إضافة سيارتك الأولى'}
           </button>
         </div>
       ) : (
-        <div className="space-y-3" role="list" aria-label={t('vehicles')}>
+        <div className="space-y-3" role="list" aria-label={t('vehicles') || 'سياراتي'}>
           {vehicles.map((car, index) => {
             const isActive = car.id != null && String(currentCar?.id) === String(car.id);
             const odometerValue = getOdometer(car);
@@ -236,7 +229,7 @@ export default function Vehicles() {
                         )}
                         {isTruck && (
                           <span className="text-[10px] bg-orange-500/10 text-orange-500 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
-                            <Truck size={9} aria-hidden="true" /> {t('truckCategory')}
+                            <Truck size={9} aria-hidden="true" /> {t('truckCategory') || 'شاحنة'}
                           </span>
                         )}
                       </div>
@@ -246,7 +239,7 @@ export default function Vehicles() {
                       <div className="flex items-center gap-1 bg-[var(--primary)]/10 px-2 py-1 rounded-lg flex-shrink-0">
                         <CheckCircle className="text-[var(--primary)]" size={14} aria-hidden="true" />
                         <span className="text-[10px] font-bold text-[var(--primary)]">
-                          {t('active')}
+                          {t('active') || 'نشطة'}
                         </span>
                       </div>
                     )}
@@ -255,7 +248,7 @@ export default function Vehicles() {
                   <div className="flex justify-between items-end mt-3">
                     {/* العداد */}
                     <span className="text-xs font-bold text-[var(--text)] bg-[var(--surface-2)] px-2.5 py-1 rounded-md border border-[var(--border)]">
-                      {odometerValue.toLocaleString()} {t('km')}
+                      {odometerValue.toLocaleString()} {t('km') || 'كم'}
                     </span>
                     
                     {/* أزرار التحكم */}
@@ -263,7 +256,7 @@ export default function Vehicles() {
                       <button 
                         type="button"
                         onClick={(e) => { e.stopPropagation(); navigate(`/add-vehicle?id=${car.id}`); }} 
-                        aria-label={t('editCar')}
+                        aria-label={t('editCar') || 'تعديل السيارة'}
                         className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500/20 active:scale-90 transition-all"
                       >
                         <Edit2 size={16} aria-hidden="true" />
@@ -271,7 +264,7 @@ export default function Vehicles() {
                       <button 
                         type="button"
                         onClick={(e) => handleDeleteClick(e, car.id)} 
-                        aria-label={t('deleteCar') || t('confirmDeleteCar')}
+                        aria-label={t('deleteCar') || t('confirmDeleteCar') || 'حذف السيارة'}
                         className="p-2 text-red-500 bg-red-500/10 rounded-xl hover:bg-red-500/20 active:scale-90 transition-all"
                       >
                         <Trash2 size={16} aria-hidden="true" />
@@ -290,11 +283,11 @@ export default function Vehicles() {
         isOpen={!!deleteId} 
         onClose={() => setDeleteId(null)} 
         onConfirm={handleConfirmDelete} 
-        title={t('confirmDeleteCar')}
+        title={t('confirmDeleteCar') || 'تأكيد حذف السيارة'}
         message={deleteMessage}
         variant="danger"
-        confirmText={t('confirmDeleteCarBtn') || t('confirmDeleteBtn')}
-        cancelText={t('cancel')}
+        confirmText={t('confirmDeleteCarBtn') || t('confirmDeleteBtn') || 'حذف'}
+        cancelText={t('cancel') || 'إلغاء'}
       />
     </div>
   );
