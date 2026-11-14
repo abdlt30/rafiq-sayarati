@@ -10,18 +10,19 @@ import Button from '../../../shared/components/ui/Button.jsx';
 import CarCard from './CarCard.jsx';
 
 export default function CarSelector() {
-  const { t, cars, currentCar, setCurrentCar } = useContext(AppContext);
+  // ✅ إصلاح حرج: استخدام أسماء المتغيرات الصحيحة من AppContext (vehicles و selectCar)
+  const { t, vehicles, currentCar, selectCar } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   // دالة اختيار السيارة وإغلاق النافذة
   const handleSelectCar = (car) => {
-    setCurrentCar(car);
+    selectCar(car); // ✅ استخدام الدالة الصحيحة لحفظ وتحديث السيارة
     setIsOpen(false);
   };
 
   // حالة عدم وجود سيارات (لأول استخدام)
-  if (!cars || cars.length === 0) {
+  if (!vehicles || vehicles.length === 0) {
     return (
       <Button 
         variant="outline" 
@@ -65,11 +66,12 @@ export default function CarSelector() {
         title={t('selectCar') || 'اختر السيارة'}
       >
         <div className="space-y-3 mt-2">
-          {cars.map((car) => (
+          {/* ✅ إصلاح حرج: استخدام vehicles بدلاً من cars */}
+          {vehicles.map((car) => (
             <CarCard
               key={car.id}
               car={car}
-              isSelected={currentCar?.id === car.id}
+              isSelected={String(currentCar?.id) === String(car.id)} // ✅ تحويل لنص لضمان تطابق آمن
               onSelect={() => handleSelectCar(car)}
             />
           ))}
