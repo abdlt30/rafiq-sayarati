@@ -39,8 +39,8 @@ export const ar = {
   noResults: 'لا توجد نتائج',
   currency: 'العملة',
   language: 'اللغة',
-  exporting: 'جاري التصدير...', // ✅ جديد
-  resetting: 'جاري المسح...', // ✅ جديد
+  exporting: 'جاري التصدير...',
+  resetting: 'جاري المسح...',
 
   // ===================== Onboarding & Welcome =====================
   welcomeMessagePart1: 'تحكم في مصاريف سيارتك، تابع صيانتها، ووفر',
@@ -216,9 +216,9 @@ export const ar = {
   addDocument: 'إضافة وثيقة',
   documentType: 'نوع الوثيقة',
   endDate: 'تاريخ الانتهاء',
-  expiryDate: 'تاريخ الانتهاء', // ✅ جديد (متوافق مع Documents.jsx)
-  registration: 'رخصة (Carte Grise)', // ✅ جديد
-  uploadImage: 'التقط صورة أو ارفعها', // ✅ جديد
+  expiryDate: 'تاريخ الانتهاء',
+  registration: 'رخصة (Carte Grise)',
+  uploadImage: 'التقط صورة أو ارفعها',
   technicalInspection: 'فحص تقني',
   license: 'رخصة',
   expired: 'منتهية',
@@ -287,7 +287,7 @@ export const ar = {
   recentActivity: 'آخر العمليات',
   upcomingMaintenance: 'الصيانة القادمة',
   timeline: 'سجل السيارة',
-  carTimeline: 'سجل السيارة', // ✅ جديد (متوافق مع Timeline.jsx)
+  carTimeline: 'سجل السيارة',
   confirmLowerOdometer: 'العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟',
 
   // ===================== Reports & Print =====================
@@ -296,7 +296,7 @@ export const ar = {
   comprehensiveFinancialReport: 'تقرير مالي شامل',
   financialSummary: 'الملخص المالي',
   totalExpenses: 'إجمالي المصاريف',
-  totalFuel: 'إجمالي الوقود', // ✅ جديد
+  totalFuel: 'إجمالي الوقود',
   totalFuelCost: 'إجمالي الوقود',
   expenseDistribution: 'توزيع المصاريف',
   monthlyExpenses: 'المصاريف الشهرية',
@@ -307,9 +307,9 @@ export const ar = {
   otherExpenses: 'مصاريف أخرى',
   fuelLog: 'سجل الوقود',
   maintenanceLog: 'سجل الصيانة',
-  pdfReport: 'تقرير PDF', // ✅ جديد
-  noChartData: 'لا توجد بيانات كافية للرسم البياني', // ✅ جديد
-  addMoreRecords: 'أضف المزيد من السجلات لعرض التحليلات', // ✅ جديد
+  pdfReport: 'تقرير PDF',
+  noChartData: 'لا توجد بيانات كافية للرسم البياني',
+  addMoreRecords: 'أضف المزيد من السجلات لعرض التحليلات',
   printPdf: 'طباعة / PDF',
   printReport: 'طباعة التقرير',
   shareReport: 'مشاركة التقرير',
@@ -456,9 +456,9 @@ export const ar = {
 
   // ===================== Export Center =====================
   backupMovedMsg: 'تم نقل ميزة حفظ واستعادة البيانات (JSON) إلى صفحة الإعدادات لتوحيد التجربة.',
-  goToSettings: 'الذهاب إلى الإعدادات'
+  goToSettings: 'الذهاب إلى الإعدادات', // ✅ إصلاح حرج: تمت إضافة الفاصلة هنا
 
-  // ... المفاتيح السابقة
+  // ===================== Added Keys =====================
   totalMaintenanceCost: 'إجمالي مصاريف الصيانة',
   proactiveMaintenance: 'صيانة استباقية',
   trackExpenses: 'تتبع كل درهم',
@@ -466,6 +466,5 @@ export const ar = {
   startYourJourney: 'ابدأ رحلتك!',
   noFuelRecordsDesc: 'سجل أول تعبئة لتتمكن من تتبع استهلاكك وتوفير المال.',
   secureDocuments: 'وثائقك في أمان',
-  carDetails: 'تفاصيل السيارة',
-  switchCar: 'تبديل السيارة',
+  carDetails: 'تفاصيل السيارة'
 };
