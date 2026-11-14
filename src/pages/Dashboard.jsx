@@ -4,16 +4,16 @@ import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, Pencil, Check, X, Bell, Settings,
-  TrendingUp, Activity, Plus // ✅ إضافة أيقونات جديدة
+  TrendingUp, Activity, Plus, ShieldCheck
 } from 'lucide-react'; 
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
-// ✅ استيراد مبدل السيارة من المسار الصحيح في مجلد الميزات
 import CarSelector from '../features/vehicles/components/CarSelector.jsx'; 
 
 export default function Dashboard() {
-  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity } = useContext(AppContext);
+  // ✅ إضافة isLoading من المخ المركزي لعرض الـ Skeleton
+  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, isLoading } = useContext(AppContext);
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
@@ -39,13 +39,47 @@ export default function Dashboard() {
     }
   }, [newOdo, currentCar, updateCar, t]);
 
+  // ✅ حساب درجة صحة السيارة (محاكاة للذكاء الاصطناعي - يمكن ربطها بالتنبيهات لاحقاً)
+  const calculateHealthScore = () => {
+    if (!currentCar) return 100;
+    let score = 100;
+    // إذا كان العداد قريباً من صيانة قادمة، نقوم بخصم نقاط
+    // (هذا منطق مبدئي وسيتم تطويره لاحقاً في ملف الخدمات)
+    return Math.max(0, score); 
+  };
+  const healthScore = calculateHealthScore();
+
   const netValue = safeNumber(totals?.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals?.income);
   const totalValue = safeNumber(totals?.total);
-  const odometerValue = safeNumber(currentCar.odometer);
+  const odometerValue = safeNumber(currentCar?.odometer);
   const avgValue = totals?.avgConsumption || null;
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
+
+  // ✅ شاشة التحميل الهيكلية (Skeleton Loader) - معيار الشركات الكبرى
+  if (isLoading) {
+    return (
+      <div className="space-y-5 pb-24 px-4 pt-2 animate-pulse">
+        <div className="flex justify-between items-start pt-4 pb-3 border-b border-[var(--border)]/50 mb-2">
+          <div className="w-1/2 h-8 bg-[var(--surface-2)] rounded-lg"></div>
+          <div className="w-1/4 h-8 bg-[var(--surface-2)] rounded-lg"></div>
+        </div>
+        <div className="h-36 bg-[var(--surface-2)] rounded-3xl"></div>
+        <div className="grid grid-cols-4 gap-2 mt-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>)}
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className="h-24 bg-[var(--surface-2)] rounded-2xl"></div>
+          <div className="h-24 bg-[var(--surface-2)] rounded-2xl"></div>
+          <div className="col-span-2 h-28 bg-[var(--surface-2)] rounded-2xl"></div>
+        </div>
+        <div className="h-32 bg-[var(--surface-2)] rounded-2xl mt-4"></div>
+      </div>
+    );
+  }
+
+  if (!currentCar) return null;
 
   return (
     <div className="space-y-5 pb-24 px-4 pt-2">
@@ -65,12 +99,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ✅ بطاقة السيارة مع مبدل السيارة المدمج */}
+      {/* ✅ بطاقة السيارة مع مبدل السيارة ومؤشر الصحة */}
       <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
         <div className="flex justify-between items-start mb-3 relative z-10">
           <p className="text-xs text-blue-300 font-bold">{t('currentCar')}</p>
-          
-          {/* زر تبديل السيارة المدمج */}
           <div className="scale-90 origin-top-left rtl:origin-top-right">
             <CarSelector />
           </div>
@@ -83,6 +115,25 @@ export default function Dashboard() {
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold text-white leading-tight truncate">{currentCar.make} {currentCar.model}</h2>
             <p className="text-xs font-mono text-blue-200 mt-1 bg-blue-500/20 px-2 py-0.5 rounded inline-block truncate max-w-full">{currentCar.plate || t('noPlate')}</p>
+          </div>
+        </div>
+
+        {/* ✅ مؤشر صحة السيارة (Car Health Score) */}
+        <div className="mt-4 p-3 bg-black/20 rounded-xl border border-white/10 backdrop-blur-sm relative z-10">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-[10px] text-blue-200 font-bold flex items-center gap-1">
+              <ShieldCheck size={12} className={healthScore > 80 ? 'text-green-400' : 'text-yellow-400'} />
+              {t('carHealth') || 'حالة السيارة'}
+            </span>
+            <span className={`text-[10px] font-bold ${healthScore > 80 ? 'text-green-400' : healthScore > 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+              {healthScore}%
+            </span>
+          </div>
+          <div className="w-full bg-black/40 rounded-full h-1.5">
+            <div 
+              className={`h-1.5 rounded-full transition-all duration-1000 ${healthScore > 80 ? 'bg-green-500' : healthScore > 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+              style={{ width: `${healthScore}%` }}
+            ></div>
           </div>
         </div>
       </div>
@@ -119,14 +170,14 @@ export default function Dashboard() {
           <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('odometer')}</p>
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1">
-              <input type="number" value={newOdo} onChange={(e) => setNewOdo(e.target.value)} className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold outline-none" autoFocus />
-              <button onClick={handleSaveOdometer} className="text-green-500 p-1 bg-green-500/10 rounded"><Check size={14}/></button>
-              <button onClick={() => setIsEditingOdo(false)} className="text-red-500 p-1 bg-red-500/10 rounded"><X size={14}/></button>
+              <input type="number" value={newOdo} onChange={(e) => setNewOdo(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveOdometer()} className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold outline-none" autoFocus />
+              <button type="button" onClick={handleSaveOdometer} className="text-green-500 p-1 bg-green-500/10 rounded"><Check size={14}/></button>
+              <button type="button" onClick={() => setIsEditingOdo(false)} className="text-red-500 p-1 bg-red-500/10 rounded"><X size={14}/></button>
             </div>
           ) : (
             <div className="flex items-center justify-between mt-1">
               <p className="text-lg font-extrabold text-blue-500">{odometerValue.toLocaleString()}</p>
-              <button onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-blue-500/10 text-blue-500 rounded-md"><Pencil size={14}/></button>
+              <button type="button" onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-blue-500/10 text-blue-500 rounded-md"><Pencil size={14}/></button>
             </div>
           )}
         </div>
@@ -139,7 +190,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* آخر العمليات (مع تصميم Empty State احترافي) */}
+      {/* آخر العمليات (مع تصميم Empty State تفاعلي) */}
       <div className="mt-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-sm">{t('recentActivity')}</h3>
@@ -147,13 +198,18 @@ export default function Dashboard() {
         </div>
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
           {recentActivity.length === 0 ? (
-            <div className="p-8 text-center flex flex-col items-center justify-center">
-              <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-3">
-                <Activity size={24} className="text-[var(--text-muted)]" />
+            // ✅ تحسين "حالة الفراغ" (Empty State)
+            <div className="p-8 text-center flex flex-col items-center justify-center animate-fade-in">
+              <div className="relative w-20 h-20 flex items-center justify-center mb-4">
+                <div className="absolute inset-0 bg-[var(--primary)]/20 rounded-full animate-ping opacity-50"></div>
+                <div className="relative w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center border border-[var(--border)]">
+                  <Activity size={28} className="text-[var(--primary)]" />
+                </div>
               </div>
-              <p className="text-sm font-bold text-[var(--text)] mb-2">{t('noData')}</p>
-              <Link to="/fuel" className="flex items-center gap-1 text-xs text-white bg-[var(--primary)] px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-                <Plus size={14}/> {t('addFuel') || 'إضافة وقود'}
+              <h4 className="text-sm font-bold text-[var(--text)] mb-1">{t('startYourJourney') || 'ابدأ رحلتك!'}</h4>
+              <p className="text-xs text-[var(--text-muted)] mb-4">{t('noData')}</p>
+              <Link to="/fuel" className="flex items-center gap-1 text-xs text-white bg-[var(--primary)] px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
+                <Plus size={16}/> {t('addFuel') || 'إضافة وقود'}
               </Link>
             </div>
           ) : (
