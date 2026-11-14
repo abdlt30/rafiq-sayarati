@@ -55,7 +55,6 @@ export default function Vehicles() {
     setDeleteId(id); 
   };
 
-  // ✅ إصلاح حرج: تحويل الدالة إلى async واستخدام await لدالة الحذف
   const handleConfirmDelete = async () => {
     if (!deleteId) return;
     try {
@@ -96,11 +95,14 @@ export default function Vehicles() {
   return (
     <div className="space-y-4 pb-24 px-4 pt-6 relative min-h-screen">
       
-      {/* ✅ Toast */}
+      {/* ✅ Toast (مع إضافة aria-live للوصولية) */}
       {toast.show && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${
-          toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-        }`}>
+        <div 
+          aria-live="polite"
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${
+            toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}
+        >
           {toast.type === 'success' ? <CheckCircle size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
         </div>
@@ -265,7 +267,7 @@ export default function Vehicles() {
                       <button 
                         type="button"
                         onClick={(e) => handleDeleteClick(e, car.id)} 
-                        aria-label={t('deleteCar') || t('confirmDeleteCar') || 'حذف السيارة'}
+                        aria-label={t('deleteCar') || 'حذف السيارة'}
                         className="p-2 text-red-500 bg-red-500/10 rounded-xl hover:bg-red-500/20 active:scale-90 transition-all"
                       >
                         <Trash2 size={16} aria-hidden="true" />
