@@ -1,13 +1,9 @@
 import { useState, useContext, useMemo, useEffect } from 'react';
-import { AppContext } from '../context/AppContext';
-import { Tag, TrendingDown, Calculator, Info, AlertCircle } from 'lucide-react'; // ✅ إزالة Sparkles غير المستخدم
+import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
+import { Tag, TrendingDown, Calculator, Info, AlertCircle } from 'lucide-react'; 
 
-/* ✅ مساعد رياضي: يرفض NaN/Infinity/-Infinity */
-const safeNumber = (v) => {
-  if (v === null || v === undefined || v === '') return 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
+// ✅ استخدام دالة الحماية الرياضية المشتركة
+import { safeNumber } from '../shared/utils/safeNumber.js';
 
 export default function Valuation() {
   const { currentCar, currency, t } = useContext(AppContext);
@@ -27,7 +23,7 @@ export default function Valuation() {
     }
   }, [currentCar]);
 
-  /* ===================== المعادلة الرياضية ===================== */
+  /* ===================== المعادلة الرياضية (مُحسّنة) ===================== */
   const calculateValuation = useMemo(() => {
     const price = safeNumber(purchasePrice);
     const year = safeNumber(purchaseYear);
@@ -39,17 +35,19 @@ export default function Valuation() {
 
     const mileage = safeNumber(currentCar.odometer);
 
-    // 1. خصم العمر (10% لكل سنة)
-    const ageDepreciation = age * 0.10; 
+    // 1. خصم العمر (10% لكل سنة، بحد أقصى 60% لتجنب القيم السالبة)
+    const ageDepreciation = Math.min(age * 0.10, 0.60); 
     
-    // 2. خصم المسافة (1% لكل 10,000 كم)
-    const mileageDepreciation = (mileage / 10000) * 0.01;
+    // 2. خصم المسافة (1% لكل 10,000 كم، بحد أقصى 30%)
+    const mileageDepreciation = Math.min((mileage / 10000) * 0.01, 0.30);
     
     // 3. معامل الحالة
     const conditionMultiplier = condition === 'excellent' ? 1.05 : condition === 'fair' ? 0.90 : 1.0;
 
-    // المعادلة النهائية
-    let estimatedValue = price * (1 - ageDepreciation - mileageDepreciation) * conditionMultiplier;
+    // 4. إجمالي الانخفاض (حد أقصى 90% حتى لا تصبح القيمة سالبة أبداً)
+    const totalDepreciation = Math.min(ageDepreciation + mileageDepreciation, 0.90);
+    
+    let estimatedValue = price * (1 - totalDepreciation) * conditionMultiplier;
 
     // الحد الأدنى (10% من السعر)
     const minimumValue = price * 0.10;
@@ -186,7 +184,7 @@ export default function Valuation() {
           </div>
         </div>
 
-        <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 mt-2">
+        <button type="submit" className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 mt-2 active:scale-[0.98]">
           <Calculator size={20} aria-hidden="true" />
           {t('calculateValue') || 'حساب القيمة التقديرية'}
         </button>
