@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import { dbService } from '../services/dbService.js';
 import { Plus, Trash2, X, FileText, Camera, AlertCircle, CheckCircle, Download } from 'lucide-react';
@@ -21,6 +21,8 @@ export default function Documents() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
+  // ✅ إصلاح: استخدام useRef لمنع تداخل رسائل الـ Toast
+  const toastTimeoutRef = useRef(null);
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
   const docTypes = [
@@ -32,8 +34,13 @@ export default function Documents() {
   ];
 
   const showToast = useCallback((message, type = 'error') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+    toastTimeoutRef.current = setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+  }, []);
+
+  useEffect(() => {
+    return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
   }, []);
 
   const loadData = useCallback(async () => {
@@ -72,31 +79,53 @@ export default function Documents() {
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
-    if (!file.type.startsWith('image/')) return showToast(t('invalidFileType'), 'error');
-    if (file.size > MAX_IMAGE_SIZE) return showToast(t('imageTooLarge'), 'error');
+    if (!file.type.startsWith('image/')) return showToast(t('invalidFileType') || 'نوع الملف غير صالح', 'error');
+    if (file.size > MAX_IMAGE_SIZE) return showToast(t('imageTooLarge') || 'حجم الصورة كبير جداً. الحد 5 ميجابايت', 'error');
     try {
       const compressed = await compressImage(file);
-      setFormData(prev => ({ ...prev, image: compressed })); e.target.value = null;
-    } catch (err) { showToast(t('imageProcessingFailed'), 'error'); }
+      setFormData(prev => ({ ...prev, image: compressed })); 
+      e.target.value = null;
+    } catch (err) { showToast(t('imageProcessingFailed') || 'فشل معالجة الصورة', 'error'); }
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!currentCar) return;
     if (!formData.image) return showToast(t('imageRequired') || 'الرجاء رفع صورة الوثيقة', 'error');
+    
     try {
-      await dbService.addDocument({ carId: currentCar.id, type: formData.type, date: formData.date || null, image: formData.image });
-      await loadData(); bumpDataVersion(); setIsModalOpen(false); setFormData(EMPTY_FORM); showToast(t('saveSuccess'), 'success');
-    } catch (error) { showToast(t('errorSaving'), 'error'); }
+      await dbService.addDocument({ 
+        carId: currentCar.id, 
+        type: formData.type, 
+        date: formData.date || null, 
+        image: formData.image 
+      });
+      await loadData(); 
+      bumpDataVersion(); 
+      setIsModalOpen(false); 
+      setFormData(EMPTY_FORM); 
+      showToast(t('saveSuccess') || 'تم حفظ الوثيقة بنجاح', 'success');
+    } catch (error) { 
+      showToast(t('errorSaving') || 'حدث خطأ أثناء الحفظ', 'error'); 
+    }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    try { await dbService.deleteDocument(deleteId); await loadData(); bumpDataVersion(); setDeleteId(null); } catch (e) { showToast(t('errorSaving'), 'error'); setDeleteId(null); }
+    try { 
+      await dbService.deleteDocument(deleteId); 
+      await loadData(); 
+      bumpDataVersion(); 
+      setDeleteId(null); 
+    } catch (e) { 
+      showToast(t('errorSaving') || 'حدث خطأ أثناء الحذف', 'error'); 
+      setDeleteId(null); 
+    }
   };
 
   const getTypeLabel = (type) => docTypes.find(d => d.value === type)?.label || type;
 
+  // ✅ شاشة التحميل (Skeleton Loader)
   if (isLoading) {
     return (
       <div className="p-4 space-y-4 animate-pulse">
@@ -111,19 +140,22 @@ export default function Documents() {
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
+      {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
           <span className="text-sm font-bold whitespace-nowrap">{toast.message}</span>
-          <button onClick={() => setToast({ show: false, message: '', type: 'success' })} className="ml-2 opacity-70"><X size={16} /></button>
+          <button onClick={() => setToast({ show: false, message: '', type: 'success' })} className="ml-2 opacity-70 hover:opacity-100"><X size={16} /></button>
         </div>
       )}
 
+      {/* الشريط العلوي */}
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents')}</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('documents') || 'الوثائق'}</h1>
       </div>
 
       {records.length === 0 ? (
+        // ✅ حالة الفراغ التفاعلية (متطابقة مع باقي الصفحات)
         <div className="flex flex-col items-center justify-center mt-20 p-6 text-center animate-fade-in">
           <div className="relative w-24 h-24 flex items-center justify-center mb-6">
             <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-50"></div>
@@ -132,9 +164,9 @@ export default function Documents() {
             </div>
           </div>
           <h3 className="text-lg font-bold text-[var(--text)] mb-2">{t('secureDocuments') || 'وثائقك في أمان'}</h3>
-          <p className="text-sm text-[var(--text-muted)] mb-6 max-w-xs">{t('noDocuments')} احفظ صور التأمين والرخصة لتكون دائماً في أمان قانوني.</p>
-          <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 text-white bg-[var(--primary)] px-6 py-3 rounded-xl hover:bg-blue-600 active:scale-95 shadow-lg">
-            <Plus size={18} /> {t('addDocument')}
+          <p className="text-sm text-[var(--text-muted)] mb-6 max-w-xs">{t('noDocuments') || 'لا توجد وثائق مسجلة.'} احفظ صور التأمين والرخصة لتكون دائماً في أمان قانوني.</p>
+          <button onClick={() => { setIsModalOpen(true); setFormData(EMPTY_FORM); }} className="flex items-center gap-2 text-white bg-[var(--primary)] px-6 py-3 rounded-xl hover:bg-blue-600 active:scale-95 shadow-lg">
+            <Plus size={18} /> {t('addDocument') || 'إضافة وثيقة'}
           </button>
         </div>
       ) : (
@@ -149,7 +181,7 @@ export default function Documents() {
                     {record.date && <p className="text-[10px] text-[var(--text-muted)]">{formatDate(record.date, todayLocale)}</p>}
                   </div>
                 </div>
-                <button onClick={() => setDeleteId(record.id)} className="text-red-500 p-1.5 bg-red-500/10 rounded-lg active:scale-90"><Trash2 size={16} /></button>
+                <button onClick={() => setDeleteId(record.id)} className="text-red-500 p-1.5 bg-red-500/10 rounded-lg active:scale-90 transition-transform"><Trash2 size={16} /></button>
               </div>
               <div className="relative w-full h-32 bg-[var(--surface-2)] rounded-xl overflow-hidden border border-[var(--border)] group">
                 <img src={record.image} alt="doc" className="w-full h-full object-cover" />
@@ -162,33 +194,48 @@ export default function Documents() {
         </div>
       )}
 
-      <button type="button" onClick={() => { setIsModalOpen(true); setFormData(EMPTY_FORM); }} className="fixed bottom-24 right-6 rtl:left-6 w-14 h-14 bg-green-500 text-white rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center z-40 active:scale-95 transition-transform"><Plus size={28} /></button>
+      {/* ✅ إصلاح: إخفاء الزر العائم عندما تكون القائمة فارغة لمنع التداخل */}
+      {records.length > 0 && (
+        <button type="button" onClick={() => { setIsModalOpen(true); setFormData(EMPTY_FORM); }} className="fixed bottom-24 right-6 rtl:left-6 w-14 h-14 bg-green-500 text-white rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center z-40 active:scale-95 transition-transform"><Plus size={28} /></button>
+      )}
 
-      <ConfirmModal isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('confirmDelete')} message={t('confirmDeleteMsg')} variant="danger" confirmText={t('confirmDeleteBtn')} />
+      <ConfirmModal 
+        isOpen={!!deleteId} 
+        onClose={() => setDeleteId(null)} 
+        onConfirm={handleDelete} 
+        title={t('confirmDelete') || 'تأكيد الحذف'} 
+        message={t('confirmDeleteMsg') || 'هل أنت متأكد من حذف هذه الوثيقة؟'} 
+        variant="danger" 
+        confirmText={t('confirmDeleteBtn') || 'حذف'} 
+      />
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative shadow-2xl">
             <button type="button" onClick={() => setIsModalOpen(false)} className="absolute top-4 left-4 rtl:right-4 p-1.5 bg-[var(--surface-2)] rounded-full z-10"><X size={20} /></button>
-            <h2 className="text-lg font-bold text-center mb-5 mt-1">{t('addDocument')}</h2>
+            <h2 className="text-lg font-bold text-center mb-5 mt-1">{t('addDocument') || 'إضافة وثيقة'}</h2>
+            
             <div className="space-y-4">
-              <OptionPicker label={t('documentType')} options={docTypes} value={formData.type} onChange={(val) => setFormData(prev => ({ ...prev, type: val }))} />
-              <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('expiryDate')}</label><input type="date" value={formData.date} onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm [color-scheme:dark]" /></div>
+              <OptionPicker label={t('documentType') || 'نوع الوثيقة'} options={docTypes} value={formData.type} onChange={(val) => setFormData(prev => ({ ...prev, type: val }))} />
               <div>
-                <label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('documentImage')}</label>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('expiryDate') || 'تاريخ الانتهاء'}</label>
+                <input type="date" value={formData.date} onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('documentImage') || 'صورة الوثيقة'}</label>
                 <div className="relative w-full h-40 rounded-xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-green-500 transition-colors">
                   {formData.image ? (
-                    <><img src={formData.image} alt="doc" className="w-full h-full object-contain" /><button type="button" onClick={() => setFormData(prev => ({...prev, image: ''}))} className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full"><X size={14} /></button></>
+                    <><img src={formData.image} alt="doc" className="w-full h-full object-contain" /><button type="button" onClick={() => setFormData(prev => ({...prev, image: ''}))} className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full active:scale-90"><X size={14} /></button></>
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-green-500 transition-colors">
-                      <Camera size={32} className="mb-2" /><span className="text-xs font-bold">{t('uploadImage')}</span>
+                      <Camera size={32} className="mb-2" /><span className="text-xs font-bold">{t('uploadImage') || 'التقط صورة أو ارفعها'}</span>
                       <input type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" />
                     </label>
                   )}
                 </div>
               </div>
             </div>
-            <button type="submit" className="w-full mt-5 bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95">{t('save')}</button>
+            <button type="submit" className="w-full mt-5 bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-all">{t('save') || 'حفظ'}</button>
           </form>
         </div>
       )}
