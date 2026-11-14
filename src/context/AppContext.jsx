@@ -1,12 +1,20 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
-import { dbService } from '../services/dbService'; 
-import { translations } from '../locales'; 
-import { safeNumber } from '../shared/utils/safeNumber'; // ✅ درع الحماية الرياضي
+import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
+import { translations } from '../locales/index.js'; // ✅ إضافة .js (أو بدونها حسب هيكلك)
+import { safeNumber } from '../shared/utils/safeNumber.js'; // ✅ إضافة .js
 
 export const AppContext = createContext();
 
+// ✅ توليد IDs آمن ومتوافق (مثل dbService)
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try { return crypto.randomUUID(); } catch { /* fallback */ }
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
+};
+
 export const AppProvider = ({ children }) => {
-  // ... (نفس كود الحالة السابق للسيارة والمستخدم والإعدادات)
+  // ===================== حالة المستخدم =====================
   const [user, setUserState] = useState(() => {
     try { const savedName = localStorage.getItem('user_name'); return savedName ? { name: savedName } : null; } catch { return null; }
   });
@@ -16,9 +24,10 @@ export const AppProvider = ({ children }) => {
     try {
       if (userData && userData.name) localStorage.setItem('user_name', userData.name);
       else localStorage.removeItem('user_name');
-    } catch (e) {}
+    } catch (e) { console.error('Save user failed:', e); }
   }, []);
 
+  // ===================== حالة السيارات =====================
   const [currentCar, setCurrentCar] = useState(() => {
     try {
       const saved = localStorage.getItem('savedCar');
@@ -37,6 +46,7 @@ export const AppProvider = ({ children }) => {
     } catch { return []; }
   });
 
+  // ===================== حالة الإعدادات =====================
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState(() => {
     try { const saved = localStorage.getItem('theme'); return saved === 'light' || saved === 'dark' ? saved : 'dark'; } catch { return 'dark'; }
@@ -48,18 +58,17 @@ export const AppProvider = ({ children }) => {
     try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; }
   });
 
-  // ✅ الحالة المركزية للبيانات الحقيقية
+  // ===================== الحالة المركزية للبيانات =====================
   const [totals, setTotals] = useState({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km' });
   const [recentActivity, setRecentActivity] = useState([]);
   const [dataVersion, setDataVersion] = useState(0);
   const bumpDataVersion = useCallback(() => setDataVersion(v => v + 1), []);
 
-  // ✅ المعادلة الرياضية الدقيقة لجلب البيانات
+  // ===================== المعادلة الرياضية (refreshDashboard) =====================
   const refreshDashboard = useCallback(async () => {
     if (!currentCar) return;
     setIsLoading(true);
     try {
-      // جلب البيانات الحقيقية من IndexedDB
       const fetchedTotals = await dbService.getTotals(currentCar.id);
       const fuelRecords = await dbService.getFuel() || [];
       const maintenanceRecords = await dbService.getMaintenance() || [];
@@ -71,12 +80,11 @@ export const AppProvider = ({ children }) => {
 
       const myFuel = filter(fuelRecords);
       
-      // 🧮 حساب الاستهلاك (مع مراعاة السيارات الكهربائية والبنزين)
+      // 🧮 حساب الاستهلاك
       const powertrain = currentCar.powertrain || 'ice';
       const isEV = powertrain === 'ev';
       const unit = isEV ? 'kWh/100km' : 'L/100km';
       
-      // نأخذ السجلات التي تحتوي على عداد وكمية وقود، بغض النظر عن نوع الطاقة (لتجنب استثناء السجلات القديمة)
       const validFuelRecords = myFuel.filter(f => 
         safeNumber(f.odometer) > 0 && 
         (safeNumber(f.amount) > 0 || safeNumber(f.liters) > 0)
@@ -84,14 +92,12 @@ export const AppProvider = ({ children }) => {
 
       let avgVal = null;
       if (validFuelRecords.length >= 2) {
-        // ترتيب السجلات من الأقدم للأحدث بناءً على العداد
         const sorted = [...validFuelRecords].sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
         let totalDistance = 0;
         let totalAmount = 0;
 
         for (let i = 1; i < sorted.length; i++) {
           const dist = safeNumber(sorted[i].odometer) - safeNumber(sorted[i - 1].odometer);
-          // الأفضل رياضياً: كمية الوقود في التعبئة الحالية تُقسم على المسافة المقطوعة منذ التعبئة السابقة
           const amt = safeNumber(sorted[i].amount ?? sorted[i].liters);
           
           if (dist > 0 && amt > 0) {
@@ -130,9 +136,7 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => { refreshDashboard(); }, [currentCar, dataVersion, refreshDashboard]);
 
-  // ... (باقي الكود للإعدادات واللغة والثيم وإضافة السيارات كما هو بدون تغيير)
-  
-  // (مقتطف من كود إضافة السيارة لتأكيد عدم التغيير)
+  // ===================== التحقق من العداد =====================
   const validateOdometer = (input, { required = false } = {}) => {
     if (input === undefined || input === null || String(input).trim() === '') return required ? { valid: false } : { valid: true, value: 0 };
     const num = Number(String(input).trim());
@@ -140,75 +144,102 @@ export const AppProvider = ({ children }) => {
     return { valid: true, value: Math.round(num) };
   };
 
+  // ===================== CRUD السيارات =====================
   const addNewCar = useCallback((carData) => {
-    // ... (نفس الكود السابق)
     if (!carData || typeof carData !== 'object') return false;
     const odoCheck = validateOdometer(carData.odometer, { required: false });
     if (!odoCheck.valid) return false;
+    
     try {
-      const newCar = { ...carData, odometer: odoCheck.value, id: Date.now().toString() };
-      const updatedVehicles = [...vehicles, newCar];
+      const newCar = { ...carData, odometer: odoCheck.value, id: generateId() }; // ✅ استخدام generateId
+      setVehicles(prev => {
+        const updated = [...prev, newCar];
+        localStorage.setItem('vehicles', JSON.stringify(updated));
+        return updated;
+      });
       localStorage.setItem('savedCar', JSON.stringify(newCar));
-      localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
       setCurrentCar(newCar);
-      setVehicles(updatedVehicles);
       bumpDataVersion();
       return true;
-    } catch (e) { return false; }
-  }, [vehicles, bumpDataVersion]);
+    } catch (e) { console.error('addNewCar failed:', e); return false; }
+  }, [bumpDataVersion]);
 
   const updateCar = useCallback((carId, updatedData) => {
-    // ... (نفس الكود السابق)
     if (!carId || !updatedData) return false;
+    
+    const odoCheck = validateOdometer(updatedData.odometer, { required: true });
+    if (updatedData.odometer !== undefined && !odoCheck.valid) return false;
+    
     try {
-      const updatedVehicles = vehicles.map(v => String(v.id) === String(carId) ? { ...v, ...updatedData } : v);
-      const isCurrentCar = String(currentCar?.id) === String(carId);
-      const newCurrentCar = isCurrentCar ? { ...currentCar, ...updatedData } : currentCar;
-      localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      if (isCurrentCar) localStorage.setItem('savedCar', JSON.stringify(newCurrentCar));
-      setVehicles(updatedVehicles);
-      if (isCurrentCar) setCurrentCar(newCurrentCar);
+      const sanitized = updatedData.odometer !== undefined ? { ...updatedData, odometer: odoCheck.value } : updatedData;
+      
+      setVehicles(prev => {
+        const updated = prev.map(v => String(v.id) === String(carId) ? { ...v, ...sanitized } : v);
+        localStorage.setItem('vehicles', JSON.stringify(updated));
+        return updated;
+      });
+
+      setCurrentCar(prevCar => {
+        if (String(prevCar?.id) === String(carId)) {
+          const newCurrentCar = { ...prevCar, ...sanitized };
+          localStorage.setItem('savedCar', JSON.stringify(newCurrentCar));
+          return newCurrentCar;
+        }
+        return prevCar;
+      });
+      
       bumpDataVersion();
       return true;
-    } catch (e) { return false; }
-  }, [vehicles, currentCar, bumpDataVersion]);
+    } catch (e) { console.error('updateCar failed:', e); return false; }
+  }, [bumpDataVersion]);
 
-  const deleteCar = useCallback((id) => {
-    // ... (نفس الكود السابق)
+  const deleteCar = useCallback(async (id) => { // ✅ أصبحت async
     if (!id) return false;
     try {
-      if (dbService?.deleteCarData) dbService.deleteCarData(id);
-      const updatedVehicles = vehicles.filter(v => String(v.id) !== String(id));
-      localStorage.setItem('vehicles', JSON.stringify(updatedVehicles));
-      if (String(currentCar?.id) === String(id)) {
-        const nextCar = updatedVehicles.length > 0 ? updatedVehicles[0] : null;
-        setCurrentCar(nextCar);
-        if (nextCar) localStorage.setItem('savedCar', JSON.stringify(nextCar));
-        else localStorage.removeItem('savedCar');
+      // ✅ إصلاح حرج: إضافة await لدالة الحذف من قاعدة البيانات
+      if (dbService?.deleteCarData) {
+        await dbService.deleteCarData(id);
       }
-      setVehicles(updatedVehicles);
+      
+      setVehicles(prev => {
+        const updated = prev.filter(v => String(v.id) !== String(id));
+        localStorage.setItem('vehicles', JSON.stringify(updated));
+        return updated;
+      });
+
+      setCurrentCar(prevCar => {
+        if (String(prevCar?.id) === String(id)) {
+          const nextCar = vehicles.find(v => String(v.id) !== String(id)) || null;
+          if (nextCar) localStorage.setItem('savedCar', JSON.stringify(nextCar));
+          else localStorage.removeItem('savedCar');
+          return nextCar;
+        }
+        return prevCar;
+      });
+      
       bumpDataVersion();
       return true;
-    } catch (e) { return false; }
-  }, [vehicles, currentCar, bumpDataVersion]);
+    } catch (e) { console.error('deleteCar failed:', e); return false; }
+  }, [vehicles, bumpDataVersion]);
 
   const selectCar = useCallback((car) => {
-    // ... (نفس الكود السابق)
     if (!car || typeof car !== 'object') return false;
     try {
       localStorage.setItem('savedCar', JSON.stringify(car));
       setCurrentCar(car);
       bumpDataVersion();
       return true;
-    } catch (e) { return false; }
+    } catch (e) { console.error('selectCar failed:', e); return false; }
   }, [bumpDataVersion]);
 
+  // ===================== الإعدادات واللغة =====================
   const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
   const changeLang = useCallback((newLang) => { if (['ar', 'en', 'fr'].includes(newLang)) setLang(newLang); }, []);
   const setCurrency = useCallback((newCurrency) => {
     if (typeof newCurrency === 'string' && /^[A-Z]{3}$/.test(newCurrency.trim())) setCurrencyRaw(newCurrency.trim());
   }, []);
 
+  // ===================== دالة الترجمة (t) =====================
   const t = useCallback((key, variables = {}) => {
     let text = translations[lang]?.[key] ?? translations['en']?.[key] ?? key;
     text = String(text);
