@@ -4,28 +4,23 @@ import { Link } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, Pencil, Check, X, Bell, Settings,
-  AlertTriangle, ShieldAlert, TrendingUp, Activity
+  TrendingUp, Activity, Plus // ✅ إضافة أيقونات جديدة
 } from 'lucide-react'; 
+
 import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
+// ✅ استيراد مبدل السيارة من المسار الصحيح في مجلد الميزات
+import CarSelector from '../features/vehicles/components/CarSelector.jsx'; 
 
 export default function Dashboard() {
-  // ✅ جلب البيانات من المخ المركزي
   const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity } = useContext(AppContext);
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
 
-  // ✅ إصلاح كلمة welcomeUser
-  const greeting = user?.name && user.name.trim() !== '' 
-    ? `مرحباً، ${user.name} 👋` 
-    : 'مرحباً بك 👋';
-
+  const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
-
-  const today = new Date().toLocaleDateString(todayLocale, {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
+  const today = new Date().toLocaleDateString(todayLocale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const handleSaveOdometer = useCallback(() => {
     const raw = String(newOdo).trim();
@@ -34,9 +29,7 @@ export default function Dashboard() {
     if (!Number.isFinite(val) || val < 0) return;
 
     const currentVal = safeNumber(currentCar.odometer);
-    if (val < currentVal && !window.confirm(t('confirmLowerOdometer') || 'العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟')) {
-      return;
-    }
+    if (val < currentVal && !window.confirm(t('confirmLowerOdometer') || 'العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟')) return;
 
     try {
       updateCar(currentCar.id, { odometer: val });
@@ -51,8 +44,6 @@ export default function Dashboard() {
   const incomeValue = safeNumber(totals?.income);
   const totalValue = safeNumber(totals?.total);
   const odometerValue = safeNumber(currentCar.odometer);
-  
-  // ✅ استخدام متوسط الاستهلاك من المخ المركزي (أو عرض شرطة إذا لم تكن هناك بيانات كافية)
   const avgValue = totals?.avgConsumption || null;
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
 
@@ -74,15 +65,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* بطاقة السيارة */}
+      {/* ✅ بطاقة السيارة مع مبدل السيارة المدمج */}
       <div className="bg-gradient-to-br from-blue-900/40 to-[var(--surface)] border border-blue-500/20 p-4 rounded-3xl relative overflow-hidden shadow-lg">
-        <p className="text-xs text-blue-300 font-bold mb-3">{t('currentCar')}</p>
-        <div className="flex items-center gap-3 relative z-10">
+        <div className="flex justify-between items-start mb-3 relative z-10">
+          <p className="text-xs text-blue-300 font-bold">{t('currentCar')}</p>
+          
+          {/* زر تبديل السيارة المدمج */}
+          <div className="scale-90 origin-top-left rtl:origin-top-right">
+            <CarSelector />
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4 relative z-10">
           <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
             {currentCar.image ? <img src={currentCar.image} alt="car" className="w-full h-full object-cover" /> : <Car size={28} className="text-white/50" />}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-white leading-tight truncate">{currentCar.make} {currentCar.model}</h2>
+            <h2 className="text-xl font-bold text-white leading-tight truncate">{currentCar.make} {currentCar.model}</h2>
             <p className="text-xs font-mono text-blue-200 mt-1 bg-blue-500/20 px-2 py-0.5 rounded inline-block truncate max-w-full">{currentCar.plate || t('noPlate')}</p>
           </div>
         </div>
@@ -90,47 +89,48 @@ export default function Dashboard() {
 
       {/* الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2 mt-4">
-        <Link to="/fuel" className="flex flex-col items-center justify-center p-2 bg-[var(--surface)] border border-[var(--border)] rounded-2xl"><Fuel size={18} className="text-blue-500 mb-1"/><span className="text-[10px] font-bold">{t('fuel')}</span></Link>
-        <Link to="/maintenance" className="flex flex-col items-center justify-center p-2 bg-[var(--surface)] border border-[var(--border)] rounded-2xl"><Wrench size={18} className="text-yellow-500 mb-1"/><span className="text-[10px] font-bold">{t('maintenance')}</span></Link>
-        <Link to="/expenses" className="flex flex-col items-center justify-center p-2 bg-[var(--surface)] border border-[var(--border)] rounded-2xl"><Wallet size={18} className="text-purple-500 mb-1"/><span className="text-[10px] font-bold">{t('expenses')}</span></Link>
-        <Link to="/documents" className="flex flex-col items-center justify-center p-2 bg-[var(--surface)] border border-[var(--border)] rounded-2xl"><FileText size={18} className="text-green-500 mb-1"/><span className="text-[10px] font-bold">{t('documents')}</span></Link>
+        <Link to="/fuel" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all"><div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-2"><Fuel size={18}/></div><span className="text-[10px] font-bold">{t('fuel')}</span></Link>
+        <Link to="/maintenance" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 active:scale-95 transition-all"><div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-2"><Wrench size={18}/></div><span className="text-[10px] font-bold">{t('maintenance')}</span></Link>
+        <Link to="/expenses" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all"><div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-2"><Wallet size={18}/></div><span className="text-[10px] font-bold">{t('expenses')}</span></Link>
+        <Link to="/documents" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all"><div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-2"><FileText size={18}/></div><span className="text-[10px] font-bold">{t('documents')}</span></Link>
       </div>
 
-      {/* الإحصائيات */}
+      {/* الإحصائيات بتصميم حديث */}
       <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="bg-[var(--surface)] border border-green-500/20 p-3 rounded-2xl">
+        <div className="bg-[var(--surface)] border border-green-500/20 p-4 rounded-2xl shadow-sm">
           <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('totalIncome')}</p>
-          <p className="text-lg font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
+          <p className="text-xl font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
         </div>
-        <div className="bg-[var(--surface)] border border-red-500/20 p-3 rounded-2xl">
+        <div className="bg-[var(--surface)] border border-red-500/20 p-4 rounded-2xl shadow-sm">
           <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('totalExpenses')}</p>
-          <p className="text-lg font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
-        </div>
-        <div className={`col-span-2 border p-3 rounded-2xl flex justify-between items-center ${isNetPositive ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-          <div>
-            <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('netProfit')}</p>
-            <p className={`text-xl font-extrabold ${isNetPositive ? 'text-green-500' : 'text-red-500'}`}>{netValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
-          </div>
+          <p className="text-xl font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
         </div>
         
-        {/* العداد */}
+        <div className={`col-span-2 border p-4 rounded-2xl flex justify-between items-center ${isNetPositive ? 'bg-gradient-to-r from-green-500/10 to-transparent border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-transparent border-red-500/30'}`}>
+          <div>
+            <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('netProfit')}</p>
+            <p className={`text-2xl font-extrabold ${isNetPositive ? 'text-green-500' : 'text-red-500'}`}>{netValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p>
+          </div>
+          <TrendingUp size={36} className={isNetPositive ? 'text-green-500/20' : 'text-red-500/20'} />
+        </div>
+
+        {/* العداد والاستهلاك */}
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl">
           <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('odometer')}</p>
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1">
-              <input type="number" value={newOdo} onChange={(e) => setNewOdo(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveOdometer()} className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold outline-none" autoFocus />
-              <button type="button" onClick={handleSaveOdometer} className="text-green-500 p-1 bg-green-500/10 rounded"><Check size={14} /></button>
-              <button type="button" onClick={() => setIsEditingOdo(false)} className="text-red-500 p-1 bg-red-500/10 rounded"><X size={14} /></button>
+              <input type="number" value={newOdo} onChange={(e) => setNewOdo(e.target.value)} className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold outline-none" autoFocus />
+              <button onClick={handleSaveOdometer} className="text-green-500 p-1 bg-green-500/10 rounded"><Check size={14}/></button>
+              <button onClick={() => setIsEditingOdo(false)} className="text-red-500 p-1 bg-red-500/10 rounded"><X size={14}/></button>
             </div>
           ) : (
             <div className="flex items-center justify-between mt-1">
-              <p className="text-lg font-extrabold text-blue-500">{odometerValue.toLocaleString()} <span className="text-xs font-normal">{t('km')}</span></p>
-              <button type="button" onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-md"><Pencil size={14} /></button>
+              <p className="text-lg font-extrabold text-blue-500">{odometerValue.toLocaleString()}</p>
+              <button onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-blue-500/10 text-blue-500 rounded-md"><Pencil size={14}/></button>
             </div>
           )}
         </div>
 
-        {/* ✅ بطاقة متوسط الاستهلاك (تمت إعادتها) */}
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl">
           <p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('avgConsumption')}</p>
           <p className="text-lg font-extrabold text-yellow-500 flex items-center gap-1 mt-1">
@@ -139,12 +139,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* آخر العمليات */}
+      {/* آخر العمليات (مع تصميم Empty State احترافي) */}
       <div className="mt-4">
-        <h3 className="font-bold text-sm mb-2">{t('recentActivity')}</h3>
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-bold text-sm">{t('recentActivity')}</h3>
+          <Link to="/timeline" className="text-xs text-[var(--primary)] font-bold flex items-center">{t('viewAll')} <ChevronLeft size={14} className="rtl:rotate-0 ltr:rotate-180"/></Link>
+        </div>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
           {recentActivity.length === 0 ? (
-            <div className="p-6 text-center text-xs text-[var(--text-muted)]">{t('noData')}</div>
+            <div className="p-8 text-center flex flex-col items-center justify-center">
+              <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-3">
+                <Activity size={24} className="text-[var(--text-muted)]" />
+              </div>
+              <p className="text-sm font-bold text-[var(--text)] mb-2">{t('noData')}</p>
+              <Link to="/fuel" className="flex items-center gap-1 text-xs text-white bg-[var(--primary)] px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                <Plus size={14}/> {t('addFuel') || 'إضافة وقود'}
+              </Link>
+            </div>
           ) : (
             recentActivity.map((activity, index) => {
               const isFuel = activity.type === 'fuel';
@@ -154,7 +165,7 @@ export default function Dashboard() {
                 <div key={index} className="flex justify-between items-center p-3 border-b border-[var(--border)] last:border-0">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${isFuel ? 'bg-blue-500/10 text-blue-500' : isIncome ? 'bg-green-500/10 text-green-500' : 'bg-purple-500/10 text-purple-500'}`}>
-                      {isFuel ? <Fuel size={16} /> : isIncome ? <TrendingUp size={16} /> : <Wallet size={16} />}
+                      {isFuel ? <Fuel size={16}/> : isIncome ? <TrendingUp size={16}/> : <Wallet size={16}/>}
                     </div>
                     <div>
                       <p className="text-xs font-bold">{isFuel ? t('fuel') : isIncome ? t('income') : t('expense')}</p>
