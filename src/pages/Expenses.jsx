@@ -138,7 +138,10 @@ export default function Expenses() {
         </div>
       )}
 
-      <button type="button" onClick={openAddModal} className="fixed bottom-24 right-6 rtl:left-6 w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"><Plus size={28} /></button>
+      {/* ✅ إصلاح: إخفاء الزر العائم عندما تكون القائمة فارغة لمنع التداخل */}
+      {records.length > 0 && (
+        <button type="button" onClick={openAddModal} className="fixed bottom-24 right-6 rtl:left-6 w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"><Plus size={28} /></button>
+      )}
 
       <ConfirmModal isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('confirmDelete')} message={t('confirmDeleteMsg')} variant="danger" confirmText={t('confirmDeleteBtn')} />
 
