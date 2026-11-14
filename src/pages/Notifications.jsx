@@ -1,11 +1,10 @@
 import { useContext, useMemo, useState, useCallback } from 'react';
-import { AppContext } from '../context/AppContext';
-import { notificationService } from '../services/notificationService'; 
+import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
+import { notificationService } from '../services/notificationService.js'; // ✅ إضافة .js
 import { AlertTriangle, Info, Trash2, Check, ShieldAlert, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// ✅ 1. تحديث المسار إلى الهيكل الجديد (Shared)
-import ConfirmModal from '../shared/components/ui/ConfirmModal';
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx'; // ✅ إضافة .jsx
 
 const READ_IDS_KEY = 'read_notifications';
 const DISMISSED_IDS_KEY = 'dismissed_notifications';
@@ -40,7 +39,6 @@ const safeIdsFromStorage = (key) => {
 
 const saveIds = (key, ids) => {
   try {
-    // ✅ الرياضيات: الاحتفاظ بآخر 200 معرف فقط (FIFO)
     const unique = [...new Set(ids)].slice(-MAX_TRACKED_IDS);
     localStorage.setItem(key, JSON.stringify(unique));
     return unique;
@@ -109,12 +107,12 @@ export default function Notifications() {
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text)]">
-            {t('notifications')}
+            {t('notifications') || 'مركز التنبيهات'}
           </h1>
           <p className="text-xs text-[var(--text-muted)] mt-1">
             {unreadCount > 0 
-              ? `${unreadCount} ${t('unread')}`
-              : t('allUnderControl')}
+              ? `${unreadCount} ${t('unread') || 'جديد'}`
+              : (t('allUnderControl') || 'كل شيء تحت السيطرة')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -123,8 +121,8 @@ export default function Notifications() {
               <button 
                 type="button"
                 onClick={markAllRead} 
-                aria-label={t('markAllRead')}
-                title={t('markAllRead')}
+                aria-label={t('markAllRead') || 'تحديد الكل كمقروء'}
+                title={t('markAllRead') || 'تحديد الكل كمقروء'}
                 disabled={unreadCount === 0}
                 className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-green-500 disabled:opacity-50 disabled:hover:text-[var(--text-muted)] transition-colors"
               >
@@ -133,8 +131,8 @@ export default function Notifications() {
               <button 
                 type="button"
                 onClick={() => setShowClearModal(true)} 
-                aria-label={t('clearAll')}
-                title={t('clearAll')}
+                aria-label={t('clearAll') || 'مسح الكل'}
+                title={t('clearAll') || 'مسح الكل'}
                 className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-red-500 transition-colors"
               >
                 <Trash2 size={18} aria-hidden="true" />
@@ -147,14 +145,17 @@ export default function Notifications() {
       {/* قائمة التنبيهات */}
       {visibleNotifications.length === 0 ? (
         <div className="text-center text-[var(--text-muted)] mt-24 flex flex-col items-center animate-fade-in">
-          <div className="p-5 bg-green-500/10 rounded-full mb-4">
-            <ShieldAlert size={56} className="text-green-500 opacity-80" aria-hidden="true" />
+          <div className="relative w-24 h-24 flex items-center justify-center mb-6">
+            <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-50"></div>
+            <div className="relative w-20 h-20 bg-[var(--surface-2)] rounded-full flex items-center justify-center border border-[var(--border)]">
+              <ShieldAlert size={40} className="text-green-500" aria-hidden="true" />
+            </div>
           </div>
           <h3 className="text-lg font-bold text-[var(--text)] mb-2">
-            {t('allSafe')}
+            {t('allSafe') || 'سيارتك في أمان تام'}
           </h3>
           <p className="text-sm max-w-xs">
-            {t('noNotifications')}
+            {t('noNotifications') || 'لا توجد تنبيهات حالياً.'}
           </p>
         </div>
       ) : (
@@ -201,11 +202,11 @@ export default function Notifications() {
         isOpen={showClearModal} 
         onClose={() => setShowClearModal(false)} 
         onConfirm={handleClearAllConfirm} 
-        title={t('clearAllNotifications')}
-        message={t('clearAllConfirmMsg')}
+        title={t('clearAllNotifications') || 'مسح جميع التنبيهات'}
+        message={t('clearAllConfirmMsg') || 'هل أنت متأكد من مسح جميع التنبيهات؟ لن تظهر مرة أخرى إلا عند إنشاء تنبيهات جديدة.'}
         variant="danger"
-        confirmText={t('confirmDeleteBtn')}
-        cancelText={t('cancel')}
+        confirmText={t('confirmDeleteBtn') || 'حذف'}
+        cancelText={t('cancel') || 'إلغاء'}
       />
     </div>
   );
