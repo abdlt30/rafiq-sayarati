@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Car, ShieldCheck, Mail } from 'lucide-react';
-import { AppContext } from '../context/AppContext';
+import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx لضمان نجاح Vite Build
 
 // ⚠️ مهم جداً: يجب أن تكون هذه القيم حقيقية قبل النشر على Google Play
 const APP_VERSION = '1.0.0';
@@ -31,7 +31,7 @@ export default function About() {
         <button 
           type="button"
           onClick={handleBack} 
-          aria-label={t('back')}
+          aria-label={t('back') || 'رجوع'}
           className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] active:scale-90 transition-transform"
         >
           {lang === 'ar' 
@@ -39,35 +39,38 @@ export default function About() {
             : <ArrowLeft size={20} aria-hidden="true" />}
         </button>
         <h1 className="text-2xl font-bold text-[var(--text)]">
-          {t('aboutApp')}
+          {t('aboutApp') || 'حول التطبيق'}
         </h1>
       </div>
 
-      {/* بطاقة الشعار */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] p-6 rounded-3xl text-center shadow-sm">
-        <div className="w-20 h-20 bg-[var(--primary)]/10 text-[var(--primary)] rounded-full flex items-center justify-center mx-auto mb-4">
-          <Car size={40} aria-hidden="true" />
-        </div>
-        <h2 className="text-2xl font-extrabold text-[var(--text)] mb-2">
-          {t('appName')}
-        </h2>
-        <p className="text-sm text-[var(--text-muted)] mb-6 font-mono">
-          v{APP_VERSION}
-        </p>
-        
-        <div className="flex items-center justify-center gap-2 text-xs text-green-500 font-bold bg-green-500/10 py-2 px-4 rounded-full w-fit mx-auto">
-          <ShieldCheck size={16} aria-hidden="true" />
-          <span>{t('dataSecureLocally')}</span>
+      {/* بطاقة الشعار (بتصميم أكثر حداثة) */}
+      <div className="bg-gradient-to-br from-[var(--primary)]/5 to-[var(--surface)] border border-[var(--border)] p-6 rounded-3xl text-center shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)]/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+        <div className="relative z-10">
+          <div className="w-20 h-20 bg-[var(--primary)]/10 text-[var(--primary)] rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-[var(--primary)]/20">
+            <Car size={40} aria-hidden="true" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-[var(--text)] mb-2">
+            {t('appName') || 'رفيق سيارتي'}
+          </h2>
+          <p className="text-sm text-[var(--text-muted)] mb-6 font-mono">
+            v{APP_VERSION}
+          </p>
+          
+          <div className="flex items-center justify-center gap-2 text-xs text-green-500 font-bold bg-green-500/10 py-2 px-4 rounded-full w-fit mx-auto border border-green-500/20">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <span>{t('dataSecureLocally') || 'بياناتك آمنة ومحفوظة محلياً'}</span>
+          </div>
         </div>
       </div>
 
       {/* وصف التطبيق */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl text-sm text-[var(--text-muted)] leading-relaxed">
+      <div className="bg-[var(--surface)] border border-[var(--border)] p-5 rounded-2xl text-sm text-[var(--text-muted)] leading-relaxed shadow-sm">
         <p className="mb-3">
-          {t('appDescription1')}
+          {t('appDescription1') || 'تطبيق "رفيق سيارتي" هو رفيقك الذكي لإدارة كل ما يتعلق بسيارتك. من تتبع المصاريف والوقود، إلى تذكيرات الصيانة والوثائق.'}
         </p>
         <p>
-          {t('appDescription2')}
+          {t('appDescription2') || 'تم تصميم هذا التطبيق ليكون سريعاً، آمناً، وسهل الاستخدام، ليوفر عليك الوقت والمال.'}
         </p>
       </div>
 
@@ -81,18 +84,19 @@ export default function About() {
         >
           <div className="flex items-center gap-3">
             <ShieldCheck size={18} className="text-blue-500" aria-hidden="true" />
-            <span className="text-sm font-bold text-[var(--text)]">{t('privacyPolicy')}</span>
+            <span className="text-sm font-bold text-[var(--text)]">{t('privacyPolicy') || 'سياسة الخصوصية'}</span>
           </div>
-          <span className="text-[10px] text-[var(--text-muted)]">{t('opensInBrowser')}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{t('opensInBrowser') || 'يفتح في المتصفح'}</span>
         </a>
 
         <a 
           href={`mailto:${DEVELOPER_EMAIL}`}
+          aria-label={`${t('contactDeveloper') || 'التواصل مع المطور'} ${DEVELOPER_EMAIL}`}
           className="flex items-center justify-between p-4 hover:bg-[var(--surface-2)] transition-colors"
         >
           <div className="flex items-center gap-3">
             <Mail size={18} className="text-orange-500" aria-hidden="true" />
-            <span className="text-sm font-bold text-[var(--text)]">{t('contactDeveloper')}</span>
+            <span className="text-sm font-bold text-[var(--text)]">{t('contactDeveloper') || 'التواصل مع المطور'}</span>
           </div>
           <span className="text-[10px] text-[var(--text-muted)] font-mono">{DEVELOPER_EMAIL}</span>
         </a>
@@ -100,7 +104,7 @@ export default function About() {
 
       {/* تذييل */}
       <p className="text-center text-[10px] text-[var(--text-muted)] mt-8">
-        {t('madeWithLove')} <span aria-hidden="true">❤️</span>
+        {t('madeWithLove') || 'صُنع بكل حب لخدمة سيارتك'} <span aria-hidden="true">❤️</span>
       </p>
     </div>
   );
