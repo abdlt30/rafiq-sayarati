@@ -1,15 +1,14 @@
 import { useContext, useRef, useState, useEffect, useCallback } from 'react';
-import { AppContext } from '../context/AppContext';
-import { dbService } from '../services/dbService';
+import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
+import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
 import { useNavigate } from 'react-router-dom'; 
 import { 
   FileSpreadsheet, FileText, X, CheckCircle, AlertTriangle, ChevronRight, Settings as SettingsIcon
 } from 'lucide-react'; 
 
-// ✅ 1. استيراد الدالة المشتركة
-import { safeNumber } from '../shared/utils/safeNumber';
+import { safeNumber } from '../shared/utils/safeNumber.js'; // ✅ إضافة .js
 
-/* ✅ 2. حماية CSV من الحقن (CSV Injection) */
+/* ✅ حماية CSV من الحقن (CSV Injection) */
 const escapeCSV = (value) => {
   if (value === null || value === undefined) return '""';
   let str = String(value);
@@ -47,24 +46,30 @@ export default function Backup() {
     return `${amount} ${unit}`;
   };
 
-  /* ✅ 3. تصدير CSV (محمي + محصّن) */
-  const exportCSV = () => {
+  /* ✅ تصدير CSV (محمي + محصّن + غير متزامن) */
+  const exportCSV = async () => { // ✅ إضافة async
     if (!currentCar) return;
     
     try {
       const carIdStr = String(currentCar.id);
       
-      const fuel = (dbService.getFuel() || [])
+      // ✅ إصلاح حرج: إضافة await لجلب البيانات من IndexedDB
+      const allFuel = await dbService.getFuel();
+      const allMaint = await dbService.getMaintenance();
+      const allExp = await dbService.getExpenses();
+      const allInc = await dbService.getIncomes();
+
+      const fuel = (allFuel || [])
         .filter(f => String(f.carId) === carIdStr)
         .map(f => ({ 
           date: f.date, 
-          type: f.energyType === 'electricity' ? t('chargingSession') : t('fuel'),
+          type: f.energyType === 'electricity' ? (t('chargingSession') || 'شحن') : (t('fuel') || 'وقود'),
           amount: safeNumber(f.cost), 
           odometer: safeNumber(f.odometer), 
           notes: getFuelInfo(f)
         }));
         
-      const maint = (dbService.getMaintenance() || [])
+      const maint = (allMaint || [])
         .filter(m => String(m.carId) === carIdStr)
         .map(m => ({ 
           date: m.date, 
@@ -74,7 +79,7 @@ export default function Backup() {
           notes: '' 
         }));
         
-      const exp = (dbService.getExpenses() || [])
+      const exp = (allExp || [])
         .filter(e => String(e.carId) === carIdStr)
         .map(e => ({ 
           date: e.date, 
@@ -84,7 +89,7 @@ export default function Backup() {
           notes: '' 
         }));
         
-      const inc = (dbService.getIncomes() || [])
+      const inc = (allInc || [])
         .filter(i => String(i.carId) === carIdStr)
         .map(i => ({ 
           date: i.date, 
@@ -99,12 +104,12 @@ export default function Backup() {
       );
 
       const headers = [
-        t('date'), 
-        t('type'), 
-        t('amount'), 
-        t('currency'), 
-        t('odometer'), 
-        t('notes')
+        t('date') || 'التاريخ', 
+        t('type') || 'النوع', 
+        t('amount') || 'المبلغ', 
+        t('currency') || 'العملة', 
+        t('odometer') || 'العداد', 
+        t('notes') || 'ملاحظات'
       ];
       const csvRows = [headers.map(escapeCSV).join(',')];
 
@@ -130,13 +135,13 @@ export default function Backup() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      // ✅ تأجيل revoke لضمان اكتمال التنزيل
+      
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-      showToast('success', t('excelSuccess'));
+      showToast('success', t('excelSuccess') || 'تم التصدير بنجاح');
     } catch (error) {
       console.error("CSV Error:", error);
-      showToast('error', t('errorExport'));
+      showToast('error', t('errorExport') || 'فشل التصدير');
     }
   };
 
@@ -153,7 +158,7 @@ export default function Backup() {
           <button 
             type="button"
             onClick={() => setToast({ show: false, type: '', message: '' })} 
-            aria-label={t('close')}
+            aria-label={t('close') || 'إغلاق'}
             className="ml-2 opacity-70 hover:opacity-100"
           >
             <X size={16} aria-hidden="true" />
@@ -163,7 +168,7 @@ export default function Backup() {
 
       {/* الشريط العلوي */}
       <div className="sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10 mb-4">
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('exportCenter')}</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('exportCenter') || 'مركز التصدير'}</h1>
       </div>
 
       {/* مركز التصدير */}
@@ -180,8 +185,8 @@ export default function Backup() {
               <FileText size={18} aria-hidden="true" />
             </div>
             <div className="text-start">
-              <p className="text-sm font-bold text-[var(--text)]">{t('pdfReport')}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">{t('pdfReportDesc')}</p>
+              <p className="text-sm font-bold text-[var(--text)]">{t('pdfReport') || 'تقرير PDF'}</p>
+              <p className="text-[10px] text-[var(--text-muted)]">{t('pdfReportDesc') || 'تصدير البيانات كتقرير للطباعة'}</p>
             </div>
           </div>
           <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" aria-hidden="true" />
@@ -198,8 +203,8 @@ export default function Backup() {
               <FileSpreadsheet size={18} aria-hidden="true" />
             </div>
             <div className="text-start">
-              <p className="text-sm font-bold text-[var(--text)]">{t('excelExport')}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">{t('excelExportDesc')}</p>
+              <p className="text-sm font-bold text-[var(--text)]">{t('excelExport') || 'جدول بيانات (Excel)'}</p>
+              <p className="text-[10px] text-[var(--text-muted)]">{t('excelExportDesc') || 'تصدير كامل السجلات بصيغة CSV'}</p>
             </div>
           </div>
           <ChevronRight size={18} className="text-[var(--text-muted)] rtl:rotate-180" aria-hidden="true" />
@@ -211,17 +216,17 @@ export default function Backup() {
         <SettingsIcon className="text-blue-500 flex-shrink-0" size={20} aria-hidden="true" />
         <div>
           <p className="text-sm font-bold text-[var(--text)] mb-1">
-            {t('systemBackup')}
+            {t('systemBackup') || 'النسخة الاحتياطية للنظام'}
           </p>
           <p className="text-xs text-[var(--text-muted)] mb-3">
-            {t('backupMovedMsg')}
+            {t('backupMovedMsg') || 'تم نقل ميزة حفظ واستعادة البيانات (JSON) إلى صفحة الإعدادات لتوحيد التجربة.'}
           </p>
           <button 
             type="button"
             onClick={() => navigate('/settings')} 
             className="bg-[var(--primary)] text-white text-xs font-bold px-4 py-2 rounded-lg active:scale-95 transition-transform"
           >
-            {t('goToSettings')}
+            {t('goToSettings') || 'الذهاب إلى الإعدادات'}
           </button>
         </div>
       </div>
