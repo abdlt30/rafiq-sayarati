@@ -55,10 +55,11 @@ export default function Vehicles() {
     setDeleteId(id); 
   };
 
+  // ✅ إصلاح حرج: تحويل الدالة إلى async واستخدام await لدالة الحذف
   const handleConfirmDelete = async () => {
     if (!deleteId) return;
     try {
-      const ok = deleteCar(deleteId);
+      const ok = await deleteCar(deleteId); 
       if (ok === false) {
         showToast(t('errorSaving') || 'فشل حذف السيارة. تحقق من المساحة.', 'error');
       } else {
@@ -132,7 +133,7 @@ export default function Vehicles() {
       </div>
 
       {vehicles.length === 0 ? (
-        // ✅ تصميم حالة الفراغ المحدث (متطابق مع باقي الصفحات)
+        // ✅ تصميم حالة الفراغ المحدث
         <div className="flex flex-col items-center justify-center mt-20 p-6 text-center animate-fade-in">
           <div className="relative w-24 h-24 flex items-center justify-center mb-6">
             <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping opacity-50"></div>
