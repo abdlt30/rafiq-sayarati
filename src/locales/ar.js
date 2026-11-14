@@ -41,20 +41,21 @@ export const ar = {
   language: 'اللغة',
   exporting: 'جاري التصدير...',
   resetting: 'جاري المسح...',
+  loading: 'جاري التحميل...',
 
-  // ===================== Onboarding & Welcome =====================
-  welcomeMessagePart1: 'تحكم في مصاريف سيارتك، تابع صيانتها، ووفر',
-  welcomeMessagePart2: 'من ميزانيتك بذكاء.',
+  // ===================== Onboarding & Welcome (Updated Strategy) =====================
+  welcomeMessagePart1: 'تحكم في مصاريف سيارتك، تابع صيانتها،',
+  welcomeMessagePart2: 'وتمتع براحة البال.',
   startNow: 'ابدأ الآن',
   howToCallYou: 'كيف تحب أن نناديك؟',
   enterName: 'اكتب اسمك هنا...',
-  featureTrackExpenses: 'تتبع المصاريف بدقة',
-  featureTrackExpensesDesc: 'اعرف أين تذهب كل درهم تنفقه',
-  featureSmartAlerts: 'تنبيهات ذكية',
-  featureSmartAlertsDesc: 'لا تفوت موعد صيانة أو تجديد وثيقة',
-  featurePeaceOfMind: 'راحة بالك',
-  featurePeaceOfMindDesc: 'سيارتك دائماً في أتم الاستعداد',
-  privacyNoteShort: 'بياناتك محفوظة بخصوصية تامة على جهازك',
+  featureTrackExpenses: 'تتبع دقيق للمصاريف',
+  featureTrackExpensesDesc: 'اعرف أين يذهب كل درهم تنفقه بوضوح تام.',
+  featureSmartAlerts: 'تنبيهات استباقية',
+  featureSmartAlertsDesc: 'لا تفوت موعد تغيير الزيت أو تجديد التأمين.',
+  featurePeaceOfMind: 'خصوصية مطلقة',
+  featurePeaceOfMindDesc: 'بياناتك محفوظة على هاتفك، لا نرسلها لأي خادم.',
+  privacyNoteShort: 'بياناتك ملكك وحدك، محفوظة محلياً.',
   skip: 'تخطي',
   next: 'التالي',
   onboardingTitle1: 'تتبع كل درهم',
@@ -68,6 +69,7 @@ export const ar = {
   continueAsGuest: 'المتابعة كزائر',
   signInWithEmail: 'تسجيل الدخول بالبريد',
   dataPrivacyText: 'بياناتك تبقى على جهازك في وضع الزائر.',
+  guest: 'زائر',
 
   // ===================== Cars =====================
   addNewCar: 'إضافة سيارة',
@@ -153,6 +155,9 @@ export const ar = {
   maintenanceRecord: 'سجل الصيانة',
   completeMaintenance: 'إتمام الصيانة',
   evMaintenance: 'صيانة كهربائية',
+  proactiveMaintenance: 'صيانة استباقية',
+  totalMaintenanceCost: 'إجمالي مصاريف الصيانة',
+  typeAlreadyExists: 'هذا النوع موجود بالفعل',
   
   // Maintenance Types
   oilChange: 'تغيير زيت',
@@ -194,6 +199,7 @@ export const ar = {
   fines: 'مخالفات مرورية',
   parking: 'رسوم مواقف',
   other: 'أخرى',
+  trackExpenses: 'تتبع كل درهم',
   
   income: 'الإيرادات',
   totalIncome: 'إجمالي الإيرادات',
@@ -210,6 +216,7 @@ export const ar = {
   incomeNotesPlaceholder: 'مثال: رحلة إلى المطار...',
   incomeLog: 'سجل الإيرادات',
   otherExpensesLog: 'سجل المصاريف الأخرى',
+  trackIncome: 'تتبع أرباحك',
 
   // ===================== Documents =====================
   documents: 'الوثائق',
@@ -237,6 +244,7 @@ export const ar = {
   imageTooLarge: 'حجم الصورة كبير جداً. الحد 5 ميجابايت.',
   imageProcessingFailed: 'تعذر معالجة الصورة. جرّب صورة أخرى.',
   invalidDate: 'تاريخ غير صالح.',
+  secureDocuments: 'وثائقك في أمان',
 
   // ===================== Reminders & Alerts =====================
   reminders: 'التذكيرات',
@@ -258,6 +266,8 @@ export const ar = {
   done: 'إنجاز',
   confirmQuickDone: 'هل أنت متأكد من إتمام: {title}؟\nسيتم حذف {target} نهائياً.',
   viewDetails: 'عرض التفاصيل',
+  startYourJourney: 'ابدأ رحلتك!',
+  noFuelRecordsDesc: 'سجل أول تعبئة لتتمكن من تتبع استهلاكك وتوفير المال.',
 
   // ===================== Notifications =====================
   notifications: 'مركز التنبيهات',
@@ -289,6 +299,8 @@ export const ar = {
   timeline: 'سجل السيارة',
   carTimeline: 'سجل السيارة',
   confirmLowerOdometer: 'العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟',
+  carDetails: 'تفاصيل السيارة',
+  carHealth: 'حالة السيارة',
 
   // ===================== Reports & Print =====================
   reports: 'التقارير',
@@ -300,6 +312,7 @@ export const ar = {
   totalFuelCost: 'إجمالي الوقود',
   expenseDistribution: 'توزيع المصاريف',
   monthlyExpenses: 'المصاريف الشهرية',
+  monthlyTrend: 'المصاريف الشهرية',
   netProfit: 'صافي الربح',
   category: 'الفئة',
   percentage: 'النسبة',
@@ -309,6 +322,7 @@ export const ar = {
   maintenanceLog: 'سجل الصيانة',
   pdfReport: 'تقرير PDF',
   noChartData: 'لا توجد بيانات كافية للرسم البياني',
+  noDataForChart: 'لا توجد بيانات كافية لإنشاء الرسم البياني',
   addMoreRecords: 'أضف المزيد من السجلات لعرض التحليلات',
   printPdf: 'طباعة / PDF',
   printReport: 'طباعة التقرير',
@@ -325,13 +339,17 @@ export const ar = {
   enterCost: 'أدخل التكلفة',
   date: 'التاريخ',
   notes: 'ملاحظات',
+  fuelLabel: 'وقود',
+  maintenanceLabel: 'صيانة',
+  expensesLabel: 'مصاريف أخرى',
+  incomeLabel: 'إيرادات',
 
   // ===================== Valuation =====================
   valuation: 'تقييم السيارة',
   resale: 'تقييم السيارة',
   valuationDesc: 'أدخل بيانات السيارة لحساب القيمة السوقية التقديرية بناءً على معادلة الاستهلاك المحلية (العمر، المسافة، الحالة).',
   purchasePrice: 'سعر الشراء الأصلي',
-  priceHelper: 'أدخل المبلغ بالدرهم المغربي',
+  priceHelper: 'أدخل المبلغ',
   carCondition: 'حالة السيارة الحالية',
   conditionExcellent: 'ممتازة',
   conditionGood: 'جيدة',
@@ -398,6 +416,7 @@ export const ar = {
   backupAndExport: 'النسخ الاحتياطي والتصدير',
   exportCenter: 'مركز التصدير',
   excelExport: 'جدول بيانات (Excel)',
+  excelExportDesc: 'تصدير كامل السجلات بصيغة CSV',
   printData: 'طباعة مباشرة',
   systemBackup: 'النسخة الاحتياطية للنظام',
   excelSuccess: 'تم تصدير جدول البيانات بنجاح!',
@@ -456,15 +475,18 @@ export const ar = {
 
   // ===================== Export Center =====================
   backupMovedMsg: 'تم نقل ميزة حفظ واستعادة البيانات (JSON) إلى صفحة الإعدادات لتوحيد التجربة.',
-  goToSettings: 'الذهاب إلى الإعدادات', // ✅ إصلاح حرج: تمت إضافة الفاصلة هنا
+  goToSettings: 'الذهاب إلى الإعدادات',
 
-  // ===================== Added Keys =====================
-  totalMaintenanceCost: 'إجمالي مصاريف الصيانة',
-  proactiveMaintenance: 'صيانة استباقية',
-  trackExpenses: 'تتبع كل درهم',
-  trackIncome: 'تتبع أرباحك',
-  startYourJourney: 'ابدأ رحلتك!',
-  noFuelRecordsDesc: 'سجل أول تعبئة لتتمكن من تتبع استهلاكك وتوفير المال.',
-  secureDocuments: 'وثائقك في أمان',
-  carDetails: 'تفاصيل السيارة'
+  // ===================== Roadside Assistance (New) =====================
+  roadsideAssistance: 'المساعدة على الطريق',
+  emergencySOS: 'إنقاذ طارئ (SOS)',
+  findRepairShop: 'أقرب ورشة إصلاح',
+  findSpareParts: 'محلات قطع الغيار',
+  requestTowing: 'طلب سحب (سطحة)',
+  searchingHelp: 'جاري البحث عن أقرب مساعدة...',
+  noHelpFound: 'لم يتم العثور على ورش قريبة. يرجى المحاولة في منطقة أخرى.',
+  call: 'اتصال',
+  navigate: 'اتجاهات',
+  locationRequired: 'نحتاج لتفعيل الموقع للعثور على المساعدة القريبة.',
+  helpDesc: 'سيارة معطلة؟ اضغط هنا للعثور على أقرب ورشة أو سطحة إنقاذ فوراً.'
 };
