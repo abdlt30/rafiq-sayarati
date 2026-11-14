@@ -1,23 +1,21 @@
 import { useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
+import { AppContext } from '../context/AppContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import localforage from 'localforage'; // ✅ استيراد قاعدة البيانات مباشرة للنسخ الاحتياطي
+import localforage from 'localforage';
 import { 
   Moon, Sun, Globe, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, 
   ShieldCheck, Database, BellRing, CheckCircle, XCircle, 
   Download, Upload, AlertCircle, Info, Trash2, X, Loader2
 } from 'lucide-react';
 
-import CurrencySelector from '../shared/components/ui/CustomSelect.jsx'; // ✅ إضافة .jsx
-import { pushService } from '../services/pushService.js'; // ✅ إضافة .js
+import CurrencySelector from '../shared/components/ui/CustomSelect.jsx';
+import { pushService } from '../services/pushService.js';
 
 const APP_VERSION = '1.0.0';
-const BACKUP_VERSION = 2; // ✅ تم رفع الإصدار لأن الهيكلة تغيرت
+const BACKUP_VERSION = 2;
 
-// ✅ إعداد قاعدة البيانات للوصول المباشر للنسخ الاحتياطي
 const db = localforage.createInstance({ name: 'RafiqSayaratiDB', storeName: 'appData' });
 
-// مفاتيح الـ LocalStorage (للإعدادات فقط)
 const LOCAL_STORAGE_KEYS = {
   vehicles: 'vehicles',
   savedCar: 'savedCar',
@@ -28,7 +26,6 @@ const LOCAL_STORAGE_KEYS = {
   notificationsEnabled: 'notificationsEnabled',
 };
 
-// مفاتيح قاعدة البيانات IndexedDB (للسجلات والبيانات الضخمة)
 const INDEXED_DB_KEYS = [
   'fuel_records', 'expenses_records', 'maintenance_records', 
   'documents_records', 'reminders_records', 'income_records', 'custom_maintenance_types'
@@ -59,7 +56,6 @@ export default function Settings() {
   const [pushPermission, setPushPermission] = useState(readPushPermission);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   
-  // ✅ حالات التحميل للعمليات الثقيلة
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -75,12 +71,9 @@ export default function Settings() {
 
   /* ===================== Toast ===================== */
   const showToast = useCallback((message, type = 'error') => {
-    // ✅ إصلاح: إلغاء المؤقت السابق لمنع تداخل الرسائل
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 4000);
+    toastTimeoutRef.current = setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   }, []);
 
   useEffect(() => () => {
@@ -138,7 +131,6 @@ export default function Settings() {
     try {
       const backupData = { localStorage: {}, indexedDB: {} };
 
-      // 1. جلب إعدادات واجهة المستخدم من LocalStorage
       Object.entries(LOCAL_STORAGE_KEYS).forEach(([key, storageKey]) => {
         try {
           const raw = localStorage.getItem(storageKey);
@@ -148,7 +140,6 @@ export default function Settings() {
         } catch {}
       });
 
-      // 2. جلب السجلات من IndexedDB (البيانات الحقيقية)
       for (const key of INDEXED_DB_KEYS) {
         const data = await db.getItem(key);
         if (data) backupData.indexedDB[key] = data;
@@ -161,7 +152,6 @@ export default function Settings() {
         data: backupData,
       };
 
-      // 3. تنزيل الملف
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -191,7 +181,7 @@ export default function Settings() {
   const handleImportFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 15 * 1024 * 1024) { // ✅ زيادة الحد إلى 15 ميجا بسبب البيانات
+    if (file.size > 15 * 1024 * 1024) {
       showToast(t('importError') || 'الملف كبير جداً', 'error');
       e.target.value = null;
       return;
@@ -201,7 +191,6 @@ export default function Settings() {
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target.result);
-        // ✅ التحقق من الهيكلة الجديدة
         if (!parsed || !parsed.data || !parsed.data.localStorage || !parsed.data.indexedDB) {
           return showToast(t('importVersionMismatch') || 'ملف غير متوافق', 'error');
         }
@@ -221,7 +210,6 @@ export default function Settings() {
     try {
       const { localStorage: lsData, indexedDB: idbData } = importConfirm.parsed.data;
 
-      // 1. استعادة LocalStorage
       Object.entries(lsData).forEach(([key, value]) => {
         const storageKey = LOCAL_STORAGE_KEYS[key];
         if (storageKey) {
@@ -230,7 +218,6 @@ export default function Settings() {
         }
       });
 
-      // 2. استعادة IndexedDB
       for (const [key, value] of Object.entries(idbData)) {
         if (INDEXED_DB_KEYS.includes(key)) {
           await db.setItem(key, value);
@@ -256,11 +243,8 @@ export default function Settings() {
   const handleResetAll = async () => {
     setIsResetting(true);
     try {
-      // 1. مسح LocalStorage
       Object.values(LOCAL_STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
       localStorage.removeItem('lastBackupDate');
-      
-      // 2. مسح IndexedDB بالكامل (الطريقة الآمنة)
       await db.clear();
 
       showToast(t('resetSuccess') || 'تم مسح البيانات', 'success');
@@ -304,7 +288,7 @@ export default function Settings() {
         <button type="button" onClick={handleBack} className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">
           {lang === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
         </button>
-        <h1 className="text-2xl font-bold text-[var(--text)]">{t('settings')}</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{t('settings') || 'الإعدادات'}</h1>
       </div>
       
       {/* 1. المظهر */}
@@ -314,7 +298,7 @@ export default function Settings() {
             {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
           </div>
           <span className="font-bold text-sm text-[var(--text)]">
-            {theme === 'dark' ? t('darkMode') : t('lightMode')}
+            {theme === 'dark' ? (t('darkMode') || 'الوضع الداكن') : (t('lightMode') || 'الوضع الفاتح')}
           </span>
         </div>
         <button type="button" onClick={toggleTheme} className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}>
@@ -328,7 +312,7 @@ export default function Settings() {
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><Globe size={18} /></div>
             <div className="text-start">
-              <span className="font-bold text-sm text-[var(--text)] block">{t('preferences')}</span>
+              <span className="font-bold text-sm text-[var(--text)] block">{t('preferences') || 'التفضيلات الإقليمية'}</span>
               <span className="text-[10px] text-[var(--text-muted)] mt-0.5 block font-mono tracking-wider">{lang.toUpperCase()} • {currency}</span>
             </div>
           </div>
@@ -338,7 +322,7 @@ export default function Settings() {
         {isPrefsOpen && (
           <div className="p-3.5 border-t border-[var(--border)] space-y-5 bg-[var(--surface-2)]/30">
             <div>
-              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5"><Globe size={12} /> {t('language')}</label>
+              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5"><Globe size={12} /> {t('language') || 'اللغة'}</label>
               <div className="flex gap-1.5 bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)]">
                 {['ar', 'en', 'fr'].map(l => (
                   <button key={l} type="button" onClick={() => changeLang(l)} className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${lang === l ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>
@@ -348,7 +332,7 @@ export default function Settings() {
               </div>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5"><span className="text-sm font-bold">$</span> {t('currency')}</label>
+              <label className="text-[11px] font-bold text-[var(--text-muted)] mb-2 block flex items-center gap-1.5"><span className="text-sm font-bold">$</span> {t('currency') || 'العملة'}</label>
               <CurrencySelector currentCurrency={currency} onSelect={setCurrency} />
             </div>
           </div>
@@ -361,8 +345,8 @@ export default function Settings() {
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-[var(--surface-2)] text-[var(--primary)]"><BellRing size={18} /></div>
             <div>
-              <span className="font-bold text-sm text-[var(--text)] block">{t('externalNotifications')}</span>
-              <span className="text-[10px] text-[var(--text-muted)]">{t('notificationsSubtitle')}</span>
+              <span className="font-bold text-sm text-[var(--text)] block">{t('externalNotifications') || 'الإشعارات الخارجية'}</span>
+              <span className="text-[10px] text-[var(--text-muted)]">{t('notificationsSubtitle') || 'تنبيهات تظهر على شاشة هاتفك'}</span>
             </div>
           </div>
           <button type="button" onClick={() => setNotificationsEnabled(!notificationsEnabled)} className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${notificationsEnabled ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}>
@@ -371,11 +355,11 @@ export default function Settings() {
         </div>
 
         <div className="pt-3 border-t border-[var(--border)] flex justify-between items-center text-xs">
-          <span className="text-[var(--text-muted)]">{t('browserPermission')}</span>
-          {pushPermission === 'granted' && <span className="flex items-center gap-1 text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded-md"><CheckCircle size={14} /> {t('granted')}</span>}
-          {pushPermission === 'default' && <button type="button" onClick={handleEnablePush} className="bg-[var(--primary)] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-600 transition-colors">{t('requestPermission')}</button>}
-          {pushPermission === 'denied' && <span className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded-md"><XCircle size={14} /> {t('denied')}</span>}
-          {pushPermission === 'unsupported' && <span className="flex items-center gap-1 text-slate-500 font-bold bg-slate-500/10 px-2 py-1 rounded-md"><Info size={14} /> {t('unsupported')}</span>}
+          <span className="text-[var(--text-muted)]">{t('browserPermission') || 'حالة الإذن من المتصفح:'}</span>
+          {pushPermission === 'granted' && <span className="flex items-center gap-1 text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded-md"><CheckCircle size={14} /> {t('granted') || 'مفعّل'}</span>}
+          {pushPermission === 'default' && <button type="button" onClick={handleEnablePush} className="bg-[var(--primary)] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-600 transition-colors">{t('requestPermission') || 'طلب الإذن'}</button>}
+          {pushPermission === 'denied' && <span className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded-md"><XCircle size={14} /> {t('denied') || 'مرفوض'}</span>}
+          {pushPermission === 'unsupported' && <span className="flex items-center gap-1 text-slate-500 font-bold bg-slate-500/10 px-2 py-1 rounded-md"><Info size={14} /> {t('unsupported') || 'غير مدعوم'}</span>}
         </div>
       </div>
 
@@ -383,13 +367,13 @@ export default function Settings() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-3">
           <Database size={18} className="text-[var(--primary)]" />
-          <h2 className="font-bold text-sm text-[var(--text)]">{t('backupAndExport')}</h2>
+          <h2 className="font-bold text-sm text-[var(--text)]">{t('backupAndExport') || 'النسخ الاحتياطي والتصدير'}</h2>
         </div>
 
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">{t('backupDesc')}</p>
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">{t('backupDesc') || 'بياناتك محفوظة على هاتفك فقط. قم بتصديرها كملف احتياطي لضمان عدم ضياعها.'}</p>
 
         <div className="text-[11px] text-[var(--text-muted)] mb-3 flex justify-between items-center">
-          <span>{t('lastBackup')}</span>
+          <span>{t('lastBackup') || 'آخر نسخة احتياطية:'}</span>
           <span className="font-bold text-[var(--text)]">{lastBackupDisplay}</span>
         </div>
 
@@ -401,7 +385,7 @@ export default function Settings() {
             className="w-full bg-[var(--primary)] text-white font-bold py-3 rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
           >
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-            {isExporting ? t('exporting') || 'جاري التصدير...' : t('exportDataBtn')}
+            {isExporting ? (t('exporting') || 'جاري التصدير...') : (t('exportDataBtn') || 'تصدير البيانات')}
           </button>
 
           <button 
@@ -410,7 +394,7 @@ export default function Settings() {
             disabled={isImporting}
             className="w-full bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl hover:bg-[var(--surface)] border border-[var(--border)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Upload size={16} /> {t('importDataBtn')}
+            <Upload size={16} /> {t('importDataBtn') || 'استيراد البيانات'}
           </button>
 
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportFile} className="hidden" />
@@ -421,11 +405,11 @@ export default function Settings() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-2.5">
           <ShieldCheck size={18} className="text-green-500" />
-          <h2 className="font-bold text-sm text-[var(--text)]">{t('privacyAndSecurity')}</h2>
+          <h2 className="font-bold text-sm text-[var(--text)]">{t('privacyAndSecurity') || 'الخصوصية والأمان'}</h2>
         </div>
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">{t('privacyText')}</p>
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">{t('privacyText') || 'جميع بياناتك محفوظة على هاتفك فقط. نحن لا نجمع أي بيانات شخصية.'}</p>
         <div className="flex justify-between items-center pt-3 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)]">
-          <span className="flex items-center gap-1.5"><Database size={12} /> {t('version')}</span>
+          <span className="flex items-center gap-1.5"><Database size={12} /> {t('version') || 'الإصدار'}</span>
           <span className="font-mono bg-[var(--surface-2)] px-2 py-0.5 rounded-md">v{APP_VERSION}</span>
         </div>
       </div>
@@ -434,7 +418,7 @@ export default function Settings() {
       <div className="bg-[var(--surface)] border border-red-500/20 rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2.5 mb-2.5">
           <AlertCircle size={18} className="text-red-500" />
-          <h2 className="font-bold text-sm text-red-500">{t('dangerZone')}</h2>
+          <h2 className="font-bold text-sm text-red-500">{t('dangerZone') || 'منطقة الخطر'}</h2>
         </div>
         <button 
           type="button" 
@@ -443,7 +427,7 @@ export default function Settings() {
           className="w-full bg-red-500/10 text-red-500 font-bold py-3 rounded-xl hover:bg-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isResetting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />} 
-          {isResetting ? t('resetting') || 'جاري المسح...' : t('resetApp')}
+          {isResetting ? (t('resetting') || 'جاري المسح...') : (t('resetApp') || 'مسح جميع البيانات')}
         </button>
       </div>
 
@@ -451,13 +435,13 @@ export default function Settings() {
       {importConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] shadow-2xl">
-            <h3 className="text-lg font-bold text-center mb-3 text-[var(--text)]">{t('confirmImport')}</h3>
+            <h3 className="text-lg font-bold text-center mb-3 text-[var(--text)]">{t('confirmImport') || 'تأكيد الاستيراد'}</h3>
             <p className="text-xs text-[var(--text-muted)] mb-4 text-center">{importConfirm.fileName}</p>
-            <p className="text-xs text-red-500 mb-4 text-center font-bold">تحذير: سيتم استبدال جميع البيانات الحالية!</p>
+            <p className="text-xs text-red-500 mb-4 text-center font-bold">{t('importWarning') || 'تحذير: سيتم استبدال جميع البيانات الحالية!'}</p>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setImportConfirm(null)} disabled={isImporting} className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl disabled:opacity-50">{t('cancel')}</button>
+              <button type="button" onClick={() => setImportConfirm(null)} disabled={isImporting} className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl disabled:opacity-50">{t('cancel') || 'إلغاء'}</button>
               <button type="button" onClick={handleConfirmImport} disabled={isImporting} className="flex-1 bg-[var(--primary)] text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 disabled:opacity-50">
-                {isImporting ? <Loader2 size={16} className="animate-spin" /> : t('confirm')}
+                {isImporting ? <Loader2 size={16} className="animate-spin" /> : (t('confirm') || 'تأكيد')}
               </button>
             </div>
           </div>
@@ -467,12 +451,12 @@ export default function Settings() {
       {resetConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-red-500/30 shadow-2xl">
-            <h3 className="text-lg font-bold text-center mb-3 text-red-500">{t('confirmReset')}</h3>
-            <p className="text-xs text-[var(--text-muted)] mb-4 text-center">{t('resetWarning')}</p>
+            <h3 className="text-lg font-bold text-center mb-3 text-red-500">{t('confirmReset') || 'هل أنت متأكد؟'}</h3>
+            <p className="text-xs text-[var(--text-muted)] mb-4 text-center">{t('resetWarning') || 'سيتم حذف جميع السيارات والسجلات نهائياً. لا يمكن التراجع.'}</p>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setResetConfirm(false)} disabled={isResetting} className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl disabled:opacity-50">{t('cancel')}</button>
+              <button type="button" onClick={() => setResetConfirm(false)} disabled={isResetting} className="flex-1 bg-[var(--surface-2)] text-[var(--text)] font-bold py-3 rounded-xl disabled:opacity-50">{t('cancel') || 'إلغاء'}</button>
               <button type="button" onClick={handleResetAll} disabled={isResetting} className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 disabled:opacity-50">
-                {isResetting ? <Loader2 size={16} className="animate-spin" /> : t('confirmDeleteBtn')}
+                {isResetting ? <Loader2 size={16} className="animate-spin" /> : (t('confirmDeleteBtn') || 'حذف')}
               </button>
             </div>
           </div>
