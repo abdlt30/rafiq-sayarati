@@ -39,26 +39,27 @@ export const fr = {
   noResults: 'Aucun résultat trouvé',
   currency: 'Devise',
   language: 'Langue',
-  exporting: 'Exportation...', // ✅ Ajouté
-  resetting: 'Effacement...', // ✅ Ajouté
+  exporting: 'Exportation...',
+  resetting: 'Effacement...',
+  loading: 'Chargement...',
 
-  // ===================== Onboarding & Welcome =====================
-  welcomeMessagePart1: 'Contrôlez les dépenses de votre voiture, suivez son entretien et économisez',
-  welcomeMessagePart2: 'intelligemment sur votre budget.', // ✅ Amélioration de la fluidité
+  // ===================== Onboarding & Welcome (Updated Strategy) =====================
+  welcomeMessagePart1: 'Contrôlez les dépenses de votre voiture, suivez son entretien,',
+  welcomeMessagePart2: 'et vivez l\'esprit tranquille.',
   startNow: 'Commencer',
   howToCallYou: 'Comment devons-nous vous appeler ?',
   enterName: 'Entrez votre nom...',
-  featureTrackExpenses: 'Suivez vos dépenses avec précision',
-  featureTrackExpensesDesc: 'Sachez où va chaque dirham dépensé',
-  featureSmartAlerts: 'Alertes Intelligentes',
-  featureSmartAlertsDesc: 'Ne manquez jamais un entretien ou un renouvellement',
-  featurePeaceOfMind: 'Tranquillité d\'Esprit',
-  featurePeaceOfMindDesc: 'Votre voiture est toujours prête',
-  privacyNoteShort: 'Vos données restent privées sur votre appareil',
+  featureTrackExpenses: 'Suivi Précis des Dépenses',
+  featureTrackExpensesDesc: 'Sachez exactement où va chaque centime.',
+  featureSmartAlerts: 'Alertes Proactives',
+  featureSmartAlertsDesc: 'Ne manquez jamais une vidange ou un renouvellement d\'assurance.',
+  featurePeaceOfMind: 'Confidentialité Absolue',
+  featurePeaceOfMindDesc: 'Vos données restent sur votre appareil. Aucun serveur, aucun suivi.',
+  privacyNoteShort: 'Vos données vous appartiennent, stockées localement.',
   skip: 'Passer',
   next: 'Suivant',
   onboardingTitle1: 'Suivez chaque dirham',
-  onboardingDesc1: 'Enregistrez vos dépenses de carburant, d\'entretien et d\'assurance en un seul endroit. L\'application calcule le coût par kilomètre automatiquement.', // ✅ Phrase complétée
+  onboardingDesc1: 'Enregistrez vos dépenses de carburant, d\'entretien et d\'assurance en un seul endroit. L\'application calcule le coût par kilomètre automatiquement.',
   onboardingTitle2: 'Entretien Proactif',
   onboardingDesc2: 'N\'attendez pas la panne. Ajoutez des rappels pour l\'huile et les pneus.',
   onboardingTitle3: 'Ne manquez aucune date',
@@ -68,6 +69,7 @@ export const fr = {
   continueAsGuest: 'Continuer en tant qu\'invité',
   signInWithEmail: 'Connexion par e-mail',
   dataPrivacyText: 'Vos données restent sur votre appareil en mode invité.',
+  guest: 'Invité',
 
   // ===================== Cars =====================
   addNewCar: 'Ajouter Véhicule',
@@ -102,6 +104,8 @@ export const fr = {
   invalidYear: 'Veuillez saisir une année de fabrication valide.',
   deleteImage: 'Supprimer l\'image',
   addImage: 'Ajouter une image',
+  carDetails: 'Détails de la voiture',
+  carHealth: 'Santé de la voiture',
 
   // ===================== Powertrain =====================
   powertrain: 'Groupe Motopropulseur',
@@ -139,6 +143,8 @@ export const fr = {
   consumptionKwh100km: 'kWh/100km',
   avgConsumption: 'Consommation Moyenne',
   totalLiters: 'Total Litres',
+  noFuelRecordsDesc: 'Enregistrez votre premier plein pour commencer à suivre votre consommation et économiser de l\'argent.',
+  startYourJourney: 'Commencez votre voyage !',
 
   // ===================== Maintenance =====================
   maintenance: 'Entretien',
@@ -153,6 +159,9 @@ export const fr = {
   maintenanceRecord: 'Enregistrement d\'Entretien',
   completeMaintenance: 'Terminer l\'Entretien',
   evMaintenance: 'Entretien VE',
+  proactiveMaintenance: 'Entretien Proactif',
+  totalMaintenanceCost: 'Coût Total de l\'Entretien',
+  typeAlreadyExists: 'Ce type existe déjà.',
   
   // Maintenance Types
   oilChange: 'Vidange d\'huile',
@@ -194,6 +203,7 @@ export const fr = {
   fines: 'Amendes',
   parking: 'Stationnement',
   other: 'Autre',
+  trackExpenses: 'Suivez chaque centime',
   
   income: 'Revenus',
   totalIncome: 'Revenu Total',
@@ -210,15 +220,16 @@ export const fr = {
   incomeNotesPlaceholder: 'ex: Trajet aéroport...',
   incomeLog: 'Journal des Revenus',
   otherExpensesLog: 'Journal des Autres Dépenses',
+  trackIncome: 'Suivez vos revenus',
 
   // ===================== Documents =====================
   documents: 'Documents',
   addDocument: 'Ajouter Document',
   documentType: 'Type de document',
   endDate: 'Date d\'expiration',
-  expiryDate: 'Date d\'expiration', // ✅ Ajouté
-  registration: 'Carte Grise (Immatriculation)', // ✅ Ajouté
-  uploadImage: 'Prendre une photo ou télécharger', // ✅ Ajouté
+  expiryDate: 'Date d\'expiration',
+  registration: 'Carte Grise (Immatriculation)',
+  uploadImage: 'Prendre une photo ou télécharger',
   technicalInspection: 'Contrôle technique',
   license: 'Permis',
   expired: 'Expiré',
@@ -237,6 +248,7 @@ export const fr = {
   imageTooLarge: 'L\'image est trop volumineuse. Max 5 Mo.',
   imageProcessingFailed: 'Échec du traitement de l\'image. Réessayez.',
   invalidDate: 'Date invalide.',
+  secureDocuments: 'Vos documents sont en sécurité',
 
   // ===================== Reminders & Alerts =====================
   reminders: 'Rappels',
@@ -287,7 +299,7 @@ export const fr = {
   recentActivity: 'Activité Récente',
   upcomingMaintenance: 'Prochain Entretien',
   timeline: 'Historique',
-  carTimeline: 'Historique de la Voiture', // ✅ Ajouté
+  carTimeline: 'Historique de la Voiture',
   confirmLowerOdometer: 'Le nouveau compteur est inférieur à l\'actuel. Êtes-vous sûr ?',
 
   // ===================== Reports & Print =====================
@@ -296,10 +308,11 @@ export const fr = {
   comprehensiveFinancialReport: 'Rapport Financier Complet',
   financialSummary: 'Résumé Financier',
   totalExpenses: 'Dépenses Totales',
-  totalFuel: 'Carburant Total', // ✅ Ajouté
+  totalFuel: 'Carburant Total',
   totalFuelCost: 'Coût Total du Carburant',
   expenseDistribution: 'Répartition des Dépenses',
   monthlyExpenses: 'Dépenses mensuelles',
+  monthlyTrend: 'Tendance mensuelle',
   netProfit: 'Bénéfice Net',
   category: 'Catégorie',
   percentage: 'Pourcentage',
@@ -307,9 +320,10 @@ export const fr = {
   otherExpenses: 'Autres Dépenses',
   fuelLog: 'Journal de Carburant',
   maintenanceLog: 'Journal d\'Entretien',
-  pdfReport: 'Rapport PDF', // ✅ Ajouté
-  noChartData: 'Pas assez de données pour le graphique', // ✅ Ajouté
-  addMoreRecords: 'Ajoutez plus d\'enregistrements pour voir les analyses', // ✅ Ajouté
+  pdfReport: 'Rapport PDF',
+  noChartData: 'Pas assez de données pour le graphique',
+  noDataForChart: 'Pas assez de données pour générer le graphique',
+  addMoreRecords: 'Ajoutez plus d\'enregistrements pour voir les analyses',
   printPdf: 'Imprimer / PDF',
   printReport: 'Imprimer',
   shareReport: 'Partager',
@@ -325,13 +339,17 @@ export const fr = {
   enterCost: 'Entrer le coût',
   date: 'Date',
   notes: 'Remarques',
+  fuelLabel: 'Carburant',
+  maintenanceLabel: 'Entretien',
+  expensesLabel: 'Autres dépenses',
+  incomeLabel: 'Revenus',
 
   // ===================== Valuation =====================
   valuation: 'Évaluation',
   resale: 'Revente',
   valuationDesc: 'Entrez les détails de votre voiture pour calculer la valeur marchande estimée selon la dépréciation locale (âge, kilométrage, état).',
   purchasePrice: 'Prix d\'Achat',
-  priceHelper: 'Entrez le montant', // ✅ Généralisé (car la devise peut changer)
+  priceHelper: 'Entrez le montant',
   carCondition: 'État Actuel de la Voiture',
   conditionExcellent: 'Excellent',
   conditionGood: 'Bon',
@@ -376,7 +394,7 @@ export const fr = {
   lightMode: 'Mode Clair',
   selectCurrency: 'Choisir la devise',
   dataProtection: 'Protection des données',
-  backupDesc: 'Vos données sont enregistrées uniquement sur votre téléphone. Exportez-les sous forme de fichier de sauvegarde.', // ✅ Ajout de "uniquement" pour la clarté
+  backupDesc: 'Vos données sont enregistrées uniquement sur votre téléphone. Exportez-les sous forme de fichier de sauvegarde.',
   exportData: 'Exporter les données (JSON)',
   importData: 'Importer des données',
   exportSuccess: 'Données exportées avec succès !',
@@ -398,6 +416,7 @@ export const fr = {
   backupAndExport: 'Sauvegarde et Exportation',
   exportCenter: 'Centre d\'exportation',
   excelExport: 'Feuille de calcul (Excel)',
+  excelExportDesc: 'Exporter tous les enregistrements au format CSV',
   printData: 'Imprimer directement',
   systemBackup: 'Sauvegarde du système',
   excelSuccess: 'Feuille de calcul exportée avec succès !',
@@ -456,5 +475,18 @@ export const fr = {
 
   // ===================== Export Center =====================
   backupMovedMsg: 'La sauvegarde et la restauration (JSON) ont été déplacées vers les paramètres.',
-  goToSettings: 'Aller aux paramètres'
+  goToSettings: 'Aller aux paramètres',
+
+  // ===================== Roadside Assistance (New) =====================
+  roadsideAssistance: 'Assistance routière',
+  emergencySOS: 'SOS Urgence',
+  findRepairShop: 'Trouver un garage de réparation',
+  findSpareParts: 'Trouver des pièces détachées',
+  requestTowing: 'Demander un remorquage',
+  searchingHelp: 'Recherche d\'aide à proximité...',
+  noHelpFound: 'Aucune aide trouvée à proximité. Veuillez essayer une autre zone.',
+  call: 'Appeler',
+  navigate: 'Naviguer',
+  locationRequired: 'L\'accès à la localisation est requis pour trouver de l\'aide à proximité.',
+  helpDesc: 'Voiture en panne ? Appuyez ici pour trouver immédiatement le garage de réparation ou la dépanneuse le plus proche.'
 };
