@@ -457,4 +457,15 @@ export const ar = {
   // ===================== Export Center =====================
   backupMovedMsg: 'تم نقل ميزة حفظ واستعادة البيانات (JSON) إلى صفحة الإعدادات لتوحيد التجربة.',
   goToSettings: 'الذهاب إلى الإعدادات'
+
+  // ... المفاتيح السابقة
+  totalMaintenanceCost: 'إجمالي مصاريف الصيانة',
+  proactiveMaintenance: 'صيانة استباقية',
+  trackExpenses: 'تتبع كل درهم',
+  trackIncome: 'تتبع أرباحك',
+  startYourJourney: 'ابدأ رحلتك!',
+  noFuelRecordsDesc: 'سجل أول تعبئة لتتمكن من تتبع استهلاكك وتوفير المال.',
+  secureDocuments: 'وثائقك في أمان',
+  carDetails: 'تفاصيل السيارة',
+  switchCar: 'تبديل السيارة',
 };
