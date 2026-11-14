@@ -21,6 +21,8 @@ export default function Maintenance() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [customTypes, setCustomTypes] = useState([]);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  
+  // ✅ حالات إضافة نوع مخصص
   const [isAddingType, setIsAddingType] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
 
@@ -31,6 +33,7 @@ export default function Maintenance() {
   const isHybrid = currentCar?.powertrain === 'hybrid' || currentCar?.powertrain === 'phev';
   const isTruck = currentCar?.category === 'truck';
 
+  // ... (كود الأنواع الأساسية iceTypes, evTypes, baseTypes كما هو بدون تغيير) ...
   const iceTypes = useMemo(() => [{ value: 'oilChange', label: t('engineOil') }, { value: 'oilFilter', label: t('oilFilter') }, { value: 'airFilter', label: t('airFilter') }, { value: 'cabinFilter', label: t('cabinFilter') }, { value: 'sparkPlugs', label: t('sparkPlugs') }, { value: 'timingBelt', label: t('timingBelt') }, { value: 'fuelFilter', label: t('fuelFilter') }, { value: 'coolant', label: t('coolant') }, { value: 'brakeFluid', label: t('brakeFluid') }, { value: 'transmissionOil', label: t('transmissionOil') }, { value: 'battery12v', label: t('battery12v') }, { value: 'tires', label: t('tires') }, { value: 'brakes', label: t('brakes') }, { value: 'fullInspection', label: t('fullInspection') }, { value: 'otherMaintenance', label: t('otherMaintenance') }], [t]);
   const evTypes = useMemo(() => [{ value: 'batteryCheck', label: t('batteryCheck') }, { value: 'softwareUpdate', label: t('softwareUpdate') }, { value: 'coolant', label: t('coolant') }, { value: 'brakeFluid', label: t('brakeFluid') }, { value: 'transmissionOil', label: t('transmissionOil') }, { value: 'cabinFilter', label: t('cabinFilter') }, { value: 'tires', label: t('tires') }, { value: 'brakes', label: t('brakes') }, { value: 'fullInspection', label: t('fullInspection') }, { value: 'otherMaintenance', label: t('otherMaintenance') }], [t]);
   const truckExtras = useMemo(() => [{ value: 'airBrakes', label: t('airBrakes') }, { value: 'adBlue', label: t('adBlue') }, { value: 'chassisLubrication', label: t('chassisLubrication') }, { value: 'engineHours', label: t('engineHours') }], [t]);
@@ -67,8 +70,25 @@ export default function Maintenance() {
 
   useEffect(() => { loadData(); }, [loadData, dataVersion]);
 
-  // حساب الإجمالي
   const totalCost = useMemo(() => records.reduce((sum, r) => sum + safeNumber(r.cost), 0), [records]);
+
+  // ✅ دالة إضافة نوع صيانة مخصص
+  const handleConfirmAddType = async () => {
+    const trimmed = newTypeName.trim();
+    if (!trimmed) return;
+    if (allTypes.some(t => t.label.toLowerCase() === trimmed.toLowerCase())) {
+      return showToast(t('typeAlreadyExists') || 'هذا النوع موجود بالفعل', 'error');
+    }
+    try {
+      const updatedTypes = await dbService.addCustomType(trimmed);
+      setCustomTypes(Array.isArray(updatedTypes) ? updatedTypes : []);
+      setFormData(prev => ({ ...prev, type: trimmed }));
+      setIsAddingType(false);
+      setNewTypeName('');
+    } catch (e) {
+      showToast(t('errorSaving') || 'حدث خطأ أثناء الإضافة', 'error');
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -86,8 +106,14 @@ export default function Maintenance() {
     try { await dbService.deleteMaintenance(deleteId); await loadData(); bumpDataVersion(); setDeleteId(null); } catch (e) { showToast(t('errorSaving'), 'error'); setDeleteId(null); }
   };
 
-  const openAddModal = () => { setEditingId(null); setFormData({ date: new Date().toISOString().split('T')[0], type: baseTypes[0]?.value || 'otherMaintenance', cost: '', nextKm: '' }); setIsModalOpen(true); };
-  const closeModal = () => { setIsModalOpen(false); setEditingId(null); setFormData(EMPTY_FORM); };
+  const openAddModal = () => { 
+    setEditingId(null); 
+    setFormData({ date: new Date().toISOString().split('T')[0], type: baseTypes[0]?.value || 'otherMaintenance', cost: '', nextKm: '' }); 
+    setIsAddingType(false); setNewTypeName('');
+    setIsModalOpen(true); 
+  };
+  
+  const closeModal = () => { setIsModalOpen(false); setEditingId(null); setFormData(EMPTY_FORM); setIsAddingType(false); setNewTypeName(''); };
 
   if (isLoading) {
     return (
@@ -95,14 +121,12 @@ export default function Maintenance() {
         <div className="h-10 bg-[var(--surface-2)] rounded-lg w-1/3 mb-6"></div>
         <div className="h-24 bg-[var(--surface-2)] rounded-2xl"></div>
         <div className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>
-        <div className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4 pb-24 px-4 relative min-h-screen">
-      {/* Toast */}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-down ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
@@ -115,14 +139,14 @@ export default function Maintenance() {
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('maintenance')}</h1>
       </div>
 
-      {/* ✅ بطاقة الإجمالي الجديدة */}
+      {/* بطاقة الإجمالي */}
       <div className="bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/20 p-4 rounded-2xl mb-2">
         <span className="text-xs text-[var(--text-muted)] block mb-1">{t('totalMaintenanceCost') || 'إجمالي مصاريف الصيانة'}</span>
         <span className="text-2xl font-extrabold text-yellow-500">{totalCost.toLocaleString()} <span className="text-sm font-normal">{currency}</span></span>
       </div>
 
       {records.length === 0 ? (
-        // ✅ تصميم حالة الفراغ
+        // حالة الفراغ
         <div className="flex flex-col items-center justify-center mt-16 p-6 text-center animate-fade-in">
           <div className="relative w-24 h-24 flex items-center justify-center mb-6">
             <div className="absolute inset-0 bg-yellow-500/20 rounded-full animate-ping opacity-50"></div>
@@ -162,19 +186,44 @@ export default function Maintenance() {
         </div>
       )}
 
-      <button type="button" onClick={openAddModal} className="fixed bottom-24 right-6 rtl:left-6 w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"><Plus size={28} /></button>
+      {/* ✅ إصلاح: إخفاء الزر العائم عندما تكون القائمة فارغة لمنع التداخل */}
+      {records.length > 0 && (
+        <button type="button" onClick={openAddModal} className="fixed bottom-24 right-6 rtl:left-6 w-14 h-14 bg-[var(--primary)] text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"><Plus size={28} /></button>
+      )}
 
       <ConfirmModal isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title={t('confirmDelete')} message={t('confirmDeleteMsg')} variant="danger" confirmText={t('confirmDeleteBtn')} />
 
-      {/* Modal الإضافة (مختصر لعدم الإطالة) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleSave} className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative shadow-2xl">
             <button type="button" onClick={closeModal} className="absolute top-4 left-4 rtl:right-4 p-1.5 bg-[var(--surface-2)] rounded-full z-10"><X size={20} /></button>
             <h2 className="text-lg font-bold text-center mb-5 mt-1">{editingId ? t('edit') : t('addMaintenance')}</h2>
+            
             <div className="space-y-3">
               <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('date')}</label><input type="date" value={formData.date} onChange={e => setFormData(prev => ({...prev, date: e.target.value}))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm [color-scheme:dark]" /></div>
-              <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('maintenanceType')}</label><OptionPicker options={allTypes} value={formData.type} onChange={(val) => setFormData(prev => ({...prev, type: val}))} /></div>
+              
+              {/* ✅ إضافة واجهة نوع مخصص */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[11px] font-bold text-[var(--text-muted)] block">{t('maintenanceType')}</label>
+                  {!isAddingType && (
+                    <button type="button" onClick={() => setIsAddingType(true)} className="text-xs text-[var(--primary)] flex items-center gap-1 hover:underline">
+                      <Settings2 size={12} /> {t('addType')}
+                    </button>
+                  )}
+                </div>
+                
+                {isAddingType ? (
+                  <div className="flex gap-2 mb-2">
+                    <input type="text" value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)} placeholder={t('enterCustomTypeName')} className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-2 text-sm outline-none focus:border-[var(--primary)]" autoFocus />
+                    <button type="button" onClick={handleConfirmAddType} className="bg-green-500 text-white p-2 rounded-xl active:scale-90"><Check size={18} /></button>
+                    <button type="button" onClick={() => { setIsAddingType(false); setNewTypeName(''); }} className="bg-red-500/20 text-red-500 p-2 rounded-xl active:scale-90"><X size={18} /></button>
+                  </div>
+                ) : (
+                  <OptionPicker options={allTypes} value={formData.type} onChange={(val) => setFormData(prev => ({...prev, type: val}))} />
+                )}
+              </div>
+
               <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('cost')} ({currency})</label><input type="number" step="0.01" value={formData.cost} onChange={e => setFormData(prev => ({...prev, cost: e.target.value}))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold" /></div>
               <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('nextOdometer')} ({t('km')})</label><input type="number" value={formData.nextKm} onChange={e => setFormData(prev => ({...prev, nextKm: e.target.value}))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm" placeholder={t('optional')} /></div>
             </div>
