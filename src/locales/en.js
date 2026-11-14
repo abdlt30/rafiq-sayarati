@@ -39,23 +39,23 @@ export const en = {
   noResults: 'No results found',
   currency: 'Currency',
   language: 'Language',
-  exporting: 'Exporting...', // ✅ Added
-  resetting: 'Clearing...', // ✅ Added
+  exporting: 'Exporting...',
+  resetting: 'Clearing...',
+  loading: 'Loading...',
 
-  // ===================== Onboarding & Welcome =====================
-  // ✅ Improved phrasing for natural English flow
-  welcomeMessagePart1: 'Control your car expenses, track maintenance, and save',
-  welcomeMessagePart2: 'your budget smartly.',
+  // ===================== Onboarding & Welcome (Updated Strategy) =====================
+  welcomeMessagePart1: 'Control your car expenses, track maintenance,',
+  welcomeMessagePart2: 'and enjoy peace of mind.',
   startNow: 'Start Now',
   howToCallYou: 'What should we call you?',
   enterName: 'Enter your name...',
-  featureTrackExpenses: 'Track expenses accurately',
-  featureTrackExpensesDesc: 'Know where every penny goes',
-  featureSmartAlerts: 'Smart Alerts',
-  featureSmartAlertsDesc: 'Never miss a maintenance or renewal date',
-  featurePeaceOfMind: 'Peace of Mind',
-  featurePeaceOfMindDesc: 'Your car is always ready to go',
-  privacyNoteShort: 'Your data is kept private on your device',
+  featureTrackExpenses: 'Accurate Expense Tracking',
+  featureTrackExpensesDesc: 'Know exactly where every penny goes.',
+  featureSmartAlerts: 'Proactive Alerts',
+  featureSmartAlertsDesc: 'Never miss an oil change or insurance renewal.',
+  featurePeaceOfMind: 'Absolute Privacy',
+  featurePeaceOfMindDesc: 'Your data stays on your device. No servers, no tracking.',
+  privacyNoteShort: 'Your data is yours alone, stored locally.',
   skip: 'Skip',
   next: 'Next',
   onboardingTitle1: 'Track every penny',
@@ -69,6 +69,7 @@ export const en = {
   continueAsGuest: 'Continue as Guest',
   signInWithEmail: 'Sign in with Email',
   dataPrivacyText: 'Your data stays on your device in guest mode.',
+  guest: 'Guest',
 
   // ===================== Cars =====================
   addNewCar: 'Add Vehicle',
@@ -103,6 +104,8 @@ export const en = {
   invalidYear: 'Please enter a valid manufacturing year.',
   deleteImage: 'Delete Image',
   addImage: 'Add Image',
+  carDetails: 'Car Details',
+  carHealth: 'Car Health',
 
   // ===================== Powertrain =====================
   powertrain: 'Powertrain',
@@ -140,6 +143,8 @@ export const en = {
   consumptionKwh100km: 'kWh/100km',
   avgConsumption: 'Average Consumption',
   totalLiters: 'Total Liters',
+  noFuelRecordsDesc: 'Log your first fill-up to start tracking your consumption and saving money.',
+  startYourJourney: 'Start Your Journey!',
 
   // ===================== Maintenance =====================
   maintenance: 'Maintenance',
@@ -154,6 +159,9 @@ export const en = {
   maintenanceRecord: 'Maintenance Record',
   completeMaintenance: 'Complete Maintenance',
   evMaintenance: 'EV Maintenance',
+  proactiveMaintenance: 'Proactive Maintenance',
+  totalMaintenanceCost: 'Total Maintenance Cost',
+  typeAlreadyExists: 'This type already exists.',
   
   // Maintenance Types
   oilChange: 'Oil Change',
@@ -174,7 +182,7 @@ export const en = {
   transmissionOil: 'Transmission Oil',
   battery12v: '12V Battery',
   airBrakes: 'Air Brakes',
-  adBlue: 'AdBlue Fluid',
+  adBlue: 'AdBlue',
   chassisLubrication: 'Chassis Lubrication',
   engineHours: 'Engine Hours',
   suspensionCheck: 'Suspension Check',
@@ -195,6 +203,7 @@ export const en = {
   fines: 'Traffic Fines',
   parking: 'Parking',
   other: 'Other',
+  trackExpenses: 'Track Every Penny',
   
   income: 'Income',
   totalIncome: 'Total Income',
@@ -211,15 +220,16 @@ export const en = {
   incomeNotesPlaceholder: 'e.g., Airport trip...',
   incomeLog: 'Income Log',
   otherExpensesLog: 'Other Expenses Log',
+  trackIncome: 'Track Your Income',
 
   // ===================== Documents =====================
   documents: 'Documents',
   addDocument: 'Add Document',
   documentType: 'Document Type',
   endDate: 'End Date',
-  expiryDate: 'Expiry Date', // ✅ Added
-  registration: 'Registration (Carte Grise)', // ✅ Added
-  uploadImage: 'Take a photo or upload', // ✅ Added
+  expiryDate: 'Expiry Date',
+  registration: 'Registration (Carte Grise)',
+  uploadImage: 'Take a photo or upload',
   technicalInspection: 'Technical Inspection',
   license: 'License',
   expired: 'Expired',
@@ -238,6 +248,7 @@ export const en = {
   imageTooLarge: 'Image is too large. Max 5MB.',
   imageProcessingFailed: 'Failed to process image. Try again.',
   invalidDate: 'Invalid date.',
+  secureDocuments: 'Your Documents are Safe',
 
   // ===================== Reminders & Alerts =====================
   reminders: 'Reminders',
@@ -288,7 +299,7 @@ export const en = {
   recentActivity: 'Recent Activity',
   upcomingMaintenance: 'Upcoming Maintenance',
   timeline: 'Timeline',
-  carTimeline: 'Car Timeline', // ✅ Added
+  carTimeline: 'Car Timeline',
   confirmLowerOdometer: 'The new odometer is less than the current one. Are you sure?',
 
   // ===================== Reports & Print =====================
@@ -297,10 +308,11 @@ export const en = {
   comprehensiveFinancialReport: 'Comprehensive Financial Report',
   financialSummary: 'Financial Summary',
   totalExpenses: 'Total Expenses',
-  totalFuel: 'Total Fuel', // ✅ Added
+  totalFuel: 'Total Fuel',
   totalFuelCost: 'Total Fuel Cost',
   expenseDistribution: 'Expense Distribution',
   monthlyExpenses: 'Monthly Expenses',
+  monthlyTrend: 'Monthly Trend',
   netProfit: 'Net Profit',
   category: 'Category',
   percentage: 'Percentage',
@@ -308,9 +320,10 @@ export const en = {
   otherExpenses: 'Other Expenses',
   fuelLog: 'Fuel Log',
   maintenanceLog: 'Maintenance Log',
-  pdfReport: 'PDF Report', // ✅ Added
-  noChartData: 'Not enough data for chart', // ✅ Added
-  addMoreRecords: 'Add more records to view analytics', // ✅ Added
+  pdfReport: 'PDF Report',
+  noChartData: 'Not enough data for chart',
+  noDataForChart: 'Not enough data to generate chart',
+  addMoreRecords: 'Add more records to view analytics',
   printPdf: 'Print / PDF',
   printReport: 'Print Report',
   shareReport: 'Share Report',
@@ -326,13 +339,17 @@ export const en = {
   enterCost: 'Enter cost',
   date: 'Date',
   notes: 'Notes',
+  fuelLabel: 'Fuel',
+  maintenanceLabel: 'Maintenance',
+  expensesLabel: 'Other Expenses',
+  incomeLabel: 'Income',
 
   // ===================== Valuation =====================
   valuation: 'Car Valuation',
   resale: 'Resale Value',
   valuationDesc: 'Enter your car details to calculate the estimated market value based on local depreciation (age, mileage, condition).',
   purchasePrice: 'Purchase Price',
-  priceHelper: 'Enter amount', // ✅ Adjusted for generic currency
+  priceHelper: 'Enter amount',
   carCondition: 'Current Car Condition',
   conditionExcellent: 'Excellent',
   conditionGood: 'Good',
@@ -399,6 +416,7 @@ export const en = {
   backupAndExport: 'Backup & Export',
   exportCenter: 'Export Center',
   excelExport: 'Spreadsheet (Excel)',
+  excelExportDesc: 'Export all records as CSV',
   printData: 'Print Directly',
   systemBackup: 'System Backup',
   excelSuccess: 'Spreadsheet exported successfully!',
@@ -457,5 +475,18 @@ export const en = {
 
   // ===================== Export Center =====================
   backupMovedMsg: 'Backup and restore (JSON) has been moved to Settings for a unified experience.',
-  goToSettings: 'Go to Settings'
+  goToSettings: 'Go to Settings',
+
+  // ===================== Roadside Assistance (New) =====================
+  roadsideAssistance: 'Roadside Assistance',
+  emergencySOS: 'Emergency SOS',
+  findRepairShop: 'Find Repair Shop',
+  findSpareParts: 'Find Spare Parts',
+  requestTowing: 'Request Towing',
+  searchingHelp: 'Searching for nearby help...',
+  noHelpFound: 'No nearby help found. Please try another area.',
+  call: 'Call',
+  navigate: 'Navigate',
+  locationRequired: 'Location access is required to find nearby help.',
+  helpDesc: 'Car broken down? Tap here to find the nearest repair shop or tow truck immediately.'
 };
