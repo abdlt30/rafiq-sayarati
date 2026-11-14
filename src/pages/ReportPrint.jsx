@@ -1,12 +1,11 @@
-import { useContext, useMemo, useState } from 'react';
-import { AppContext } from '../context/AppContext';
-import { dbService } from '../services/dbService';
+import { useContext, useMemo, useState, useEffect } from 'react';
+import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
+import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
 import { Link } from 'react-router-dom';
-import { ArrowRight, Printer, FileText } from 'lucide-react';
+import { ArrowRight, Printer, FileText, Loader2 } from 'lucide-react';
 
-// ✅ 1. استيراد الدوال المشتركة من الهيكل الجديد
-import { safeNumber } from '../shared/utils/safeNumber';
-import { formatDate as formatDateShared } from '../shared/utils/formatters';
+import { safeNumber } from '../shared/utils/safeNumber.js'; // ✅ إضافة .js
+import { formatDate as formatDateShared } from '../shared/utils/formatters.js'; // ✅ إضافة .js
 
 /* ✅ كمية الوقود: يدعم amount الجديد + liters القديم */
 const getFuelAmount = (r) => {
@@ -28,6 +27,11 @@ const percent = (part, total) => {
 export default function ReportPrint() {
   const { currentCar, t, currency, lang, dataVersion } = useContext(AppContext);
   const [period, setPeriod] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // ✅ حالة البيانات (تم فصلها عن useMemo لحل مشكلة Async)
+  const [data, setData] = useState({ fuel: [], maintenance: [], expenses: [], incomes: [] });
+
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
   /* ✅ بيانات آمنة للعرض */
@@ -41,63 +45,78 @@ export default function ReportPrint() {
   const carOdometerNum = safeNumber(currentCar?.odometer);
   const carPlate = (currentCar?.plate || '').trim();
 
-  /* ✅ دالة تنسيق التاريخ الموحدة */
   const formatDate = (dateString) => formatDateShared(dateString, todayLocale);
 
-  /* ===================== جمع البيانات (مُحصَّن) ===================== */
-  const data = useMemo(() => {
-    if (!currentCar) return { fuel: [], maintenance: [], expenses: [], incomes: [] };
-
-    const normalizeDate = (s) => {
-      if (!s) return null;
-      const str = String(s).includes('T') ? s : `${s}T00:00:00`;
-      const d = new Date(str);
-      if (isNaN(d.getTime())) return null;
-      d.setHours(0, 0, 0, 0);
-      return d;
-    };
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const isInPeriod = (dateString) => {
-      if (period === 'all') return true;
-      const d = normalizeDate(dateString);
-      if (!d) return false;
-      if (period === 'month') {
-        return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  /* ===================== جمع البيانات (غير متزامن) ===================== */
+  useEffect(() => {
+    let isMounted = true;
+    const loadData = async () => {
+      if (!currentCar) {
+        if (isMounted) setIsLoading(false);
+        return;
       }
-      if (period === 'year') {
-        return d.getFullYear() === today.getFullYear();
+      setIsLoading(true);
+      try {
+        // ✅ جلب البيانات من IndexedDB
+        const allFuel = await dbService.getFuel() || [];
+        const allMaint = await dbService.getMaintenance() || [];
+        const allExp = await dbService.getExpenses() || [];
+        const allInc = await dbService.getIncomes() || [];
+
+        const normalizeDate = (s) => {
+          if (!s) return null;
+          const str = String(s).includes('T') ? s : `${s}T00:00:00`;
+          const d = new Date(str);
+          if (isNaN(d.getTime())) return null;
+          d.setHours(0, 0, 0, 0);
+          return d;
+        };
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const isInPeriod = (dateString) => {
+          if (period === 'all') return true;
+          const d = normalizeDate(dateString);
+          if (!d) return false;
+          if (period === 'month') {
+            return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+          }
+          if (period === 'year') {
+            return d.getFullYear() === today.getFullYear();
+          }
+          return true;
+        };
+
+        const carIdStr = String(currentCar.id);
+        const filterByCar = (arr) =>
+          (Array.isArray(arr) ? arr : []).filter(
+            r => r && String(r.carId) === carIdStr && isInPeriod(r.date)
+          );
+
+        const sortByDateDesc = (arr) =>
+          [...arr].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+        if (isMounted) {
+          setData({
+            fuel: sortByDateDesc(filterByCar(allFuel)),
+            maintenance: sortByDateDesc(filterByCar(allMaint)),
+            expenses: sortByDateDesc(filterByCar(allExp)),
+            incomes: sortByDateDesc(filterByCar(allInc)),
+          });
+        }
+      } catch (e) {
+        console.error('Report data load failed:', e);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      return true;
     };
-
-    const carIdStr = String(currentCar.id);
-    const filterByCar = (arr) =>
-      (Array.isArray(arr) ? arr : []).filter(
-        r => r && String(r.carId) === carIdStr && isInPeriod(r.date)
-      );
-
-    const sortByDateDesc = (arr) =>
-      [...arr].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-
-    try {
-      return {
-        fuel: sortByDateDesc(filterByCar(dbService.getFuel())),
-        maintenance: sortByDateDesc(filterByCar(dbService.getMaintenance())),
-        expenses: sortByDateDesc(filterByCar(dbService.getExpenses())),
-        incomes: sortByDateDesc(filterByCar(dbService.getIncomes())),
-      };
-    } catch (e) {
-      console.error('Report data load failed:', e);
-      return { fuel: [], maintenance: [], expenses: [], incomes: [] };
-    }
+    loadData();
+    return () => { isMounted = false; };
   }, [currentCar, period, dataVersion]);
 
   /* ===================== الإجماليات (مع رفض السالب) ===================== */
   const totals = useMemo(() => {
-    // ✅ 2. إصلاح رياضي: رفض القيم السالبة في الجمع
     const sum = (arr, key) => arr.reduce((s, r) => {
       const val = safeNumber(r?.[key]);
       return s + (val > 0 ? val : 0);
@@ -119,10 +138,9 @@ export default function ReportPrint() {
     };
   }, [data]);
 
-  /* ===================== ترجمة نوع الصيانة ===================== */
   const getMaintenanceTypeLabel = (type) => {
     if (!type) return '—';
-    return t(type);
+    return t(type) || type;
   };
 
   if (!currentCar) return null;
@@ -142,6 +160,15 @@ export default function ReportPrint() {
     }
   };
 
+  // ✅ شاشة تحميل أثناء جلب البيانات
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64 text-[var(--primary)]">
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       
@@ -150,28 +177,28 @@ export default function ReportPrint() {
         <div className="flex items-center justify-between gap-3 mb-3">
           <Link
             to="/reports"
-            aria-label={t('back')}
-            className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl"
+            aria-label={t('back') || 'رجوع'}
+            className="p-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl active:scale-90 transition-transform"
           >
             <ArrowRight size={20} className={`text-[var(--text)] ${dir === 'ltr' ? 'rotate-180' : ''}`} aria-hidden="true" />
           </Link>
           <h1 className="text-lg font-bold text-[var(--text)]">
-            {t('financialReport')}
+            {t('financialReport') || 'تقرير مالي'}
           </h1>
           <button
             type="button"
             onClick={handlePrint}
             className="flex items-center gap-2 bg-[var(--primary)] text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all"
           >
-            <Printer size={16} aria-hidden="true" /> {t('printPdf')}
+            <Printer size={16} aria-hidden="true" /> {t('printPdf') || 'طباعة PDF'}
           </button>
         </div>
         
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[
-            { v: 'all', l: t('allPeriods') },
-            { v: 'month', l: t('thisMonth') },
-            { v: 'year', l: t('thisYear') },
+            { v: 'all', l: t('allPeriods') || 'كل الفترات' },
+            { v: 'month', l: t('thisMonth') || 'هذا الشهر' },
+            { v: 'year', l: t('thisYear') || 'هذه السنة' },
           ].map(p => (
             <button
               key={p.v}
@@ -199,16 +226,16 @@ export default function ReportPrint() {
             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg">🚗</div>
             <div>
               <h1 className="text-3xl font-black text-gray-900 mb-1">
-                {t('appName')}
+                {t('appName') || 'رفيق سيارتي'}
               </h1>
               <p className="text-sm font-bold text-blue-600">
-                {t('comprehensiveFinancialReport')}
+                {t('comprehensiveFinancialReport') || 'تقرير مالي شامل'}
               </p>
             </div>
           </div>
           <div className={dir === 'rtl' ? 'text-left' : 'text-right'}>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
-              {t('issueDate')}
+              {t('issueDate') || 'تاريخ الإصدار'}
             </p>
             <p className="text-sm font-black text-gray-900">{todayStr}</p>
           </div>
@@ -217,7 +244,7 @@ export default function ReportPrint() {
         {/* معلومات السيارة */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-8 flex justify-between items-center">
           <div>
-            <p className="text-xs text-gray-500 font-bold mb-1">{t('car')}</p>
+            <p className="text-xs text-gray-500 font-bold mb-1">{t('car') || 'السيارة'}</p>
             <p className="text-2xl font-black text-gray-900">
               {carTitle}
               {carYearDisplay && <span className="text-gray-400 text-lg"> ({carYearDisplay})</span>}
@@ -226,13 +253,13 @@ export default function ReportPrint() {
           <div className={dir === 'rtl' ? 'text-left' : 'text-right'}>
             {carPlate && (
               <p className="text-sm text-gray-700 mb-1">
-                {t('plate')}:{' '}
+                {t('plate') || 'اللوحة'}:{' '}
                 <span className="font-mono font-bold bg-white px-2 py-1 border border-gray-300 rounded">{carPlate}</span>
               </p>
             )}
             {carOdometerNum > 0 && (
               <p className="text-sm text-gray-700">
-                {t('odometer')}: <span className="font-bold">{carOdometerNum.toLocaleString()} {t('km')}</span>
+                {t('odometer') || 'العداد'}: <span className="font-bold">{carOdometerNum.toLocaleString()} {t('km') || 'كم'}</span>
               </p>
             )}
           </div>
@@ -243,7 +270,7 @@ export default function ReportPrint() {
           <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-10 mb-8 text-center">
             <FileText className="mx-auto mb-3 text-gray-400" size={48} aria-hidden="true" />
             <p className="text-sm text-gray-500 font-bold">
-              {t('noData')}
+              {t('noData') || 'لا توجد بيانات كافية'}
             </p>
           </div>
         )}
@@ -253,29 +280,21 @@ export default function ReportPrint() {
             {/* الملخص المالي */}
             <div className="mb-8 page-break">
               <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-blue-600`}>
-                {t('financialSummary')}
+                {t('financialSummary') || 'الملخص المالي'}
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div className="border border-green-200 bg-green-50 rounded-xl p-4">
-                  <p className="text-xs text-green-700 font-bold mb-1">
-                    {t('totalIncome')}
-                  </p>
-                  <p className="text-2xl font-black text-green-600" dir="ltr">
-                    + {totals.income.toLocaleString()} {currency}
-                  </p>
+                  <p className="text-xs text-green-700 font-bold mb-1">{t('totalIncome') || 'إجمالي الإيرادات'}</p>
+                  <p className="text-2xl font-black text-green-600" dir="ltr">+ {totals.income.toLocaleString()} {currency}</p>
                 </div>
                 <div className="border border-red-200 bg-red-50 rounded-xl p-4">
-                  <p className="text-xs text-red-700 font-bold mb-1">
-                    {t('totalExpenses')}
-                  </p>
-                  <p className="text-2xl font-black text-red-600" dir="ltr">
-                    - {totals.totalExpenses.toLocaleString()} {currency}
-                  </p>
+                  <p className="text-xs text-red-700 font-bold mb-1">{t('totalExpenses') || 'إجمالي المصاريف'}</p>
+                  <p className="text-2xl font-black text-red-600" dir="ltr">- {totals.totalExpenses.toLocaleString()} {currency}</p>
                 </div>
                 
                 <div className="col-span-2 border-2 border-gray-900 rounded-xl p-5 bg-gray-900 text-white flex flex-col justify-center gap-3 relative overflow-hidden">
                   <div className="flex items-center justify-between relative z-10">
-                    <p className="text-sm text-gray-300 font-bold">{t('netProfit')}</p>
+                    <p className="text-sm text-gray-300 font-bold">{t('netProfit') || 'صافي الربح'}</p>
                     <div className="text-4xl opacity-30" aria-hidden="true">💰</div>
                   </div>
                   <p className={`text-4xl font-black relative z-10 ${totals.net >= 0 ? 'text-green-400' : 'text-red-400'}`} dir="ltr">
@@ -289,36 +308,36 @@ export default function ReportPrint() {
             {totals.totalExpenses > 0 && (
               <div className="mb-8 page-break">
                 <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-blue-600`}>
-                  {t('expenseDistribution')}
+                  {t('expenseDistribution') || 'توزيع المصاريف'}
                 </h2>
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('category')}</th>
-                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('amount')}</th>
-                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('percentage')}</th>
+                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('category') || 'الفئة'}</th>
+                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('amount') || 'المبلغ'}</th>
+                      <th scope="col" className="p-3 text-start font-bold text-gray-700">{t('percentage') || 'النسبة'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b border-gray-200">
-                      <td className="p-3">{t('fuel')}</td>
+                      <td className="p-3">{t('fuel') || 'وقود'}</td>
                       <td className="p-3 font-bold" dir="ltr">{totals.fuel.toLocaleString()} {currency}</td>
                       <td className="p-3 font-bold">{percent(totals.fuel, totals.totalExpenses)}</td>
                     </tr>
                     <tr className="border-b border-gray-200">
-                      <td className="p-3">{t('maintenance')}</td>
+                      <td className="p-3">{t('maintenance') || 'صيانة'}</td>
                       <td className="p-3 font-bold" dir="ltr">{totals.maintenance.toLocaleString()} {currency}</td>
                       <td className="p-3 font-bold">{percent(totals.maintenance, totals.totalExpenses)}</td>
                     </tr>
                     <tr className="border-b border-gray-200">
-                      <td className="p-3">{t('otherExpenses')}</td>
+                      <td className="p-3">{t('otherExpenses') || 'مصاريف أخرى'}</td>
                       <td className="p-3 font-bold" dir="ltr">{totals.expenses.toLocaleString()} {currency}</td>
                       <td className="p-3 font-bold">{percent(totals.expenses, totals.totalExpenses)}</td>
                     </tr>
                   </tbody>
                   <tfoot className="bg-gray-50 border-t-2 border-gray-300">
                     <tr>
-                      <td className="p-3 font-black">{t('total')}</td>
+                      <td className="p-3 font-black">{t('total') || 'الإجمالي'}</td>
                       <td className="p-3 font-black text-red-600" dir="ltr">{totals.totalExpenses.toLocaleString()} {currency}</td>
                       <td className="p-3 font-black">{percent(totals.totalExpenses, totals.totalExpenses)}</td>
                     </tr>
@@ -331,15 +350,15 @@ export default function ReportPrint() {
             {data.fuel.length > 0 && (
               <div className="mb-8 page-break">
                 <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-blue-600`}>
-                  {t('fuelLog')} ({data.fuel.length})
+                  {t('fuelLog') || 'سجل الوقود'} ({data.fuel.length})
                 </h2>
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th scope="col" className="p-2 text-start">{t('date')}</th>
-                      <th scope="col" className="p-2 text-start">{t('odometer')}</th>
-                      <th scope="col" className="p-2 text-start">{t('amount')}</th>
-                      <th scope="col" className="p-2 text-start">{t('cost')}</th>
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('odometer') || 'العداد'}</th>
+                      <th scope="col" className="p-2 text-start">{t('amount') || 'المبلغ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -366,14 +385,14 @@ export default function ReportPrint() {
             {data.maintenance.length > 0 && (
               <div className="mb-8 page-break">
                 <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-blue-600`}>
-                  {t('maintenanceLog')} ({data.maintenance.length})
+                  {t('maintenanceLog') || 'سجل الصيانة'} ({data.maintenance.length})
                 </h2>
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th scope="col" className="p-2 text-start">{t('date')}</th>
-                      <th scope="col" className="p-2 text-start">{t('maintenanceType')}</th>
-                      <th scope="col" className="p-2 text-start">{t('cost')}</th>
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('maintenanceType') || 'نوع الصيانة'}</th>
+                      <th scope="col" className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -396,14 +415,14 @@ export default function ReportPrint() {
             {data.expenses.length > 0 && (
               <div className="mb-8 page-break">
                 <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-blue-600`}>
-                  {t('otherExpensesLog')} ({data.expenses.length})
+                  {t('otherExpensesLog') || 'سجل المصاريف الأخرى'} ({data.expenses.length})
                 </h2>
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th scope="col" className="p-2 text-start">{t('date')}</th>
-                      <th scope="col" className="p-2 text-start">{t('expenseType')}</th>
-                      <th scope="col" className="p-2 text-start">{t('cost')}</th>
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('expenseType') || 'نوع المصروف'}</th>
+                      <th scope="col" className="p-2 text-start">{t('cost') || 'التكلفة'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -412,7 +431,7 @@ export default function ReportPrint() {
                       return (
                         <tr key={e.id} className="border-b border-gray-200">
                           <td className="p-2">{formatDate(e.date)}</td>
-                          <td className="p-2">{t(e.type)}</td>
+                          <td className="p-2">{t(e.type) || e.type}</td>
                           <td className="p-2 font-bold" dir="ltr">{cost.toLocaleString()} {currency}</td>
                         </tr>
                       );
@@ -426,15 +445,15 @@ export default function ReportPrint() {
             {data.incomes.length > 0 && (
               <div className="mb-8 page-break">
                 <h2 className={`text-xl font-black text-gray-900 mb-4 ${dir === 'rtl' ? 'border-r-4 pr-3' : 'border-l-4 pl-3'} border-green-600`}>
-                  {t('incomeLog')} ({data.incomes.length})
+                  {t('incomeLog') || 'سجل الإيرادات'} ({data.incomes.length})
                 </h2>
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th scope="col" className="p-2 text-start">{t('date')}</th>
-                      <th scope="col" className="p-2 text-start">{t('incomeType')}</th>
-                      <th scope="col" className="p-2 text-start">{t('notes')}</th>
-                      <th scope="col" className="p-2 text-start">{t('amount')}</th>
+                      <th scope="col" className="p-2 text-start">{t('date') || 'التاريخ'}</th>
+                      <th scope="col" className="p-2 text-start">{t('incomeType') || 'نوع الإيراد'}</th>
+                      <th scope="col" className="p-2 text-start">{t('notes') || 'ملاحظات'}</th>
+                      <th scope="col" className="p-2 text-start">{t('amount') || 'المبلغ'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -443,7 +462,7 @@ export default function ReportPrint() {
                       return (
                         <tr key={i.id} className="border-b border-gray-200">
                           <td className="p-2">{formatDate(i.date)}</td>
-                          <td className="p-2">{t(i.type)}</td>
+                          <td className="p-2">{t(i.type) || i.type}</td>
                           <td className="p-2">{i.notes || '—'}</td>
                           <td className="p-2 font-bold text-green-600" dir="ltr">+ {amount.toLocaleString()} {currency}</td>
                         </tr>
@@ -459,10 +478,10 @@ export default function ReportPrint() {
         {/* التذييل */}
         <div className="mt-12 pt-6 border-t border-gray-300 text-center text-xs text-gray-500">
           <p className="font-bold mb-1">
-            {t('reportFooter1')}
+            {t('reportFooter1') || 'تم إنشاء هذا التقرير بواسطة تطبيق رفيق سيارتي'}
           </p>
           <p>
-            {t('reportFooter2')}
+            {t('reportFooter2') || 'هذا التقرير تم توليده آلياً بناءً على البيانات التي قام المستخدم بإدخالها.'}
           </p>
         </div>
       </div>
