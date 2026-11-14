@@ -2,6 +2,7 @@ import { createContext, useState, useEffect, useCallback } from 'react';
 import { dbService } from '../services/dbService'; 
 import { translations } from '../locales'; 
 import { notificationService } from '../services/notificationService';
+import { safeNumber } from '../shared/utils/safeNumber'; // ✅ تأكد من استيراد دالة الحماية
 
 export const AppContext = createContext();
 
@@ -54,36 +55,69 @@ export const AppProvider = ({ children }) => {
     try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; }
   });
 
-  /* ✅ 1. الحالة المركزية للبيانات (Enterprise Grade) */
-  const [totals, setTotals] = useState({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 });
+  // ✅ 1. الحالة المركزية للبيانات
+  const [totals, setTotals] = useState({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km' });
   const [recentActivity, setRecentActivity] = useState([]);
   const [dataVersion, setDataVersion] = useState(0);
   const bumpDataVersion = useCallback(() => setDataVersion(v => v + 1), []);
 
-  /* ✅ 2. دالة تحديث لوحة التحكم بالكامل */
+  // ✅ 2. دالة تحديث لوحة التحكم بالكامل (بما فيها الاستهلاك)
   const refreshDashboard = useCallback(async () => {
     if (!currentCar) return;
     setIsLoading(true);
     try {
+      // 1. جلب الإحصائيات الأساسية
       const fetchedTotals = await dbService.getTotals(currentCar.id);
-      setTotals(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 });
-
-      const fuelRecords = await dbService.getFuel();
-      const maintenanceRecords = await dbService.getMaintenance();
-      const expenseRecords = await dbService.getExpenses();
-      const incomeRecords = await dbService.getIncomes();
+      
+      // 2. جلب السجلات
+      const fuelRecords = await dbService.getFuel() || [];
+      const maintenanceRecords = await dbService.getMaintenance() || [];
+      const expenseRecords = await dbService.getExpenses() || [];
+      const incomeRecords = await dbService.getIncomes() || [];
 
       const carIdStr = String(currentCar.id);
       const filter = (arr) => (Array.isArray(arr) ? arr : []).filter(r => String(r.carId) === carIdStr);
 
+      const myFuel = filter(fuelRecords);
+      
+      // ✅ 3. حساب متوسط الاستهلاك (الذي كان مفقوداً)
+      const powertrain = currentCar.powertrain || 'ice';
+      const targetEnergy = powertrain === 'ev' ? 'electricity' : 'gasoline';
+      const unit = targetEnergy === 'electricity' ? 'kWh/100km' : 'L/100km';
+      
+      const carFuel = myFuel.filter(f => (f.energyType || 'gasoline') === targetEnergy);
+      let avgVal = null;
+      
+      if (carFuel.length >= 2) {
+        const normalized = carFuel.map(f => ({ ...f, _odo: safeNumber(f.odometer) })).filter(f => f._odo > 0).sort((a, b) => a._odo - b._odo);
+        let tAmt = 0, tDist = 0;
+        for (let i = 1; i < normalized.length; i++) {
+          const dist = normalized[i]._odo - normalized[i - 1]._odo;
+          const amt = safeNumber(normalized[i].amount ?? normalized[i].liters);
+          if (dist > 0 && amt > 0) { tDist += dist; tAmt += amt; }
+        }
+        if (tDist > 0) {
+          const res = (tAmt / tDist) * 100;
+          if (Number.isFinite(res) && res > 0) avgVal = Number(res.toFixed(1));
+        }
+      }
+
+      // 4. بناء النشاط الأخير
       const activities = [
-        ...filter(fuelRecords).map(f => ({ ...f, type: 'fuel' })),
+        ...myFuel.map(f => ({ ...f, type: 'fuel' })),
         ...filter(maintenanceRecords).map(m => ({ ...m, type: 'maintenance' })),
         ...filter(expenseRecords).map(e => ({ ...e, type: 'expense' })),
         ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
       ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 4);
 
+      // تحديث الحالة
+      setTotals({ 
+        ...(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 }),
+        avgConsumption: avgVal,
+        avgUnit: unit
+      });
       setRecentActivity(activities);
+      
     } catch (e) {
       console.error("Failed to refresh dashboard:", e);
     } finally {
@@ -211,7 +245,6 @@ export const AppProvider = ({ children }) => {
       currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, 
       isLoading, setIsLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
       user, setUser, dataVersion, bumpDataVersion,
-      // ✅ القيم المركزية الجديدة
       totals, recentActivity, refreshDashboard
     }}>
       {children}
