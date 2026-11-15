@@ -6,7 +6,6 @@ import {
   Wrench, Settings, Truck, AlertTriangle, Loader2, Map, Star
 } from 'lucide-react';
 
-// ✅ تم إصلاح المسار هنا ليتطابق مع مجلد shared
 import { REGIONS, getSearchKeywords } from '../shared/constants/regions.js';
 import { safeNumber } from '../shared/utils/safeNumber.js';
 
@@ -34,35 +33,24 @@ export default function Assistance() {
   const [userLocation, setUserLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState([]);
-  const [activeTab, setActiveTab] = useState('repair'); // repair | parts | towing
+  const [activeTab, setActiveTab] = useState('repair'); 
   const [activeSubTab, setActiveSubTab] = useState(''); 
   const [errorMsg, setErrorMsg] = useState('');
   const [showFallback, setShowFallback] = useState(false);
 
   const loadingTimerRef = useRef(null);
 
-  const CURRENCY_TO_COUNTRY = {
-    'MAD': 'MA', 'DZD': 'DZ', 'TND': 'TN', 'LYD': 'LY', 'EGP': 'EG',
-    'SAR': 'SA', 'AED': 'AE', 'KWD': 'KW', 'QAR': 'QA', 'BHD': 'BH', 'OMR': 'OM', 'JOD': 'JO',
-    'USD': 'SA', 'EUR': 'MA' 
-  };
-
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1);
     else navigate('/');
   };
 
-  // 🗺️ دالة فتح خرائط جوجل (محدثة لتدعم التخصيصات واللغة)
   const openGoogleMapsSearch = useCallback(() => {
-    // جلب الكلمات المفتاحية باللغة الحالية
     const keywords = getSearchKeywords(currency, lang);
     const regionConfig = REGIONS[currency] || REGIONS['MAD'];
 
     let searchQuery = '';
-    
-    // إذا كان هناك تخصيص محدد (مثل قطع غيار مستعملة)
     if (activeSubTab) {
-      // جلب الرقائق الخاصة باللغة الحالية أو العربية كاحتياط
       const subTabs = regionConfig?.subKeywords?.[lang]?.[activeTab] 
                    || regionConfig?.subKeywords?.['ar']?.[activeTab] 
                    || [];
@@ -70,12 +58,10 @@ export default function Assistance() {
       if (sub) searchQuery = sub.query;
     }
     
-    // إذا لم يوجد تخصيص، استخدم الكلمة العامة
     if (!searchQuery) {
       searchQuery = keywords[activeTab] || keywords.repair;
     }
 
-    // فتح الرابط
     if (userLocation) {
       const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}/@${userLocation.lat},${userLocation.lon},14z`;
       window.open(url, '_blank', 'noopener,noreferrer');
@@ -85,18 +71,16 @@ export default function Assistance() {
     }
   }, [userLocation, activeTab, activeSubTab, currency, lang]);
 
-  // 📍 جلب الموقع بدقة عالية مع معالجة التعليق
   const fetchNearbyHelp = useCallback(async (type) => {
     setErrorMsg('');
     setShowFallback(false);
     setIsLoading(true);
     setResults([]);
 
-    // ✅ إصلاح مشكلة "التعليق": إذا استغرق البحث أكثر من 8 ثوانٍ، اعرض زر جوجل مابس
     if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
     loadingTimerRef.current = setTimeout(() => {
       setIsLoading(false);
-      setErrorMsg('استغرق البحث وقتاً طويلاً (قد تكون الشبكة ضعيفة).');
+      setErrorMsg(t('searchTimeout') || 'استغرق البحث وقتاً طويلاً (قد تكون الشبكة ضعيفة).');
       setShowFallback(true);
     }, 8000);
 
@@ -179,15 +163,13 @@ export default function Assistance() {
 
   useEffect(() => {
     fetchNearbyHelp(activeTab);
-    setActiveSubTab(''); // إعادة تعيين التخصيص عند تغيير التبويب الرئيسي
+    setActiveSubTab(''); 
     
-    // ✅ تنظيف المؤقت عند مغادرة الصفحة
     return () => {
       if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
     };
   }, [activeTab, fetchNearbyHelp]);
 
-  // ✅ جلب التخصيصات بناءً على الدولة واللغة والتبويب الحالي
   const regionConfig = REGIONS[currency] || REGIONS['MAD'];
   const availableSubTabs = regionConfig?.subKeywords?.[lang]?.[activeTab] 
                         || regionConfig?.subKeywords?.['ar']?.[activeTab] 
@@ -209,18 +191,18 @@ export default function Assistance() {
 
       {/* التبويبات الرئيسية */}
       <div className="flex gap-1.5 bg-[var(--surface-2)] p-1.5 rounded-2xl border border-[var(--border)]/50 shadow-inner">
-        <button onClick={() => setActiveTab('repair')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${activeTab === 'repair' ? 'bg-[var(--surface)] shadow-md text-blue-500 scale-[1.02]' : 'text-[var(--text-muted)]'}`}>
+        <button onClick={() => setActiveTab('repair')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${activeTab === 'repair' ? 'bg-[var(--surface)] shadow-sm text-blue-500 scale-[1.02]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>
           <Wrench size={16} /> {t('findRepairShop') || 'ورش إصلاح'}
         </button>
-        <button onClick={() => setActiveTab('parts')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${activeTab === 'parts' ? 'bg-[var(--surface)] shadow-md text-purple-500 scale-[1.02]' : 'text-[var(--text-muted)]'}`}>
+        <button onClick={() => setActiveTab('parts')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${activeTab === 'parts' ? 'bg-[var(--surface)] shadow-sm text-purple-500 scale-[1.02]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>
           <Settings size={16} /> {t('findSpareParts') || 'قطع غيار'}
         </button>
-        <button onClick={() => setActiveTab('towing')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${activeTab === 'towing' ? 'bg-[var(--surface)] shadow-md text-red-500 scale-[1.02]' : 'text-[var(--text-muted)]'}`}>
+        <button onClick={() => setActiveTab('towing')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${activeTab === 'towing' ? 'bg-[var(--surface)] shadow-sm text-red-500 scale-[1.02]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}>
           <Truck size={16} /> {t('requestTowing') || 'سحب السيارات'}
         </button>
       </div>
 
-      {/* ✅ الرقائق الذكية (Smart Chips) للتخصيص */}
+      {/* الرقائق الذكية */}
       {availableSubTabs.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide animate-fade-in">
           {availableSubTabs.map(sub => (
@@ -229,7 +211,7 @@ export default function Assistance() {
               onClick={() => setActiveSubTab(activeSubTab === sub.id ? '' : sub.id)}
               className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
                 activeSubTab === sub.id 
-                  ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md shadow-[var(--primary)]/20' 
+                  ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md' 
                   : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:border-[var(--text-muted)]'
               }`}
             >
@@ -240,32 +222,32 @@ export default function Assistance() {
       )}
 
       {/* منطقة البحث والخريطة */}
-      <div className="w-full h-44 bg-gradient-to-br from-blue-900/10 to-[var(--surface)] rounded-3xl border border-blue-500/20 flex flex-col items-center justify-center relative shadow-lg overflow-hidden group">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--primary)_1px,_transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
+      <div className="w-full h-44 bg-[var(--surface)] rounded-3xl border border-[var(--border)] flex flex-col items-center justify-center relative shadow-sm overflow-hidden group">
+        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,_var(--primary)_1px,_transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
         
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="relative mb-2">
+        <div className="relative z-10 flex flex-col items-center w-full px-6">
+          <div className="relative mb-3">
             <div className="absolute inset-0 bg-[var(--primary)] rounded-full animate-ping opacity-20"></div>
-            <MapPin size={36} className="text-[var(--primary)] relative z-10" />
+            <MapPin size={36} className="text-[var(--primary)] relative z-10 drop-shadow-md" />
           </div>
-          <p className="text-xs font-bold text-[var(--text)] mb-3 bg-[var(--surface)]/80 backdrop-blur-sm px-3 py-1 rounded-full border border-[var(--border)]">
+          <p className="text-xs font-bold text-[var(--text)] mb-3 bg-[var(--surface-2)] px-3 py-1 rounded-full border border-[var(--border)]">
             {t('yourLocation') || 'موقعك الحالي (تم التحديد)'}
           </p>
           
-          <div className="flex items-center gap-1 text-[10px] text-green-600 font-bold mb-3 bg-green-500/10 px-2.5 py-1 rounded-md border border-green-500/20">
+          <div className="flex items-center gap-1 text-[10px] text-green-600 font-bold mb-4 bg-green-500/10 px-2.5 py-1 rounded-md border border-green-500/20">
             <Star size={12} fill="currentColor" /> ننصحك باختيار الخدمات 4.5 ⭐ فما فوق
           </div>
 
           <button 
             onClick={openGoogleMapsSearch}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-all hover:opacity-90"
+            className="flex items-center justify-center gap-2 w-full bg-[var(--primary)] text-white px-6 py-3.5 rounded-2xl text-sm font-bold shadow-lg shadow-[var(--primary)]/20 active:scale-95 transition-all hover:opacity-90"
           >
-            <Map size={18} /> {t('searchOnGoogleMaps') || 'عرض الكل على خرائط جوجل'}
+            <Map size={18} /> {t('searchOnGoogleMaps') || 'البحث على خرائط جوجل'}
           </button>
         </div>
       </div>
 
-      {/* حالة التحميل (مع زر إلغاء/تجاوز) */}
+      {/* حالة التحميل */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-10">
           <Loader2 size={36} className="animate-spin text-[var(--primary)] mb-4" />
@@ -283,7 +265,7 @@ export default function Assistance() {
           <p className="text-sm font-bold text-red-500 mb-5 leading-relaxed">{errorMsg}</p>
           
           {showFallback && (
-            <button onClick={openGoogleMapsSearch} className="bg-[var(--primary)] text-white px-5 py-3.5 rounded-2xl text-sm font-bold active:scale-95 transition-transform flex items-center justify-center gap-2 w-full mb-4 shadow-lg shadow-blue-500/20">
+            <button onClick={openGoogleMapsSearch} className="bg-[var(--primary)] text-white px-5 py-3.5 rounded-2xl text-sm font-bold active:scale-95 transition-transform flex items-center justify-center gap-2 w-full mb-4 shadow-lg shadow-[var(--primary)]/20">
               <Map size={18} /> {t('searchOnGoogleMaps') || 'البحث الآن على خرائط جوجل'}
             </button>
           )}
