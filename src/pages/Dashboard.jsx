@@ -12,7 +12,7 @@ import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.js';
 
-// مكون العداد الدائري (يقبل القيم الفارغة ويعرض 0 بدلاً من الانهيار)
+// مكون العداد الدائري (مُحسن ليكون متجاوباً)
 const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon }) => {
   const safeMax = max > 0 ? max : 100;
   const displayVal = value !== null && value !== undefined ? value : 0;
@@ -61,7 +61,8 @@ const CarBrandLogo = ({ carName, carImage }) => {
 };
 
 export default function Dashboard() {
-  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, documents, maintenanceRecords } = useContext(AppContext);
+  // تمت إزالة maintenanceRecords لأننا نعتمد على totals.nextOilChangeOdo
+  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, documents } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
@@ -115,7 +116,7 @@ export default function Dashboard() {
     );
   }, [vehicles, searchQuery]);
 
-  // --- الحسابات الحقيقية (بدون أي بيانات وهمية) ---
+  // --- الحسابات الحقيقية ---
   const netValue = safeNumber(totals?.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals?.income);
@@ -124,17 +125,17 @@ export default function Dashboard() {
   const avgValue = safeNumber(totals?.avgConsumption);
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
 
-  // ✅ 1. تكلفة الكيلومتر الحقيقية (من الـ Context)
+  // تكلفة الكيلومتر الحقيقية
   const realCostPerKm = totals?.costPerKm;
 
-  // ✅ 2. التنبؤ بالزيت الحقيقي (من الـ Context)
+  // التنبؤ بالزيت الحقيقي
   const nextOilChangeOdo = totals?.nextOilChangeOdo;
   const kmToOilChange = (nextOilChangeOdo && odometerValue > 0) 
     ? Math.max(0, nextOilChangeOdo - odometerValue) 
     : null;
   const isOilOverdue = nextOilChangeOdo !== null && odometerValue >= nextOilChangeOdo;
 
-  // ✅ 3. التنبيهات الذكية (الوثائق التي تنتهي قريباً)
+  // التنبيهات الذكية (الوثائق التي تنتهي قريباً)
   const activeAlert = useMemo(() => {
     if (!documents || documents.length === 0) return null;
     const now = new Date();
@@ -157,14 +158,14 @@ export default function Dashboard() {
     return null;
   }, [documents, t]);
 
-  // ✅ 4. حساب صحة السيارة الديناميكي (وثائق + زيت)
+  // حساب صحة السيارة الديناميكي (وثائق + زيت)
   let healthScore = 100;
   if (activeAlert) healthScore -= 15;
   if (isOilOverdue) healthScore -= 30;
   else if (kmToOilChange !== null && kmToOilChange < 500) healthScore -= 10;
   healthScore = Math.max(0, healthScore);
 
-  // ✅ 5. التنبؤ بالوقود (لا نستخدم خزان وهمي)
+  // التنبؤ بالوقود (بدون خزان وهمي)
   const tankCapacity = safeNumber(currentCar?.tankCapacity);
   const currentFuelLiters = safeNumber(currentCar?.currentFuel);
   let distanceToEmpty = null;
@@ -290,7 +291,7 @@ export default function Dashboard() {
           <h3 className="font-bold text-xs flex items-center gap-1.5"><Activity size={14} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
           <span className="text-[9px] font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-1 rounded-md border border-[var(--border)] flex items-center gap-1">
             <Gauge size={10} className="text-purple-400"/> 
-            تكلفة الكم: {realCostPerKm !== null ? `${realCostPerKm} ${currency}` : 'غير متوفر'}
+            {realCostPerKm !== null ? `تكلفة الكم: ${realCostPerKm} ${currency}` : 'يحتاج بيانات أكثر'}
           </span>
         </div>
         
@@ -354,7 +355,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* النافذة السفلية لتبديل السيارة (بدون تغيير) */}
+      {/* النافذة السفلية لتبديل السيارة */}
       {isCarModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[150] flex items-end justify-center backdrop-blur-sm pb-0" onClick={() => setIsCarModalOpen(false)}>
           <div className="bg-[var(--surface)] w-full max-w-md rounded-t-3xl border-t border-[var(--border)] animate-slide-up flex flex-col h-[85vh]" onClick={e => e.stopPropagation()}>
