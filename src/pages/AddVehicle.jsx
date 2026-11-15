@@ -1,13 +1,15 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext.jsx';
-import { Camera, X } from 'lucide-react';
+import { Camera, X, Search, CheckCircle, ChevronDown } from 'lucide-react';
 
 import Input from '../shared/components/ui/Input.jsx';
 import Button from '../shared/components/ui/Button.jsx';
 import OptionPicker from '../shared/components/ui/OptionPicker.jsx';
 // ✅ استيراد دالة الحماية الرياضية
 import { safeNumber } from '../shared/utils/safeNumber.js';
+// ✅ استيراد ملف الماركات والشعارات
+import { CAR_BRANDS, getBrandLogoUrl } from '../shared/constants/carBrands.js';
 
 const EMPTY_CAR = { 
   make: '', model: '', plate: '', odometer: '', 
@@ -38,6 +40,18 @@ export default function AddVehicle() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [car, setCar] = useState(EMPTY_CAR);
+
+  // ✅ حالات جديدة لاختيار الماركة
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [brandSearch, setBrandSearch] = useState('');
+
+  // ✅ دالة الفلترة للبحث عن الماركة
+  const filteredBrands = useMemo(() => {
+    if (!brandSearch) return CAR_BRANDS;
+    return CAR_BRANDS.filter(brand => 
+      brand.name.toLowerCase().includes(brandSearch.toLowerCase())
+    );
+  }, [brandSearch]);
 
   const powertrainOptions = [
     { value: 'ice', label: t('ice') || 'بنزين / ديزل' },
@@ -155,7 +169,6 @@ export default function AddVehicle() {
       return t('fieldTooLong') || 'النص طويل جداً.';
     }
 
-    // ✅ استخدام safeNumber لتنظيف المدخلات (مثل إزالة الفواصل)
     const odoNum = safeNumber(car.odometer, -1);
     if (odoNum < 0 || odoNum > MAX_ODO) {
       return t('invalidOdometer') || 'العداد غير صالح.';
@@ -199,7 +212,6 @@ export default function AddVehicle() {
       return;
     }
 
-    // ✅ استخدام safeNumber لضمان دقة الأرقام
     const odoNum = safeNumber(car.odometer);
     const yearStr = String(car.year ?? '').trim();
     const yearNum = yearStr !== '' ? Number(yearStr) : null;
@@ -223,7 +235,6 @@ export default function AddVehicle() {
 
     setIsSaving(true);
     try {
-      // ✅ إصلاح حرج: التحقق من القيمة المرجعة (true/false) قبل التنقل
       let success = false;
       if (isEditing) {
         success = updateCar(editId, carData);
@@ -284,7 +295,7 @@ export default function AddVehicle() {
               <input 
                 type="file" 
                 accept="image/*" 
-                capture="environment" // ✅ فتح الكاميرا مباشرة على الهاتف
+                capture="environment" 
                 onChange={handleImageUpload} 
                 className="hidden" 
                 aria-label={t('addImage') || 'إضافة صورة'} 
@@ -295,13 +306,24 @@ export default function AddVehicle() {
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="flex-1 space-y-1">
-        <Input 
-          label={t('carMake') || 'الماركة'} 
-          value={car.make} 
-          onChange={(e) => setCar(prev => ({...prev, make: e.target.value}))} 
-          maxLength={MAX_MAKE_LEN}
-          required 
-        />
+        
+        {/* ✅ حقل الماركة التفاعلي (يفتح النافذة السفلية) */}
+        <div className="flex flex-col gap-1.5 mt-2 mb-4">
+          <label className="text-xs font-bold text-[var(--text-muted)] mr-1">
+            {t('carMake') || 'الماركة'} <span className="text-red-500">*</span>
+          </label>
+          <button
+            type="button"
+            onClick={() => setIsBrandModalOpen(true)}
+            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl py-3.5 px-4 flex items-center justify-between text-right active:scale-[0.98] transition-all hover:border-[var(--primary)]"
+          >
+            <span className={`text-sm font-bold ${car.make ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}`}>
+              {car.make || t('chooseBrand') || 'اختر ماركة السيارة...'}
+            </span>
+            <ChevronDown size={18} className="text-[var(--text-muted)]" />
+          </button>
+        </div>
+
         <Input 
           label={t('carModel') || 'الموديل'} 
           value={car.model} 
@@ -393,6 +415,82 @@ export default function AddVehicle() {
           </Button>
         </div>
       </form>
+
+      {/* ✅ النافذة السفلية لاختيار الماركة (Bottom Sheet) */}
+      {isBrandModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[150] flex items-end justify-center backdrop-blur-sm pb-0" onClick={() => setIsBrandModalOpen(false)}>
+          <div className="bg-[var(--surface)] w-full max-w-md rounded-t-3xl border-t border-[var(--border)] animate-slide-up flex flex-col h-[85vh]" onClick={e => e.stopPropagation()}>
+            
+            <div className="p-5 border-b border-[var(--border)]">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-lg text-[var(--text)]">{t('carBrand') || 'ماركة السيارة'}</h3>
+                <button onClick={() => setIsBrandModalOpen(false)} className="p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)]">
+                  <X size={18} />
+                </button>
+              </div>
+              
+              <div className="relative">
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <Search size={16} className="text-[var(--text-muted)]" />
+                </div>
+                <input 
+                  type="text" 
+                  value={brandSearch}
+                  onChange={(e) => setBrandSearch(e.target.value)}
+                  placeholder={t('searchBrand') || 'ابحث عن ماركة...'}
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl py-2.5 pr-10 pl-4 text-sm font-bold text-[var(--text)] outline-none focus:border-[var(--primary)] transition-colors"
+                />
+              </div>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 p-2">
+              {filteredBrands.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {filteredBrands.map(brand => (
+                    <button
+                      key={brand.id}
+                      onClick={() => {
+                        setCar(prev => ({ ...prev, make: brand.name }));
+                        setIsBrandModalOpen(false);
+                        setBrandSearch('');
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-right ${
+                        car.make === brand.name 
+                          ? 'border-[var(--primary)] bg-[var(--primary)]/10' 
+                          : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--text-muted)]'
+                      }`}
+                    >
+                      <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-[var(--border)]">
+                        <img 
+                          src={getBrandLogoUrl(brand.domain)} 
+                          alt={brand.name} 
+                          className="w-full h-full object-contain p-1"
+                          onError={(e) => { e.target.style.display = 'none'; }} 
+                        />
+                      </div>
+                      <span className={`text-xs font-bold truncate ${car.make === brand.name ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
+                        {brand.name}
+                      </span>
+                      {car.make === brand.name && <CheckCircle size={14} className="text-[var(--primary)] ml-auto shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center flex flex-col items-center justify-center">
+                  <p className="text-sm font-bold text-[var(--text-muted)] mb-4">{t('noResults') || 'لم يتم العثور على الماركة.'}</p>
+                  <button onClick={() => {
+                    setCar(prev => ({ ...prev, make: brandSearch }));
+                    setIsBrandModalOpen(false);
+                    setBrandSearch('');
+                  }} className="text-xs font-bold text-white bg-[var(--primary)] px-4 py-2 rounded-lg">
+                    {t('addCustomBrand') || `إضافة "${brandSearch}" كماركة مخصصة`}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
