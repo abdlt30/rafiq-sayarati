@@ -1,21 +1,22 @@
-import { useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { useContext, useState, useCallback, useMemo } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, Pencil, Check, X, Bell, Settings,
   TrendingUp, TrendingDown, Activity, Plus, ShieldCheck, ChevronDown, CheckCircle,
-  AlertTriangle, MapPin, Search, Gauge, AlertOctagon, Navigation, Zap, Droplets
+  AlertTriangle, MapPin, Search, Gauge, AlertOctagon, Navigation, Droplets
 } from 'lucide-react'; 
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.js';
 
-// ✅ مكون العداد الدائري (مُحسن ليكون متجاوباً)
+// مكون العداد الدائري (يقبل القيم الفارغة ويعرض 0 بدلاً من الانهيار)
 const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon }) => {
   const safeMax = max > 0 ? max : 100;
-  const safeVal = Math.min(Math.max(0, value), safeMax);
+  const displayVal = value !== null && value !== undefined ? value : 0;
+  const safeVal = Math.min(Math.max(0, displayVal), safeMax);
   const percentage = (safeVal / safeMax) * 100;
   
   const radius = 40;
@@ -38,7 +39,7 @@ const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon })
         </svg>
         <div className="absolute flex flex-col items-center justify-center text-center">
           {Icon && <Icon size={12} className="mb-0.5 opacity-80" style={{ color }} />}
-          <span className="text-base sm:text-lg font-extrabold text-[var(--text)] leading-tight">{value}</span>
+          <span className="text-base sm:text-lg font-extrabold text-[var(--text)] leading-tight">{displayVal}</span>
           <span className="text-[7px] sm:text-[8px] text-[var(--text-muted)] font-bold">{unit}</span>
         </div>
       </div>
@@ -60,15 +61,14 @@ const CarBrandLogo = ({ carName, carImage }) => {
 };
 
 export default function Dashboard() {
-  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, reminders, documents } = useContext(AppContext);
+  // نضيف documents و maintenance لجلب البيانات الحقيقية
+  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, documents } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
   const [isCarModalOpen, setIsCarModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // حالة جلب الموقع
   const [isLocating, setIsLocating] = useState(false);
 
   const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
@@ -90,9 +90,8 @@ export default function Dashboard() {
     setSearchQuery('');
   };
 
-  // ✅ ميزة 4: جلب الموقع الحي
   const handleLocateCar = (e) => {
-    e.stopPropagation(); // منع فتح نافذة تبديل السيارة عند الضغط على الزر
+    e.stopPropagation(); 
     setIsLocating(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -101,15 +100,11 @@ export default function Dashboard() {
           window.open(`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`, '_blank', 'noopener,noreferrer');
           setIsLocating(false);
         },
-        (error) => {
-          alert('تعذر جلب الموقع. يرجى تفعيل الـ GPS.');
-          setIsLocating(false);
-        },
+        () => { alert('تعذر جلب الموقع. يرجى تفعيل الـ GPS.'); setIsLocating(false); },
         { enableHighAccuracy: true, timeout: 8000 }
       );
     } else {
-      alert('متصفحك لا يدعم تحديد الموقع.');
-      setIsLocating(false);
+      alert('متصفحك لا يدعم تحديد الموقع.'); setIsLocating(false);
     }
   };
 
@@ -121,7 +116,7 @@ export default function Dashboard() {
     );
   }, [vehicles, searchQuery]);
 
-  // ✅ العمليات الحسابية والذكاء الاصطناعي البسيط
+  // --- الحسابات الحقيقية (بدون أي بيانات وهمية) ---
   const netValue = safeNumber(totals?.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals?.income);
@@ -129,32 +124,58 @@ export default function Dashboard() {
   const odometerValue = safeNumber(currentCar?.odometer);
   const avgValue = safeNumber(totals?.avgConsumption);
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
-  const healthScore = 100; 
 
-  // ✅ ميزة 1: حساب تكلفة الكيلومتر
-  // (إجمالي المصاريف / المسافة المقطوعة) - نضع 1 كحد أدنى لتجنب القسمة على صفر
-  const costPerKm = (totalValue / (odometerValue || 1)).toFixed(2);
+  // 1. تكلفة الكيلومتر (تظهر 0.00 إذا لم توجد بيانات كافية)
+  const costPerKm = (odometerValue > 0 && totalValue > 0) ? (totalValue / odometerValue).toFixed(2) : '0.00';
 
-  // ✅ ميزة 3: التنبؤ بالصيانة (محاكاة ذكاء اصطناعي)
-  // نفترض أن الزيت يحتاج تغيير كل 5000 كم
-  const assumedOilChangeInterval = 5000;
-  const kmToOilChange = Math.max(0, assumedOilChangeInterval - (odometerValue % assumedOilChangeInterval));
-  
-  // ✅ ميزة 2: التنبيهات الذكية
-  // نبحث في التذكيرات والوثائق عن أي شيء ينتهي قريباً (للتجربة نضع تنبيهاً ثابتاً إذا لم توجد بيانات)
-  const hasUpcomingAlert = true; // يمكنك تغيير هذا المنطق لاحقاً ليفحص التواريخ الفعلية
-  const alertMessage = "⚠️ تنبيه: التأمين ينتهي بعد 5 أيام. يرجى التجديد.";
+  // 2. حساب نسبة صحة السيارة (ديناميكي): تبدأ بـ 100 وتنقص إذا وجدت مستحقات
+  const activeAlert = useMemo(() => {
+    if (!documents || documents.length === 0) return null;
+    const now = new Date();
+    // نبحث عن وثيقة تنتهي خلال الـ 30 يوماً القادمة
+    const soon = new Date();
+    soon.setDate(now.getDate() + 30);
 
-  const tankCapacity = safeNumber(currentCar?.tankCapacity) || 50;
-  const currentFuelLiters = safeNumber(currentCar?.currentFuel) || (tankCapacity / 2);
-  let distanceToEmpty = 0;
-  if (avgValue > 0) {
+    const expiringDoc = documents.find(doc => {
+      if (!doc.expiryDate) return false;
+      const expDate = new Date(doc.expiryDate);
+      return expDate <= soon;
+    });
+
+    if (expiringDoc) {
+      const daysLeft = Math.ceil((new Date(expiringDoc.expiryDate) - now) / (1000 * 60 * 60 * 24));
+      return { 
+        message: `⚠️ تنبيه: ${t(expiringDoc.type) || expiringDoc.type} ينتهي بعد ${daysLeft} أيام. يرجى التجديد.`,
+        isUrgent: daysLeft < 7
+      };
+    }
+    return null;
+  }, [documents, t]);
+
+  const healthScore = activeAlert ? 85 : 100; // ينقص 15% إذا كان هناك تنبيه
+
+  // 3. التنبؤ بالوقود (لا نستخدم خزان وهمي)
+  const tankCapacity = safeNumber(currentCar?.tankCapacity);
+  const currentFuelLiters = safeNumber(currentCar?.currentFuel);
+  let distanceToEmpty = null;
+  if (avgValue > 0 && currentFuelLiters > 0) {
     distanceToEmpty = Math.floor((currentFuelLiters / avgValue) * 100);
   }
-  const isFuelLow = distanceToEmpty > 0 && distanceToEmpty < 50;
+  const isFuelLow = distanceToEmpty !== null && distanceToEmpty > 0 && distanceToEmpty < 50;
+
+  // 4. التنبؤ بتغيير الزيت (نبحث في سجلات الصيانة الحقيقية)
+  const lastOilChange = recentActivity?.find(act => 
+    act.type === 'maintenance' && 
+    (act.subType?.toLowerCase().includes('زيت') || act.subType?.toLowerCase().includes('oil'))
+  );
+  // إذا لم يجد سجلاً، لا نعرض رقماً وهمياً
+  const kmToOilChange = lastOilChange && lastOilChange.nextOdometer 
+    ? Math.max(0, lastOilChange.nextOdometer - odometerValue) 
+    : null;
+
   const findGasStationUrl = `https://www.google.com/maps/search/${encodeURIComponent('gas station محطة وقود')}`;
 
-  if (isLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-40 bg-[var(--surface-2)] rounded-3xl"></div><div className="h-24 bg-[var(--surface-2)] rounded-2xl"></div></div>;
+  if (isLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-40 bg-[var(--surface-2)] rounded-3xl"></div></div>;
   if (!currentCar) return null;
 
   return (
@@ -172,16 +193,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ✅ ميزة 2: شريط التنبيهات الذكية */}
-      {hasUpcomingAlert && (
-        <div className="bg-orange-500/10 border border-orange-500/30 p-3 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm">
-          <AlertOctagon size={20} className="text-orange-500 shrink-0 animate-pulse" />
-          <p className="text-xs font-bold text-orange-500 flex-1">{alertMessage}</p>
-          <button className="text-[10px] font-bold bg-orange-500 text-white px-2 py-1 rounded-md">تجديد</button>
+      {/* التنبيهات الذكية (تظهر فقط إذا كان هناك تنبيه حقيقي) */}
+      {activeAlert && (
+        <div className={`p-3 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm border ${activeAlert.isUrgent ? 'bg-red-500/10 border-red-500/30' : 'bg-orange-500/10 border-orange-500/30'}`}>
+          <AlertOctagon size={20} className={`shrink-0 ${activeAlert.isUrgent ? 'text-red-500' : 'text-orange-500'}`} />
+          <p className={`text-xs font-bold flex-1 ${activeAlert.isUrgent ? 'text-red-500' : 'text-orange-500'}`}>{activeAlert.message}</p>
+          <Link to="/documents" className="text-[10px] font-bold bg-[var(--surface)] px-2 py-1 rounded-md border border-[var(--border)]">عرض</Link>
         </div>
       )}
 
-      {/* بطاقة السيارة (أفقية) */}
+      {/* بطاقة السيارة */}
       <div 
         onClick={() => setIsCarModalOpen(true)}
         className="relative overflow-hidden rounded-2xl p-4 bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-[var(--primary)]/50 transition-all active:scale-[0.98]"
@@ -195,7 +216,7 @@ export default function Dashboard() {
               {currentCar.plate || t('noPlate')} • {odometerValue.toLocaleString()} {t('km') || 'كم'}
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-[10px] font-bold text-green-500 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-md">
+              <span className={`text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${healthScore === 100 ? 'text-green-500 bg-green-500/10' : 'text-orange-500 bg-orange-500/10'}`}>
                 <ShieldCheck size={12} /> {healthScore}% {t('carHealth') || 'صحة'}
               </span>
               <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1 bg-[var(--surface-2)] px-2 py-0.5 rounded-md">
@@ -207,34 +228,37 @@ export default function Dashboard() {
             <div className="w-12 h-12 bg-[var(--surface-2)] rounded-full flex items-center justify-center overflow-hidden border border-[var(--border)] shadow-inner">
               <CarBrandLogo carName={`${currentCar.make} ${currentCar.model}`} carImage={currentCar.image} />
             </div>
-            {/* ✅ ميزة 4: زر تحديد موقع السيارة */}
             <button onClick={handleLocateCar} className="flex items-center gap-1 text-[9px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded-md active:scale-95 transition-all">
               {isLocating ? <Activity size={10} className="animate-spin" /> : <Navigation size={10} />} 
-              {isLocating ? 'جاري...' : 'أين سيارتي؟'}
+              {isLocating ? 'جاري...' : 'موقعي'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* لوحة القيادة - عدادات الصحة والوقود */}
+      {/* لوحة القيادة - عدادات */}
       <div className="grid grid-cols-2 gap-3">
         {/* عداد الوقود */}
         <div className={`p-3 rounded-2xl border ${isFuelLow ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-between relative`}>
           <div className="flex justify-between items-center w-full mb-1 px-1">
             <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={12} className={isFuelLow ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
-            {isFuelLow && <span className="text-[8px] bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">!</span>}
           </div>
-          <CircularGauge 
-            value={distanceToEmpty} 
-            max={600} 
-            label={t('distanceToEmpty') || 'كم متبقية'} 
-            color={isFuelLow ? '#ef4444' : '#3b82f6'} 
-            unit={t('km') || 'كم'} 
-            icon={MapPin}
-          />
-          {/* ✅ ميزة 5: زر تسجيل وقود سريع */}
+          
+          {/* إذا لم تكن هناك بيانات، نعرض شرطة بدلاً من رقم وهمي */}
+          {distanceToEmpty !== null ? (
+            <CircularGauge 
+              value={distanceToEmpty} max={600} label={t('distanceToEmpty') || 'كم متبقية'} 
+              color={isFuelLow ? '#ef4444' : '#3b82f6'} unit={t('km') || 'كم'} icon={MapPin}
+            />
+          ) : (
+             <div className="flex flex-col items-center justify-center h-[100px] text-center px-2">
+               <Fuel size={24} className="text-[var(--text-muted)] opacity-30 mb-2" />
+               <span className="text-[9px] font-bold text-[var(--text-muted)]">سجل تعبئة لتوقع المسافة</span>
+             </div>
+          )}
+          
           <Link to="/fuel" className="mt-2 w-full flex items-center justify-center gap-1 bg-blue-500 text-white text-[10px] font-bold py-1.5 rounded-lg active:scale-95 transition-transform shadow-md shadow-blue-500/20">
-            <Plus size={12} /> تعبئة سريعة
+            <Plus size={12} /> تعبئة
           </Link>
         </div>
 
@@ -244,25 +268,26 @@ export default function Dashboard() {
             <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><ShieldCheck size={12} className="text-green-500" /> {t('carHealth') || 'الحالة'}</span>
           </div>
           <CircularGauge 
-            value={healthScore} 
-            max={100} 
-            label={t('carHealth') || 'ممتازة'} 
-            color="#10b981" 
-            unit="%" 
+            value={healthScore} max={100} label={t('carHealth') || 'ممتازة'} 
+            color={healthScore === 100 ? "#10b981" : "#f59e0b"} unit="%" 
           />
-          {/* ✅ ميزة 3: التنبؤ بالصيانة */}
+          
+          {/* التنبؤ بالصيانة الحقيقي */}
           <div className="mt-2 w-full bg-[var(--surface-2)] rounded-lg p-1.5 text-center border border-[var(--border)]">
-             <p className="text-[8px] text-[var(--text-muted)] font-bold flex items-center justify-center gap-1"><Droplets size={10} className="text-yellow-500"/> تغيير الزيت القادم</p>
-             <p className="text-[10px] font-extrabold text-yellow-500">بعد {kmToOilChange} كم</p>
+             <p className="text-[8px] text-[var(--text-muted)] font-bold flex items-center justify-center gap-1"><Droplets size={10} className="text-yellow-500"/> تغيير الزيت</p>
+             {kmToOilChange !== null ? (
+               <p className="text-[10px] font-extrabold text-yellow-500">بعد {kmToOilChange} كم</p>
+             ) : (
+               <p className="text-[9px] font-bold text-[var(--text-muted)]">غير مسجل</p>
+             )}
           </div>
         </div>
       </div>
 
-      {/* لوحة القيادة - الملخص المالي */}
+      {/* الملخص المالي */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm mt-3">
         <div className="flex justify-between items-center mb-3 px-1">
           <h3 className="font-bold text-xs flex items-center gap-1.5"><Activity size={14} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
-          {/* ✅ ميزة 1: مؤشر تكلفة الكيلومتر */}
           <span className="text-[9px] font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-1 rounded-md border border-[var(--border)] flex items-center gap-1">
             <Gauge size={10} className="text-purple-400"/> 
             تكلفة الكم: {costPerKm} {currency}
@@ -272,11 +297,9 @@ export default function Dashboard() {
         <div className="flex items-center gap-4">
           <div className="w-[45%] flex justify-center">
             <CircularGauge 
-              value={Math.abs(netValue)} 
-              max={Math.max(incomeValue, totalValue, 1000)} 
+              value={Math.abs(netValue)} max={Math.max(incomeValue, totalValue, 1000)} 
               label={t('netProfit') || 'صافي الربح'} 
-              color={isNetPositive ? '#10b981' : '#ef4444'} 
-              unit={currency} 
+              color={isNetPositive ? '#10b981' : '#ef4444'} unit={currency} 
             />
           </div>
           
@@ -331,44 +354,27 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* النافذة السفلية لتبديل السيارة */}
+      {/* النافذة السفلية لتبديل السيارة (بدون تغيير) */}
       {isCarModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[150] flex items-end justify-center backdrop-blur-sm pb-0" onClick={() => setIsCarModalOpen(false)}>
           <div className="bg-[var(--surface)] w-full max-w-md rounded-t-3xl border-t border-[var(--border)] animate-slide-up flex flex-col h-[85vh]" onClick={e => e.stopPropagation()}>
-            
             <div className="p-5 border-b border-[var(--border)]">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-lg text-[var(--text)]">{t('vehicles') || 'المركبات'}</h3>
                 <button onClick={() => setIsCarModalOpen(false)} className="p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)]"><X size={18}/></button>
               </div>
-              
               <div className="relative">
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <Search size={16} className="text-[var(--text-muted)]" />
-                </div>
-                <input 
-                  type="text" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('searchCar') || 'ابحث عن سيارة...'}
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl py-2.5 pr-10 pl-4 text-sm font-bold text-[var(--text)] outline-none focus:border-[var(--primary)] transition-colors"
-                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><Search size={16} className="text-[var(--text-muted)]" /></div>
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('searchCar') || 'ابحث عن سيارة...'} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl py-2.5 pr-10 pl-4 text-sm font-bold text-[var(--text)] outline-none focus:border-[var(--primary)] transition-colors" />
               </div>
             </div>
-            
             <div className="overflow-y-auto flex-1">
               {filteredVehicles.length > 0 ? (
                 filteredVehicles.map(car => (
-                  <div 
-                    key={car.id} 
-                    onClick={() => handleSelectCar(car)}
-                    className={`flex items-center justify-between p-4 border-b border-[var(--border)] cursor-pointer transition-all ${String(car.id) === String(currentCar.id) ? 'bg-[var(--primary)]/5' : 'hover:bg-[var(--surface-2)]'}`}
-                  >
+                  <div key={car.id} onClick={() => handleSelectCar(car)} className={`flex items-center justify-between p-4 border-b border-[var(--border)] cursor-pointer transition-all ${String(car.id) === String(currentCar.id) ? 'bg-[var(--primary)]/5' : 'hover:bg-[var(--surface-2)]'}`}>
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className={`font-bold text-sm ${String(car.id) === String(currentCar.id) ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
-                          {car.make} {car.model}
-                        </p>
+                        <p className={`font-bold text-sm ${String(car.id) === String(currentCar.id) ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>{car.make} {car.model}</p>
                         <p className="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">{car.plate || t('noPlate')}</p>
                       </div>
                     </div>
@@ -381,12 +387,9 @@ export default function Dashboard() {
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-[var(--text-muted)] text-sm font-bold">
-                  {t('noResults') || 'لا توجد نتائج'}
-                </div>
+                <div className="p-8 text-center text-[var(--text-muted)] text-sm font-bold">{t('noResults') || 'لا توجد نتائج'}</div>
               )}
             </div>
-
             <div className="p-4 border-t border-[var(--border)]">
               <button onClick={() => { setIsCarModalOpen(false); navigate('/add-vehicle'); }} className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-[var(--primary)]/20">
                 <Plus size={18} /> {t('addNewCar') || 'إضافة سيارة'}
