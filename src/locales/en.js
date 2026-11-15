@@ -505,4 +505,15 @@ export const en = {
   recommendedRating: 'We recommend choosing services rated 4.5 ⭐ or above',
   skipSearchOpenMaps: 'Skip search and open Google Maps directly',
   nearbyPlaces: 'nearby places'
+
+  helpCenter: 'Roadside Help Center',
+serviceRepair: 'Repair Shop',
+serviceTowing: 'Towing Service',
+servicePartsNew: 'New Spare Parts',
+servicePartsUsed: 'Used Spare Parts',
+serviceBattery: 'Car Battery',
+searchViaGoogle: 'Quick Search via Google',
+nearbyResults: 'Nearby Discovered Services',
+emergencyDesc: 'Choose the type of help you need now',
+  
 };
