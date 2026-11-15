@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
+// ✅ استيراد دالة جلب كود الدولة
+import { getCountryCode } from '../shared/constants/regions.js';
 
 // دالة حساب المسافة (Haversine)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -60,15 +62,22 @@ export default function Assistance() {
     return queries[tab]?.[lang] || queries[tab]?.['en'] || 'car service';
   };
 
-  // فتح خرائط جوجل فوراً بالكلمة المفتاحية المناسبة
+  // ✅ فتح خرائط جوجل فوراً وتحديد بلد المستخدم
   const openGoogleMapsSearch = useCallback(() => {
     const query = getGoogleMapsQuery(activeTab, lang);
-    let url = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+    const countryCode = getCountryCode(currency); // جلب كود الدولة (مثلاً MA للمغرب)
+
+    let url = '';
     if (userLocation) {
-      url += `/@${userLocation.lat},${userLocation.lon},14z`;
+      // إذا كان الموقع متاحاً، افتح الخريطة على الإحداثيات مباشرة
+      url = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${userLocation.lat},${userLocation.lon},14z`;
+    } else {
+      // إذا كان الموقع مرفوضاً، أجبر جوجل على البحث داخل بلد المستخدم (gl=ma)
+      url = `https://www.google.com/maps/search/${encodeURIComponent(query)}?gl=${countryCode.toLowerCase()}`;
     }
+    
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [userLocation, activeTab, lang]);
+  }, [userLocation, activeTab, lang, currency]); // أضفنا currency هنا
 
   // جلب الموقع والبحث في OSM
   const fetchNearbyHelp = useCallback(async (type) => {
@@ -225,7 +234,7 @@ export default function Assistance() {
         })}
       </div>
 
-      {/* بطاقة البحث السريع (تحل مشكلة الزر المقطوع) */}
+      {/* بطاقة البحث السريع */}
       <div className="w-full bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] rounded-3xl p-5 border border-[var(--border)] shadow-sm relative overflow-hidden mt-4">
         <div className="flex flex-col items-center text-center">
           <div className="w-12 h-12 bg-[var(--primary)]/10 rounded-full flex items-center justify-center mb-3">
