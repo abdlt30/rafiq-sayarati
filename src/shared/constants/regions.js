@@ -27,16 +27,6 @@ export const REGIONS = {
     keywords: {
       ar: { repair: 'ورشة صيانة سيارات السعودية', parts: 'قطع غيار سيارات السعودية', towing: 'سطحة سحب سيارات السعودية', fuel: 'محطة وقود السعودية' },
       en: { repair: 'auto repair shop saudi arabia', parts: 'auto parts saudi arabia', towing: 'towing service saudi arabia', fuel: 'gas station saudi arabia' }
-    },
-    subKeywords: {
-      ar: {
-        repair: [{ id: 'mechanic', label: 'ميكانيكي', query: 'ورشة ميكانيكا سيارات' }, { id: 'electrician', label: 'كهربائي', query: 'كهرباء سيارات' }, { id: 'bodywork', label: 'سمكرة', query: 'سمكرة وصباغة سيارات' }, { id: 'tires', label: 'بنشري', query: 'بنشري إطارات' }],
-        parts: [{ id: 'new', label: 'جديد', query: 'قطع غيار جديدة' }, { id: 'used', label: 'تشليح', query: 'تشليح قطع غيار' }]
-      },
-      en: {
-        repair: [{ id: 'mechanic', label: 'Mechanic', query: 'car mechanic' }, { id: 'bodywork', label: 'Body Shop', query: 'auto body shop' }],
-        parts: [{ id: 'new', label: 'New', query: 'new auto parts' }, { id: 'used', label: 'Used', query: 'salvage yard auto parts' }]
-      }
     }
   },
   AED: { // الإمارات
@@ -44,12 +34,6 @@ export const REGIONS = {
     keywords: {
       ar: { repair: 'ورشة سيارات الإمارات', parts: 'قطع غيار سيارات الإمارات', towing: 'سطحة سحب الإمارات', fuel: 'محطة وقود الإمارات' },
       en: { repair: 'auto repair shop uae', parts: 'auto parts uae', towing: 'towing recovery uae', fuel: 'gas station uae' }
-    },
-    subKeywords: {
-      en: {
-        repair: [{ id: 'mechanic', label: 'Mechanic', query: 'car mechanic' }, { id: 'electrician', label: 'Electrician', query: 'auto electrician' }, { id: 'bodywork', label: 'Body Shop', query: 'auto body shop' }],
-        parts: [{ id: 'new', label: 'New', query: 'new auto parts' }, { id: 'used', label: 'Used', query: 'used auto parts' }]
-      }
     }
   },
   EGP: { // مصر
@@ -57,12 +41,6 @@ export const REGIONS = {
     keywords: {
       ar: { repair: 'ميكانيكي سيارات مصر', parts: 'قطع غيار سيارات مصر', towing: 'ونش سحب سيارات مصر', fuel: 'محطة بنزين مصر' },
       en: { repair: 'auto repair shop egypt', parts: 'auto parts egypt', towing: 'towing service egypt', fuel: 'gas station egypt' }
-    },
-    subKeywords: {
-      ar: {
-        repair: [{ id: 'mechanic', label: 'ميكانيكي', query: 'ميكانيكي سيارات' }, { id: 'electrician', label: 'كهربائي', query: 'كهربائي سيارات' }, { id: 'bodywork', label: 'سمكري', query: 'سمكري سيارات' }, { id: 'tires', label: 'كاوتش', query: 'إصلاح كاوتش' }],
-        parts: [{ id: 'new', label: 'جديد', query: 'قطع غيار جديدة' }, { id: 'used', label: 'استيراد', query: 'قطع غيار استيراد' }]
-      }
     }
   },
   KWD: { // الكويت
@@ -70,12 +48,6 @@ export const REGIONS = {
     keywords: {
       ar: { repair: 'ورشة سيارات الكويت', parts: 'قطع غيار سيارات الكويت', towing: 'ونش كرين سطحة الكويت', fuel: 'محطة وقود الكويت' },
       en: { repair: 'auto repair shop kuwait', parts: 'auto parts kuwait', towing: 'towing service kuwait', fuel: 'gas station kuwait' }
-    },
-    subKeywords: {
-      ar: {
-        repair: [{ id: 'mechanic', label: 'ميكانيكي', query: 'ميكانيكي سيارات' }, { id: 'electrician', label: 'كهربائي', query: 'كهربائي سيارات' }],
-        parts: [{ id: 'new', label: 'جديد', query: 'قطع غيار جديدة' }, { id: 'used', label: 'تشليح', query: 'تشليح قطع غيار' }]
-      }
     }
   },
   QAR: { // قطر
@@ -127,7 +99,6 @@ export const REGIONS = {
       en: { repair: 'auto repair shop libya', parts: 'auto parts libya', towing: 'towing service libya', fuel: 'gas station libya' }
     }
   },
-  // العملات العالمية (افتراضي)
   USD: { 
     country: 'US', 
     keywords: { en: { repair: 'auto repair shop', parts: 'auto parts', towing: 'towing service', fuel: 'gas station' } } 
@@ -141,15 +112,10 @@ export const REGIONS = {
 // ✅ دالة مساعدة لجلب الكلمات المفتاحية بناءً على العملة واللغة
 export const getSearchKeywords = (currency, lang) => {
   const region = REGIONS[currency] || REGIONS.USD;
-  
-  // محاولة جلب الكلمات بلغة التطبيق الحالية
   let keywords = region.keywords[lang];
-  
-  // إذا لم توجد الكلمات بهذه اللغة، نستخدم العربية (للدول العربية) أو الإنجليزية (كاحتياط أخير)
   if (!keywords) {
     keywords = region.keywords['ar'] || region.keywords['en'];
   }
-  
   return keywords;
 };
 
