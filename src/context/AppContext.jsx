@@ -1,11 +1,11 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
-import { dbService } from '../services/dbService.js'; // ✅ إضافة .js
-import { translations } from '../locales/index.js'; // ✅ إضافة .js (أو بدونها حسب هيكلك)
-import { safeNumber } from '../shared/utils/safeNumber.js'; // ✅ إضافة .js
+import { dbService } from '../services/dbService.js';
+import { translations } from '../locales/index.js';
+import { safeNumber } from '../shared/utils/safeNumber.js';
 
 export const AppContext = createContext();
 
-// ✅ توليد IDs آمن ومتوافق (مثل dbService)
+// ✅ توليد IDs آمن ومتوافق
 const generateId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     try { return crypto.randomUUID(); } catch { /* fallback */ }
@@ -61,53 +61,74 @@ export const AppProvider = ({ children }) => {
   // ===================== الحالة المركزية للبيانات =====================
   const [totals, setTotals] = useState({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km' });
   const [recentActivity, setRecentActivity] = useState([]);
+  
+  // ✅ إضافة الحالات الجديدة المطلوبة للوحة البيانات (Dashboard)
+  const [documents, setDocuments] = useState([]);
+  const [reminders, setReminders] = useState([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState([]);
+  
   const [dataVersion, setDataVersion] = useState(0);
   const bumpDataVersion = useCallback(() => setDataVersion(v => v + 1), []);
 
   // ===================== المعادلة الرياضية (refreshDashboard) =====================
   const refreshDashboard = useCallback(async () => {
-    if (!currentCar) return;
+    if (!currentCar) {
+      setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km' });
+      setRecentActivity([]);
+      setDocuments([]);
+      setReminders([]);
+      setMaintenanceRecords([]);
+      return;
+    }
+    
     setIsLoading(true);
     try {
+      // جلب جميع البيانات من قاعدة البيانات
       const fetchedTotals = await dbService.getTotals(currentCar.id);
       const fuelRecords = await dbService.getFuel() || [];
-      const maintenanceRecords = await dbService.getMaintenance() || [];
+      const allMaintenance = await dbService.getMaintenance() || [];
       const expenseRecords = await dbService.getExpenses() || [];
       const incomeRecords = await dbService.getIncomes() || [];
+      const allDocs = await dbService.getDocuments() || [];
+      const allReminders = await dbService.getReminders() || [];
 
       const carIdStr = String(currentCar.id);
       const filter = (arr) => (Array.isArray(arr) ? arr : []).filter(r => String(r.carId) === carIdStr);
 
       const myFuel = filter(fuelRecords);
-      
-      // 🧮 حساب الاستهلاك
+      const myMaintenance = filter(allMaintenance);
+      const myDocs = filter(allDocs);
+      const myReminders = filter(allReminders);
+
+      // 🧮 حساب الاستهلاك (Math Fix: استخدام اللترات أو الكيلوواط فقط، وليس المبلغ المالي)
       const powertrain = currentCar.powertrain || 'ice';
       const isEV = powertrain === 'ev';
       const unit = isEV ? 'kWh/100km' : 'L/100km';
       
       const validFuelRecords = myFuel.filter(f => 
         safeNumber(f.odometer) > 0 && 
-        (safeNumber(f.amount) > 0 || safeNumber(f.liters) > 0)
+        (safeNumber(f.liters) > 0 || safeNumber(f.kwh) > 0)
       );
 
       let avgVal = null;
       if (validFuelRecords.length >= 2) {
         const sorted = [...validFuelRecords].sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
         let totalDistance = 0;
-        let totalAmount = 0;
+        let totalVolume = 0;
 
         for (let i = 1; i < sorted.length; i++) {
           const dist = safeNumber(sorted[i].odometer) - safeNumber(sorted[i - 1].odometer);
-          const amt = safeNumber(sorted[i].amount ?? sorted[i].liters);
+          // نستخدم كمية الوقود (liters أو kwh) وليس المبلغ المدفوع
+          const vol = safeNumber(sorted[i].liters ?? sorted[i].kwh ?? 0);
           
-          if (dist > 0 && amt > 0) {
+          if (dist > 0 && vol > 0) {
             totalDistance += dist;
-            totalAmount += amt;
+            totalVolume += vol;
           }
         }
         
         if (totalDistance > 0) {
-          const res = (totalAmount / totalDistance) * 100;
+          const res = (totalVolume / totalDistance) * 100;
           if (Number.isFinite(res) && res > 0) avgVal = Number(res.toFixed(1));
         }
       }
@@ -115,7 +136,7 @@ export const AppProvider = ({ children }) => {
       // بناء النشاط الأخير
       const activities = [
         ...myFuel.map(f => ({ ...f, type: 'fuel' })),
-        ...filter(maintenanceRecords).map(m => ({ ...m, type: 'maintenance' })),
+        ...myMaintenance.map(m => ({ ...m, type: 'maintenance' })),
         ...filter(expenseRecords).map(e => ({ ...e, type: 'expense' })),
         ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
       ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 4);
@@ -125,7 +146,11 @@ export const AppProvider = ({ children }) => {
         avgConsumption: avgVal,
         avgUnit: unit
       });
+      
       setRecentActivity(activities);
+      setDocuments(myDocs);
+      setReminders(myReminders);
+      setMaintenanceRecords(myMaintenance);
       
     } catch (e) {
       console.error("Failed to refresh dashboard:", e);
@@ -151,7 +176,7 @@ export const AppProvider = ({ children }) => {
     if (!odoCheck.valid) return false;
     
     try {
-      const newCar = { ...carData, odometer: odoCheck.value, id: generateId() }; // ✅ استخدام generateId
+      const newCar = { ...carData, odometer: odoCheck.value, id: generateId() };
       setVehicles(prev => {
         const updated = [...prev, newCar];
         localStorage.setItem('vehicles', JSON.stringify(updated));
@@ -193,10 +218,9 @@ export const AppProvider = ({ children }) => {
     } catch (e) { console.error('updateCar failed:', e); return false; }
   }, [bumpDataVersion]);
 
-  const deleteCar = useCallback(async (id) => { // ✅ أصبحت async
+  const deleteCar = useCallback(async (id) => {
     if (!id) return false;
     try {
-      // ✅ إصلاح حرج: إضافة await لدالة الحذف من قاعدة البيانات
       if (dbService?.deleteCarData) {
         await dbService.deleteCarData(id);
       }
@@ -204,23 +228,25 @@ export const AppProvider = ({ children }) => {
       setVehicles(prev => {
         const updated = prev.filter(v => String(v.id) !== String(id));
         localStorage.setItem('vehicles', JSON.stringify(updated));
-        return updated;
-      });
+        
+        // تحديث السيارة الحالية بأمان داخل الـ callback
+        setCurrentCar(prevCar => {
+          if (String(prevCar?.id) === String(id)) {
+            const nextCar = updated.length > 0 ? updated[0] : null;
+            if (nextCar) localStorage.setItem('savedCar', JSON.stringify(nextCar));
+            else localStorage.removeItem('savedCar');
+            return nextCar;
+          }
+          return prevCar;
+        });
 
-      setCurrentCar(prevCar => {
-        if (String(prevCar?.id) === String(id)) {
-          const nextCar = vehicles.find(v => String(v.id) !== String(id)) || null;
-          if (nextCar) localStorage.setItem('savedCar', JSON.stringify(nextCar));
-          else localStorage.removeItem('savedCar');
-          return nextCar;
-        }
-        return prevCar;
+        return updated;
       });
       
       bumpDataVersion();
       return true;
     } catch (e) { console.error('deleteCar failed:', e); return false; }
-  }, [vehicles, bumpDataVersion]);
+  }, [bumpDataVersion]);
 
   const selectCar = useCallback((car) => {
     if (!car || typeof car !== 'object') return false;
@@ -257,7 +283,8 @@ export const AppProvider = ({ children }) => {
       currentCar, vehicles, addNewCar, updateCar, deleteCar, selectCar, 
       isLoading, setIsLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
       user, setUser, dataVersion, bumpDataVersion,
-      totals, recentActivity, refreshDashboard
+      totals, recentActivity, refreshDashboard,
+      documents, reminders, maintenanceRecords // ✅ تمرير البيانات الجديدة للواجهة
     }}>
       {children}
     </AppContext.Provider>
