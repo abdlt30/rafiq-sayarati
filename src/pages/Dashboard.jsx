@@ -61,8 +61,7 @@ const CarBrandLogo = ({ carName, carImage }) => {
 };
 
 export default function Dashboard() {
-  // نضيف documents و maintenance لجلب البيانات الحقيقية
-  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, documents } = useContext(AppContext);
+  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, documents, maintenanceRecords } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
@@ -125,14 +124,20 @@ export default function Dashboard() {
   const avgValue = safeNumber(totals?.avgConsumption);
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
 
-  // 1. تكلفة الكيلومتر (تظهر 0.00 إذا لم توجد بيانات كافية)
-  const costPerKm = (odometerValue > 0 && totalValue > 0) ? (totalValue / odometerValue).toFixed(2) : '0.00';
+  // ✅ 1. تكلفة الكيلومتر الحقيقية (من الـ Context)
+  const realCostPerKm = totals?.costPerKm;
 
-  // 2. حساب نسبة صحة السيارة (ديناميكي): تبدأ بـ 100 وتنقص إذا وجدت مستحقات
+  // ✅ 2. التنبؤ بالزيت الحقيقي (من الـ Context)
+  const nextOilChangeOdo = totals?.nextOilChangeOdo;
+  const kmToOilChange = (nextOilChangeOdo && odometerValue > 0) 
+    ? Math.max(0, nextOilChangeOdo - odometerValue) 
+    : null;
+  const isOilOverdue = nextOilChangeOdo !== null && odometerValue >= nextOilChangeOdo;
+
+  // ✅ 3. التنبيهات الذكية (الوثائق التي تنتهي قريباً)
   const activeAlert = useMemo(() => {
     if (!documents || documents.length === 0) return null;
     const now = new Date();
-    // نبحث عن وثيقة تنتهي خلال الـ 30 يوماً القادمة
     const soon = new Date();
     soon.setDate(now.getDate() + 30);
 
@@ -152,9 +157,14 @@ export default function Dashboard() {
     return null;
   }, [documents, t]);
 
-  const healthScore = activeAlert ? 85 : 100; // ينقص 15% إذا كان هناك تنبيه
+  // ✅ 4. حساب صحة السيارة الديناميكي (وثائق + زيت)
+  let healthScore = 100;
+  if (activeAlert) healthScore -= 15;
+  if (isOilOverdue) healthScore -= 30;
+  else if (kmToOilChange !== null && kmToOilChange < 500) healthScore -= 10;
+  healthScore = Math.max(0, healthScore);
 
-  // 3. التنبؤ بالوقود (لا نستخدم خزان وهمي)
+  // ✅ 5. التنبؤ بالوقود (لا نستخدم خزان وهمي)
   const tankCapacity = safeNumber(currentCar?.tankCapacity);
   const currentFuelLiters = safeNumber(currentCar?.currentFuel);
   let distanceToEmpty = null;
@@ -162,17 +172,6 @@ export default function Dashboard() {
     distanceToEmpty = Math.floor((currentFuelLiters / avgValue) * 100);
   }
   const isFuelLow = distanceToEmpty !== null && distanceToEmpty > 0 && distanceToEmpty < 50;
-
-  // 4. التنبؤ بتغيير الزيت (نبحث في سجلات الصيانة الحقيقية)
-  const lastOilChange = recentActivity?.find(act => 
-    act.type === 'maintenance' && 
-    (act.subType?.toLowerCase().includes('زيت') || act.subType?.toLowerCase().includes('oil'))
-  );
-  // إذا لم يجد سجلاً، لا نعرض رقماً وهمياً
-  const kmToOilChange = lastOilChange && lastOilChange.nextOdometer 
-    ? Math.max(0, lastOilChange.nextOdometer - odometerValue) 
-    : null;
-
   const findGasStationUrl = `https://www.google.com/maps/search/${encodeURIComponent('gas station محطة وقود')}`;
 
   if (isLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-40 bg-[var(--surface-2)] rounded-3xl"></div></div>;
@@ -193,7 +192,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* التنبيهات الذكية (تظهر فقط إذا كان هناك تنبيه حقيقي) */}
+      {/* التنبيهات الذكية */}
       {activeAlert && (
         <div className={`p-3 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm border ${activeAlert.isUrgent ? 'bg-red-500/10 border-red-500/30' : 'bg-orange-500/10 border-orange-500/30'}`}>
           <AlertOctagon size={20} className={`shrink-0 ${activeAlert.isUrgent ? 'text-red-500' : 'text-orange-500'}`} />
@@ -216,7 +215,7 @@ export default function Dashboard() {
               {currentCar.plate || t('noPlate')} • {odometerValue.toLocaleString()} {t('km') || 'كم'}
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <span className={`text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${healthScore === 100 ? 'text-green-500 bg-green-500/10' : 'text-orange-500 bg-orange-500/10'}`}>
+              <span className={`text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${healthScore >= 90 ? 'text-green-500 bg-green-500/10' : healthScore >= 70 ? 'text-orange-500 bg-orange-500/10' : 'text-red-500 bg-red-500/10'}`}>
                 <ShieldCheck size={12} /> {healthScore}% {t('carHealth') || 'صحة'}
               </span>
               <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1 bg-[var(--surface-2)] px-2 py-0.5 rounded-md">
@@ -244,7 +243,6 @@ export default function Dashboard() {
             <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={12} className={isFuelLow ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
           </div>
           
-          {/* إذا لم تكن هناك بيانات، نعرض شرطة بدلاً من رقم وهمي */}
           {distanceToEmpty !== null ? (
             <CircularGauge 
               value={distanceToEmpty} max={600} label={t('distanceToEmpty') || 'كم متبقية'} 
@@ -269,14 +267,16 @@ export default function Dashboard() {
           </div>
           <CircularGauge 
             value={healthScore} max={100} label={t('carHealth') || 'ممتازة'} 
-            color={healthScore === 100 ? "#10b981" : "#f59e0b"} unit="%" 
+            color={healthScore >= 90 ? "#10b981" : healthScore >= 70 ? "#f59e0b" : "#ef4444"} unit="%" 
           />
           
           {/* التنبؤ بالصيانة الحقيقي */}
-          <div className="mt-2 w-full bg-[var(--surface-2)] rounded-lg p-1.5 text-center border border-[var(--border)]">
-             <p className="text-[8px] text-[var(--text-muted)] font-bold flex items-center justify-center gap-1"><Droplets size={10} className="text-yellow-500"/> تغيير الزيت</p>
+          <div className={`mt-2 w-full rounded-lg p-1.5 text-center border ${isOilOverdue ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface-2)] border-[var(--border)]'}`}>
+             <p className={`text-[8px] font-bold flex items-center justify-center gap-1 ${isOilOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}><Droplets size={10} className={isOilOverdue ? 'text-red-500' : 'text-yellow-500'}/> تغيير الزيت</p>
              {kmToOilChange !== null ? (
-               <p className="text-[10px] font-extrabold text-yellow-500">بعد {kmToOilChange} كم</p>
+               <p className={`text-[10px] font-extrabold ${isOilOverdue ? 'text-red-500' : 'text-yellow-500'}`}>
+                 {isOilOverdue ? 'متأخر!' : `بعد ${kmToOilChange} كم`}
+               </p>
              ) : (
                <p className="text-[9px] font-bold text-[var(--text-muted)]">غير مسجل</p>
              )}
@@ -290,7 +290,7 @@ export default function Dashboard() {
           <h3 className="font-bold text-xs flex items-center gap-1.5"><Activity size={14} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
           <span className="text-[9px] font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-1 rounded-md border border-[var(--border)] flex items-center gap-1">
             <Gauge size={10} className="text-purple-400"/> 
-            تكلفة الكم: {costPerKm} {currency}
+            تكلفة الكم: {realCostPerKm !== null ? `${realCostPerKm} ${currency}` : 'غير متوفر'}
           </span>
         </div>
         
