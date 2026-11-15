@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, ArrowLeft, MapPin, Phone, Navigation, 
   Wrench, Truck, Settings, Battery, AlertTriangle, 
-  Loader2, Map, Star, ShieldAlert, CheckCircle2
+  Loader2, Map, Star, ShieldAlert, CheckCircle2, UserCog
 } from 'lucide-react';
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
@@ -36,7 +36,7 @@ export default function Assistance() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState([]);
   
-  // الفئة النشطة (repair, mobile_repair, towing, parts_new, parts_used, battery)
+  // الفئات: repair, mobile_repair, towing, battery, parts_new, parts_used
   const [activeTab, setActiveTab] = useState('repair'); 
   const [errorMsg, setErrorMsg] = useState('');
   const [showFallback, setShowFallback] = useState(false);
@@ -49,28 +49,42 @@ export default function Assistance() {
     else navigate('/');
   };
 
-  // الحصول على الكلمة المفتاحية لخرائط جوجل حسب اللغة والفئة
-  const getGoogleMapsQuery = (tab, lang) => {
-    const queries = {
-      repair: { ar: 'ورشة إصلاح سيارات', en: 'car repair shop', fr: 'garage automobile' },
-      mobile_repair: { ar: 'ميكانيكي سيارات متنقل', en: 'mobile car mechanic', fr: 'mécanicien automobile mobile' }, // ✅ إضافة الكلمة المفتاحية
-      towing: { ar: 'سطحة سحب سيارات', en: 'towing service', fr: 'service de remorquage' },
-      parts_new: { ar: 'قطع غيار سيارات جديدة', en: 'new car parts', fr: 'pièces auto neuves' },
-      parts_used: { ar: 'قطع غيار سيارات مستعملة', en: 'used car parts', fr: 'pièces auto occasion' },
-      battery: { ar: 'بطارية سيارة', en: 'car battery shop', fr: 'batterie voiture' },
+  // ✅ دالة جلب الكلمة المفتاحية وإضافة اسم الدولة لضمان البحث المحلي
+  const getGoogleMapsQuery = (tab, lang, countryCode) => {
+    const countryNames = { 
+      MA: { ar: 'المغرب', fr: 'maroc', en: 'morocco' }, 
+      SA: { ar: 'السعودية', fr: 'arabie saoudite', en: 'saudi arabia' },
+      AE: { ar: 'الإمارات', fr: 'emirats', en: 'uae' },
+      DZ: { ar: 'الجزائر', fr: 'algerie', en: 'algeria' },
+      TN: { ar: 'تونس', fr: 'tunisie', en: 'tunisia' },
+      EG: { ar: 'مصر', fr: 'egypte', en: 'egypt' }
     };
-    return queries[tab]?.[lang] || queries[tab]?.['en'] || 'car service';
+    
+    const country = countryNames[countryCode]?.[lang] || countryNames[countryCode]?.['ar'] || '';
+
+    const queries = {
+      repair: { ar: `ورشة إصلاح سيارات في ${country}`, en: `car repair shop in ${country}`, fr: `garage automobile au ${country}` },
+      mobile_repair: { ar: `ميكانيكي سيارات متنقل في ${country}`, en: `mobile car mechanic in ${country}`, fr: `mécanicien automobile mobile au ${country}` },
+      towing: { ar: `سطحة سحب سيارات في ${country}`, en: `towing service in ${country}`, fr: `service de remorquage au ${country}` },
+      battery: { ar: `بطارية سيارة في ${country}`, en: `car battery shop in ${country}`, fr: `batterie voiture au ${country}` },
+      parts_new: { ar: `قطع غيار سيارات جديدة في ${country}`, en: `new car parts in ${country}`, fr: `pièces auto neuves au ${country}` },
+      parts_used: { ar: `قطع غيار سيارات مستعملة في ${country}`, en: `used car parts in ${country}`, fr: `pièces auto occasion au ${country}` },
+    };
+    
+    return queries[tab]?.[lang] || queries[tab]?.['en'] || `car service in ${country}`;
   };
 
-  // فتح خرائط جوجل فوراً وتحديد بلد المستخدم
+  // ✅ إصلاح زر خرائط جوجل ليفتح في بلد المستخدم
   const openGoogleMapsSearch = useCallback(() => {
-    const query = getGoogleMapsQuery(activeTab, lang);
     const countryCode = getCountryCode(currency); 
-
+    const query = getGoogleMapsQuery(activeTab, lang, countryCode);
+    
     let url = '';
     if (userLocation) {
-      url = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${userLocation.lat},${userLocation.lon},14z`;
+      // إذا كان الموقع متاحاً، افتح الخريطة على الإحداثيات مباشرة
+      url = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${userLocation.lat},${userLocation.lon},12z`;
     } else {
+      // إذا كان الموقع مرفوضاً، نستخدم gl=countryCode
       url = `https://www.google.com/maps/search/${encodeURIComponent(query)}?gl=${countryCode.toLowerCase()}`;
     }
     
@@ -106,7 +120,7 @@ export default function Assistance() {
 
         let queryTag = '';
         if (type === 'repair') queryTag = 'nwr["amenity"="car_repair"]';
-        else if (type === 'mobile_repair') queryTag = 'nwr["amenity"="car_repair"]["name"~"متنقل|mobile|rapide",i]'; // بحث عن كلمة متنقل في الاسم
+        else if (type === 'mobile_repair') queryTag = 'nwr["amenity"="car_repair"]["name"~"متنقل|mobile|rapide",i]'; 
         else if (type === 'towing') queryTag = '(nwr["service"="towing"];nwr["amenity"="car_repair"]["name"~"دبناج|سطحة|Remorquage|Dépannage|ونش",i];)';
         else if (type === 'parts_new' || type === 'parts_used') queryTag = 'nwr["shop"="car_parts"]';
         else if (type === 'battery') queryTag = '(nwr["shop"="car_parts"]["name"~"بطارية|batterie|battery",i];nwr["amenity"="car_repair"]["name"~"بطارية|batterie|battery",i];)';
@@ -152,8 +166,8 @@ export default function Assistance() {
           }
 
           if (!success) {
-            // ✅ إصلاح الرسالة: لم نعد نقول "محطات وقود"
-            setErrorMsg(t('noHelpFound') || 'لم نجد نتائج في قاعدة بياناتنا. يرجى استخدام خرائط جوجل.');
+            // ✅ إصلاح الرسالة
+            setErrorMsg(t('noHelpFound') || 'لم نجد نتائج في نطاق 5 كم. يرجى استخدام زر خرائط جوجل للبحث.');
             setShowFallback(true);
           }
         } finally {
@@ -179,10 +193,10 @@ export default function Assistance() {
     };
   }, [activeTab, fetchNearbyHelp]);
 
-  // ✅ قائمة الخدمات (تمت إضافة الميكانيكي المتنقل)
+  // ✅ قائمة الخدمات (المحدثة)
   const services = [
     { id: 'repair', label: t('serviceRepair') || 'ورشة إصلاح', icon: Wrench, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { id: 'mobile_repair', label: t('serviceMobileMechanic') || 'ميكانيكي متنقل', icon: Truck, color: 'text-green-500', bg: 'bg-green-500/10' }, // ✅ الخدمة الجديدة
+    { id: 'mobile_repair', label: t('serviceMobileMechanic') || 'ميكانيكي متنقل', icon: UserCog, color: 'text-green-500', bg: 'bg-green-500/10' }, 
     { id: 'towing', label: t('serviceTowing') || 'سيارة سحب (سطحة)', icon: Truck, color: 'text-red-500', bg: 'bg-red-500/10' },
     { id: 'battery', label: t('serviceBattery') || 'بطارية سيارة', icon: Battery, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
     { id: 'parts_new', label: t('servicePartsNew') || 'قطع غيار جديدة', icon: Settings, color: 'text-purple-500', bg: 'bg-purple-500/10' },
