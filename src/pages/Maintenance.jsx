@@ -1,18 +1,19 @@
 import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import { dbService } from '../services/dbService.js';
-import { Link } from 'react-router-dom'; // ✅ إضافة Link للربط مع صفحة المساعدة
+import { Link } from 'react-router-dom';
 import { 
   Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, 
-  AlertCircle, CheckCircle, Check, MapPin, ChevronLeft 
-} from 'lucide-react'; // ✅ إضافة أيقونات جديدة
+  AlertCircle, CheckCircle, Check, ChevronLeft 
+} from 'lucide-react';
 
 import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx'; 
 import OptionPicker from '../shared/components/ui/OptionPicker.jsx'; 
 import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 
-const EMPTY_FORM = { date: '', type: '', cost: '', nextKm: '' };
+// ✅ توحيد اسم الحقل ليكون nextOdometer ليتوافق مع AppContext
+const EMPTY_FORM = { date: '', type: '', cost: '', nextOdometer: '' };
 
 export default function Maintenance() {
   const { currentCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext);
@@ -94,7 +95,16 @@ export default function Maintenance() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!currentCar || !formData.date || !formData.type || !formData.cost) return showToast(t('fillRequiredFields') || 'الرجاء تعبئة الحقول', 'error');
-    const data = { carId: currentCar.id, date: formData.date, type: formData.type, cost: Number(formData.cost), nextKm: formData.nextKm ? Number(formData.nextKm) : null };
+    
+    // ✅ حفظ الحقل باسم nextOdometer ليتوافق مع لوحة البيانات
+    const data = { 
+      carId: currentCar.id, 
+      date: formData.date, 
+      type: formData.type, 
+      cost: Number(formData.cost), 
+      nextOdometer: formData.nextOdometer ? Number(formData.nextOdometer) : null 
+    };
+    
     try {
       if (editingId) await dbService.updateMaintenance(editingId, data);
       else await dbService.addMaintenance(data);
@@ -109,7 +119,7 @@ export default function Maintenance() {
 
   const openAddModal = () => { 
     setEditingId(null); 
-    setFormData({ date: new Date().toISOString().split('T')[0], type: baseTypes[0]?.value || 'otherMaintenance', cost: '', nextKm: '' }); 
+    setFormData({ date: new Date().toISOString().split('T')[0], type: baseTypes[0]?.value || 'otherMaintenance', cost: '', nextOdometer: '' }); 
     setIsAddingType(false); setNewTypeName('');
     setIsModalOpen(true); 
   };
@@ -140,7 +150,7 @@ export default function Maintenance() {
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('maintenance') || 'الصيانة'}</h1>
       </div>
 
-      {/* ✅ إضافة الرابط الذكي للبحث عن ورشة إصلاح */}
+      {/* رابط البحث عن ورشة إصلاح */}
       <Link to="/assistance" className="flex items-center justify-between p-3.5 bg-gradient-to-r from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl mb-3 active:scale-[0.98] transition-transform">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-500/20 text-blue-500 rounded-xl"><Wrench size={18} /></div>
@@ -186,10 +196,26 @@ export default function Maintenance() {
               <div className="flex items-center gap-3">
                 <div className="text-end">
                   <p className="font-extrabold text-[var(--primary)] text-sm">{safeNumber(record.cost).toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
-                  {record.nextKm && safeNumber(record.nextKm) > 0 ? <p className="text-[10px] text-[var(--text-muted)] flex items-center justify-end gap-1 mt-0.5"><Gauge size={10} /> {safeNumber(record.nextKm).toLocaleString()} {t('km') || 'كم'}</p> : <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t('noNextMaintenance') || 'لا توجد صيانة قادمة'}</p>}
+                  {/* ✅ دعم البيانات القديمة (nextKm) والجديدة (nextOdometer) */}
+                  {(record.nextOdometer || record.nextKm) && safeNumber(record.nextOdometer || record.nextKm) > 0 ? (
+                    <p className="text-[10px] text-[var(--text-muted)] flex items-center justify-end gap-1 mt-0.5">
+                      <Gauge size={10} /> {safeNumber(record.nextOdometer || record.nextKm).toLocaleString()} {t('km') || 'كم'}
+                    </p> 
+                  ) : (
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t('noNextMaintenance') || 'لا توجد صيانة قادمة'}</p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <button onClick={() => { setEditingId(record.id); setFormData({ date: record.date, type: record.type, cost: String(record.cost), nextKm: String(record.nextKm || '') }); setIsModalOpen(true); }} className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg active:scale-90"><Edit2 size={14} /></button>
+                  <button onClick={() => { 
+                    setEditingId(record.id); 
+                    setFormData({ 
+                      date: record.date, 
+                      type: record.type, 
+                      cost: String(record.cost), 
+                      nextOdometer: String(record.nextOdometer || record.nextKm || '') 
+                    }); 
+                    setIsModalOpen(true); 
+                  }} className="text-blue-500 bg-blue-500/10 p-1.5 rounded-lg active:scale-90"><Edit2 size={14} /></button>
                   <button onClick={() => setDeleteId(record.id)} className="text-red-500 bg-red-500/10 p-1.5 rounded-lg active:scale-90"><Trash2 size={14} /></button>
                 </div>
               </div>
@@ -234,8 +260,12 @@ export default function Maintenance() {
                 )}
               </div>
 
-              <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('cost') || 'التكلفة'} ({currency})</label><input type="number" step="0.01" value={formData.cost} onChange={e => setFormData(prev => ({...prev, cost: e.target.value}))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold" /></div>
-              <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('nextOdometer') || 'العداد للصيانة القادمة'} ({t('km') || 'كم'})</label><input type="number" value={formData.nextKm} onChange={e => setFormData(prev => ({...prev, nextKm: e.target.value}))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm" placeholder={t('optional') || 'اختياري'} /></div>
+              <div><label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('cost') || 'التكلفة'} ({currency})</label><input type="number" step="0.01" inputMode="decimal" value={formData.cost} onChange={e => setFormData(prev => ({...prev, cost: e.target.value}))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-lg font-bold" /></div>
+              
+              <div>
+                <label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('nextOdometer') || 'العداد للصيانة القادمة'} ({t('km') || 'كم'})</label>
+                <input type="number" inputMode="numeric" value={formData.nextOdometer} onChange={e => setFormData(prev => ({...prev, nextOdometer: e.target.value}))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm" placeholder={t('optional') || 'اختياري'} />
+              </div>
             </div>
             <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95">{t('save') || 'حفظ'}</button>
           </form>
