@@ -12,36 +12,43 @@ import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.js';
 
-// ✅ مكون العداد الدائري (Cockpit Gauge)
+// ✅ مكون العداد الدائري (مُحسن ليكون متجاوباً 100% مع جميع الشاشات)
 const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon }) => {
   const safeMax = max > 0 ? max : 100;
   const safeVal = Math.min(Math.max(0, value), safeMax);
   const percentage = (safeVal / safeMax) * 100;
   
-  const radius = 36;
+  // استخدام viewBox يضمن أن الدائرة تتمدد وتتقلص مع حجم الشاشة
+  const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center justify-center relative w-28 h-28">
-      <svg className="transform -rotate-90 w-28 h-28">
-        <circle cx="56" cy="56" r={radius} stroke="var(--surface-2)" strokeWidth="8" fill="transparent" />
-        <circle 
-          cx="56" cy="56" r={radius} 
-          stroke={color} strokeWidth="8" fill="transparent"
-          strokeDasharray={circumference} 
-          strokeDashoffset={strokeDashoffset} 
-          className="transition-all duration-1000 ease-out"
-          strokeLinecap="round"
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center">
-        {Icon && <Icon size={14} className="mb-0.5" style={{ color }} />}
-        <span className="text-lg font-extrabold text-[var(--text)]">{value}</span>
-        <span className="text-[8px] text-[var(--text-muted)] font-bold">{unit}</span>
+    <div className="flex flex-col items-center justify-center w-full">
+      <div className="relative w-full max-w-[110px] aspect-square flex items-center justify-center">
+        <svg viewBox="0 0 100 100" className="transform -rotate-90 w-full h-full">
+          {/* المسار الخلفي */}
+          <circle cx="50" cy="50" r={radius} stroke="var(--surface-2)" strokeWidth="8" fill="transparent" />
+          {/* المسار الملون */}
+          <circle 
+            cx="50" cy="50" r={radius} 
+            stroke={color} strokeWidth="8" fill="transparent"
+            strokeDasharray={circumference} 
+            strokeDashoffset={strokeDashoffset} 
+            className="transition-all duration-1000 ease-out"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute flex flex-col items-center justify-center text-center">
+          {Icon && <Icon size={14} className="mb-0.5 opacity-80" style={{ color }} />}
+          <span className="text-lg sm:text-xl font-extrabold text-[var(--text)] leading-tight">{value}</span>
+          <span className="text-[8px] sm:text-[9px] text-[var(--text-muted)] font-bold">{unit}</span>
+        </div>
       </div>
-      <span className="text-[10px] font-bold text-[var(--text)] mt-2 text-center">{label}</span>
-      {subLabel && <span className="text-[8px] text-[var(--text-muted)] text-center mt-0.5">{subLabel}</span>}
+      <div className="text-center mt-2 w-full px-1">
+        <span className="text-[10px] font-bold text-[var(--text)] block truncate">{label}</span>
+        {subLabel && <span className="text-[8px] text-[var(--text-muted)] block truncate">{subLabel}</span>}
+      </div>
     </div>
   );
 };
@@ -129,7 +136,7 @@ export default function Dashboard() {
   if (!currentCar) return null;
 
   return (
-    <div className="space-y-5 pb-24 px-4 pt-2 font-sans">
+    <div className="space-y-4 pb-24 px-4 pt-2 font-sans overflow-x-hidden">
       {/* الشريط العلوي */}
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
@@ -149,7 +156,7 @@ export default function Dashboard() {
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <h2 className="text-lg font-extrabold text-[var(--text)] leading-tight truncate">
+            <h2 className="text-base sm:text-lg font-extrabold text-[var(--text)] leading-tight truncate">
               {currentCar.make} {currentCar.model}
             </h2>
             <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
@@ -170,13 +177,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ✅ لوحة القيادة (Cockpit) - الجزء الأول: الوقود والصحة */}
+      {/* ✅ لوحة القيادة - عدادات الصحة والوقود */}
       <div className="grid grid-cols-2 gap-3">
         {/* عداد الوقود */}
-        <div className={`p-3 rounded-2xl border ${isFuelLow ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-center relative`}>
+        <div className={`p-3 rounded-2xl border ${isFuelLow ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-between relative`}>
           <div className="flex justify-between items-center w-full mb-1 px-1">
             <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={12} className={isFuelLow ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
-            {isFuelLow && <span className="text-[8px] bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">تحذير</span>}
+            {isFuelLow && <span className="text-[8px] bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">!</span>}
           </div>
           <CircularGauge 
             value={distanceToEmpty} 
@@ -187,12 +194,12 @@ export default function Dashboard() {
             icon={MapPin}
           />
           {isFuelLow && (
-            <a href={findGasStationUrl} target="_blank" rel="noopener noreferrer" className="mt-1 text-[9px] font-bold text-white bg-red-500 px-2 py-1 rounded-md">أقرب محطة</a>
+            <a href={findGasStationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-[9px] font-bold text-white bg-red-500 px-3 py-1 rounded-lg w-full text-center active:scale-95 transition-transform">أقرب محطة</a>
           )}
         </div>
 
-        {/* عداد الصحة + متوسط الاستهلاك (تمت إعادته) */}
-        <div className="p-3 rounded-2xl border bg-[var(--surface)] border-[var(--border)] shadow-sm flex flex-col items-center justify-center relative">
+        {/* عداد الصحة + متوسط الاستهلاك */}
+        <div className="p-3 rounded-2xl border bg-[var(--surface)] border-[var(--border)] shadow-sm flex flex-col items-center justify-between relative">
           <div className="flex justify-between items-center w-full mb-1 px-1">
             <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><ShieldCheck size={12} className="text-green-500" /> {t('carHealth') || 'الحالة'}</span>
           </div>
@@ -203,32 +210,22 @@ export default function Dashboard() {
             color="#10b981" 
             unit="%" 
           />
-          <div className="mt-1 w-full bg-[var(--surface-2)] rounded-lg p-1.5 text-center border border-[var(--border)]">
+          <div className="mt-2 w-full bg-[var(--surface-2)] rounded-lg p-1.5 text-center border border-[var(--border)]">
              <p className="text-[8px] text-[var(--text-muted)] font-bold">{t('avgConsumption') || 'متوسط الاستهلاك'}</p>
              <p className="text-[10px] font-extrabold text-yellow-500">{avgValue > 0 ? avgValue : '—'} <span className="text-[7px] font-normal text-[var(--text-muted)]">{avgUnit}</span></p>
           </div>
         </div>
       </div>
 
-      {/* ✅ لوحة القيادة - الجزء الثاني: الملخص المالي */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
-        <div className="flex justify-between items-center mb-2 px-1">
+      {/* ✅ لوحة القيادة - الملخص المالي */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm mt-3">
+        <div className="flex justify-between items-center mb-3 px-1">
           <h3 className="font-bold text-xs flex items-center gap-1.5"><Activity size={14} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-2 flex-1">
-            <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-xl">
-              <p className="text-[9px] text-green-500 font-bold mb-0.5 flex items-center gap-1"><TrendingUp size={10}/> {t('totalIncome')}</p>
-              <p className="text-sm font-extrabold text-green-500">{incomeValue.toLocaleString()} <span className="text-[9px] font-normal">{currency}</span></p>
-            </div>
-            <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-xl">
-              <p className="text-[9px] text-red-500 font-bold mb-0.5 flex items-center gap-1"><TrendingDown size={10}/> {t('totalExpenses')}</p>
-              <p className="text-sm font-extrabold text-red-500">{totalValue.toLocaleString()} <span className="text-[9px] font-normal">{currency}</span></p>
-            </div>
-          </div>
-          
-          <div className="w-1/2 flex justify-center items-center relative ml-2">
+        <div className="flex items-center gap-4">
+          {/* الدائرة المالية (على اليسار أو اليمين حسب اتجاه اللغة) */}
+          <div className="w-[45%] flex justify-center">
             <CircularGauge 
               value={Math.abs(netValue)} 
               max={Math.max(incomeValue, totalValue, 1000)} 
@@ -237,21 +234,33 @@ export default function Dashboard() {
               unit={currency} 
             />
           </div>
+          
+          {/* بطاقات الإيرادات والمصاريف (متراصة عمودياً) */}
+          <div className="w-[55%] flex flex-col gap-2">
+            <div className="bg-green-500/10 border border-green-500/20 p-2.5 rounded-xl">
+              <p className="text-[9px] text-green-500 font-bold mb-0.5 flex items-center gap-1"><TrendingUp size={10}/> {t('totalIncome')}</p>
+              <p className="text-sm font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-[9px] font-normal">{currency}</span></p>
+            </div>
+            <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl">
+              <p className="text-[9px] text-red-500 font-bold mb-0.5 flex items-center gap-1"><TrendingDown size={10}/> {t('totalExpenses')}</p>
+              <p className="text-sm font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-[9px] font-normal">{currency}</span></p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2 mt-2">
-        <Link to="/fuel" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all"><div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-2"><Fuel size={18}/></div><span className="text-[10px] font-bold">{t('fuel')}</span></Link>
-        <Link to="/maintenance" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 active:scale-95 transition-all"><div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-2"><Wrench size={18}/></div><span className="text-[10px] font-bold">{t('maintenance')}</span></Link>
-        <Link to="/expenses" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all"><div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-2"><Wallet size={18}/></div><span className="text-[10px] font-bold">{t('expenses')}</span></Link>
-        <Link to="/documents" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all"><div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-2"><FileText size={18}/></div><span className="text-[10px] font-bold">{t('documents')}</span></Link>
+        <Link to="/fuel" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all"><div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1.5"><Fuel size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('fuel')}</span></Link>
+        <Link to="/maintenance" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 active:scale-95 transition-all"><div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-1.5"><Wrench size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('maintenance')}</span></Link>
+        <Link to="/expenses" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all"><div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-1.5"><Wallet size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('expenses')}</span></Link>
+        <Link to="/documents" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all"><div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-1.5"><FileText size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('documents')}</span></Link>
       </div>
 
       {/* زر الإنقاذ (SOS) */}
       <Link to="/assistance" className="flex items-center justify-center gap-2 p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl hover:bg-red-500/20 active:scale-[0.98] transition-all mt-2 shadow-sm">
-        <AlertTriangle size={20} className="text-red-500 animate-pulse" />
-        <span className="text-sm font-bold text-red-500">{t('emergencySOS') || 'إنقاذ طارئ (SOS) - سيارة معطلة؟'}</span>
+        <AlertTriangle size={20} className="text-red-500 animate-pulse shrink-0" />
+        <span className="text-xs sm:text-sm font-bold text-red-500 text-center">{t('emergencySOS') || 'إنقاذ طارئ (SOS) - سيارة معطلة؟'}</span>
       </Link>
 
       {/* آخر العمليات */}
@@ -269,8 +278,8 @@ export default function Dashboard() {
               const isFuel = activity.type === 'fuel'; const isIncome = activity.type === 'income'; const safeCost = safeNumber(activity.cost);
               return (
                 <div key={index} className="flex justify-between items-center p-3 border-b border-[var(--border)] last:border-0">
-                  <div className="flex items-center gap-3"><div className={`p-2 rounded-lg ${isFuel ? 'bg-blue-500/10 text-blue-500' : isIncome ? 'bg-green-500/10 text-green-500' : 'bg-purple-500/10 text-purple-500'}`}>{isFuel ? <Fuel size={16}/> : isIncome ? <TrendingUp size={16}/> : <Wallet size={16}/>}</div><div><p className="text-xs font-bold">{isFuel ? t('fuel') : isIncome ? t('income') : t('expense')}</p><p className="text-[10px] text-[var(--text-muted)]">{formatDate(activity.date, todayLocale)}</p></div></div>
-                  <p className={`text-xs font-bold ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>{isIncome ? '+' : ''}{safeCost} {currency}</p>
+                  <div className="flex items-center gap-3 min-w-0"><div className={`p-2 rounded-lg shrink-0 ${isFuel ? 'bg-blue-500/10 text-blue-500' : isIncome ? 'bg-green-500/10 text-green-500' : 'bg-purple-500/10 text-purple-500'}`}>{isFuel ? <Fuel size={16}/> : isIncome ? <TrendingUp size={16}/> : <Wallet size={16}/>}</div><div className="min-w-0"><p className="text-xs font-bold truncate">{isFuel ? t('fuel') : isIncome ? t('income') : t('expense')}</p><p className="text-[10px] text-[var(--text-muted)]">{formatDate(activity.date, todayLocale)}</p></div></div>
+                  <p className={`text-xs font-bold shrink-0 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>{isIncome ? '+' : ''}{safeCost} {currency}</p>
                 </div>
               );
             })
