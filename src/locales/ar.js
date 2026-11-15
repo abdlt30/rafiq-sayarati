@@ -505,4 +505,15 @@ export const ar = {
   recommendedRating: 'ننصحك باختيار الخدمات 4.5 ⭐ فما فوق',
   skipSearchOpenMaps: 'تخطي البحث وفتح خرائط جوجل مباشرة',
   nearbyPlaces: 'مكان قريب'
+
+  helpCenter: 'مركز المساعدة على الطريق',
+serviceRepair: 'ورشة إصلاح',
+serviceTowing: 'سيارة سحب (سطحة)',
+servicePartsNew: 'قطع غيار جديدة',
+servicePartsUsed: 'قطع غيار مستعملة',
+serviceBattery: 'بطارية سيارة',
+searchViaGoogle: 'بحث سريع عبر جوجل',
+nearbyResults: 'أقرب الخدمات المكتشفة',
+emergencyDesc: 'اختر نوع المساعدة التي تحتاجها الآن',
+  
 };
