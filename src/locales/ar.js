@@ -104,6 +104,8 @@ export const ar = {
   invalidYear: 'يرجى إدخال سنة صنع صحيحة.',
   deleteImage: 'حذف الصورة',
   addImage: 'إضافة صورة',
+  carBrand: 'ماركة السيارة',
+  chooseBrand: 'اختر ماركة السيارة',
 
   // ===================== Powertrain =====================
   powertrain: 'نوع المحرك',
@@ -141,6 +143,10 @@ export const ar = {
   consumptionKwh100km: 'كيلوواط/100كم',
   avgConsumption: 'متوسط الاستهلاك',
   totalLiters: 'إجمالي اللترات',
+  fuelPrediction: 'توقع الوقود المتبقي',
+  distanceToEmpty: 'كم متبقية',
+  fuelLowWarning: 'تحذير: الوقود منخفض!',
+  nearestStation: 'أقرب محطة',
 
   // ===================== Maintenance =====================
   maintenance: 'الصيانة',
@@ -301,6 +307,10 @@ export const ar = {
   confirmLowerOdometer: 'العداد الجديد أقل من العداد الحالي. هل أنت متأكد؟',
   carDetails: 'تفاصيل السيارة',
   carHealth: 'حالة السيارة',
+  week: 'الأسبوع',
+  month: 'الشهر',
+  year: 'السنة',
+  searchOnGoogleMaps: 'البحث على خرائط جوجل',
 
   // ===================== Reports & Print =====================
   reports: 'التقارير',
@@ -372,7 +382,7 @@ export const ar = {
   fuelStation: 'محطة وقود',
   addressUnavailable: 'العنوان غير متوفر',
   noStationsFound: 'لا توجد محطات وقود مسجلة في نطاق 5 كم حول موقعك.',
-  searchTimeout: 'انتهت مهلة البحث. تحقق من اتصالك بالإنترنت.',
+  searchTimeout: 'استغرق البحث وقتاً طويلاً (قد تكون الشبكة ضعيفة).',
   searchBusy: 'خدمة محطات الوقود مشغولة. يرجى المحاولة بعد قليل.',
   searchSlow: 'خدمة محطات الوقود بطيئة. يرجى المحاولة بعد قليل.',
   searchFailed: 'تعذر الاتصال بقاعدة بيانات محطات الوقود. تحقق من الإنترنت.',
@@ -442,7 +452,6 @@ export const ar = {
   // ===================== Shared =====================
   confirmDelete: 'هل أنت متأكد من الحذف؟',
   confirmDeleteBtn: 'نعم، احذف',
-  month: 'هذا الشهر',
   carInfo: 'معلومات السيارة',
   car: 'السيارة',
   welcome: 'مرحباً،',
@@ -477,7 +486,7 @@ export const ar = {
   backupMovedMsg: 'تم نقل ميزة حفظ واستعادة البيانات (JSON) إلى صفحة الإعدادات لتوحيد التجربة.',
   goToSettings: 'الذهاب إلى الإعدادات',
 
-  // ===================== Roadside Assistance (New) =====================
+  // ===================== Roadside Assistance (Updated) =====================
   roadsideAssistance: 'المساعدة على الطريق',
   emergencySOS: 'إنقاذ طارئ (SOS)',
   findRepairShop: 'أقرب ورشة إصلاح',
@@ -488,5 +497,8 @@ export const ar = {
   call: 'اتصال',
   navigate: 'اتجاهات',
   locationRequired: 'نحتاج لتفعيل الموقع للعثور على المساعدة القريبة.',
-  helpDesc: 'سيارة معطلة؟ اضغط هنا للعثور على أقرب ورشة أو سطحة إنقاذ فوراً.'
+  helpDesc: 'سيارة معطلة؟ اضغط هنا للعثور على أقرب ورشة أو سطحة إنقاذ فوراً.',
+  recommendedRating: 'ننصحك باختيار الخدمات 4.5 ⭐ فما فوق',
+  skipSearchOpenMaps: 'تخطي البحث وفتح خرائط جوجل مباشرة',
+  nearbyPlaces: 'مكان قريب'
 };
