@@ -43,7 +43,7 @@ export const en = {
   resetting: 'Clearing...',
   loading: 'Loading...',
 
-  // ===================== Onboarding & Welcome (Updated Strategy) =====================
+  // ===================== Onboarding & Welcome =====================
   welcomeMessagePart1: 'Control your car expenses, track maintenance,',
   welcomeMessagePart2: 'and enjoy peace of mind.',
   startNow: 'Start Now',
@@ -104,8 +104,8 @@ export const en = {
   invalidYear: 'Please enter a valid manufacturing year.',
   deleteImage: 'Delete Image',
   addImage: 'Add Image',
-  carDetails: 'Car Details',
-  carHealth: 'Car Health',
+  carBrand: 'Car Brand',
+  chooseBrand: 'Choose Car Brand',
 
   // ===================== Powertrain =====================
   powertrain: 'Powertrain',
@@ -143,8 +143,10 @@ export const en = {
   consumptionKwh100km: 'kWh/100km',
   avgConsumption: 'Average Consumption',
   totalLiters: 'Total Liters',
-  noFuelRecordsDesc: 'Log your first fill-up to start tracking your consumption and saving money.',
-  startYourJourney: 'Start Your Journey!',
+  fuelPrediction: 'Fuel Prediction',
+  distanceToEmpty: 'km remaining',
+  fuelLowWarning: 'Warning: Low Fuel!',
+  nearestStation: 'Nearest Station',
 
   // ===================== Maintenance =====================
   maintenance: 'Maintenance',
@@ -270,6 +272,8 @@ export const en = {
   done: 'Done',
   confirmQuickDone: 'Are you sure you want to complete: {title}?\n{target} will be permanently deleted.',
   viewDetails: 'View Details',
+  startYourJourney: 'Start Your Journey!',
+  noFuelRecordsDesc: 'Log your first fill-up to start tracking your consumption and saving money.',
 
   // ===================== Notifications =====================
   notifications: 'Notifications',
@@ -301,6 +305,12 @@ export const en = {
   timeline: 'Timeline',
   carTimeline: 'Car Timeline',
   confirmLowerOdometer: 'The new odometer is less than the current one. Are you sure?',
+  carDetails: 'Car Details',
+  carHealth: 'Car Health',
+  week: 'Week',
+  month: 'Month',
+  year: 'Year',
+  searchOnGoogleMaps: 'Search on Google Maps',
 
   // ===================== Reports & Print =====================
   reports: 'Reports',
@@ -442,7 +452,6 @@ export const en = {
   // ===================== Shared =====================
   confirmDelete: 'Are you sure you want to delete?',
   confirmDeleteBtn: 'Yes, Delete',
-  month: 'This Month',
   carInfo: 'Car Information',
   car: 'Car',
   welcome: 'Welcome,',
@@ -477,7 +486,7 @@ export const en = {
   backupMovedMsg: 'Backup and restore (JSON) has been moved to Settings for a unified experience.',
   goToSettings: 'Go to Settings',
 
-  // ===================== Roadside Assistance (New) =====================
+  // ===================== Roadside Assistance (Updated) =====================
   roadsideAssistance: 'Roadside Assistance',
   emergencySOS: 'Emergency SOS',
   findRepairShop: 'Find Repair Shop',
@@ -488,5 +497,8 @@ export const en = {
   call: 'Call',
   navigate: 'Navigate',
   locationRequired: 'Location access is required to find nearby help.',
-  helpDesc: 'Car broken down? Tap here to find the nearest repair shop or tow truck immediately.'
+  helpDesc: 'Car broken down? Tap here to find the nearest repair shop or tow truck immediately.',
+  recommendedRating: 'We recommend choosing services rated 4.5 ⭐ or above',
+  skipSearchOpenMaps: 'Skip search and open Google Maps directly',
+  nearbyPlaces: 'nearby places'
 };
