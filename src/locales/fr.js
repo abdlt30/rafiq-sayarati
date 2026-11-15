@@ -106,8 +106,12 @@ export const fr = {
   addImage: 'Ajouter une image',
   carDetails: 'Détails de la voiture',
   carHealth: 'Santé de la voiture',
+  
+  // ✅ مفاتيح اختيار الماركة (المضافة حديثاً)
   carBrand: 'Marque de voiture',
   chooseBrand: 'Choisir la marque',
+  searchBrand: 'Rechercher une marque...',
+  addCustomBrand: 'Ajouter comme marque personnalisée',
 
   // ===================== Powertrain =====================
   powertrain: 'Groupe Motopropulseur',
