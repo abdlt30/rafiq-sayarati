@@ -1,31 +1,29 @@
-import { useContext, useState, useCallback, useMemo } from 'react';
+import { useContext, useState, useCallback } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, Pencil, Check, X, Bell, Settings,
   TrendingUp, Activity, Plus, ShieldCheck, ChevronDown, CheckCircle,
-  AlertTriangle, MapPin, Navigation
+  AlertTriangle, MapPin
 } from 'lucide-react'; 
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
-// استيراد دوال الشعارات (تأكد من وجود الملف في المسار الصحيح)
 import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.js';
 
-// مكون فرعي لعرض شعار السيارة
 const CarBrandLogo = ({ carName, carImage }) => {
   const [imgError, setImgError] = useState(false);
   
   if (carImage && !imgError) {
-    return <img src={carImage} alt="car" className="w-full h-full object-cover rounded-2xl" onError={() => setImgError(true)} />;
+    return <img src={carImage} alt="car" className="w-full h-full object-cover rounded-xl" onError={() => setImgError(true)} />;
   }
 
   const brand = findBrandByName(carName);
   const logoUrl = brand ? getBrandLogoUrl(brand.domain) : null;
 
   if (!logoUrl || imgError) {
-    return <Car size={36} className="text-white/30" />;
+    return <Car size={32} className="text-[var(--text-muted)] opacity-50" />;
   }
 
   return (
@@ -33,7 +31,7 @@ const CarBrandLogo = ({ carName, carImage }) => {
       src={logoUrl} 
       alt={carName} 
       onError={() => setImgError(true)}
-      className="w-full h-full object-contain p-2 bg-white/5 rounded-2xl"
+      className="w-full h-full object-contain p-2 drop-shadow-md"
     />
   );
 };
@@ -64,7 +62,6 @@ export default function Dashboard() {
     setIsCarModalOpen(false);
   };
 
-  // --- الحسابات الرياضية الآمنة ---
   const netValue = safeNumber(totals?.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals?.income);
@@ -74,29 +71,20 @@ export default function Dashboard() {
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
   const healthScore = 100; 
 
-  // --- التنبؤ بالوقود (Fuel Prediction Math) ---
-  // نفترض أن سعة الخزان الافتراضية 50 لتراً إذا لم تكن مسجلة
   const tankCapacity = safeNumber(currentCar?.tankCapacity) || 50;
-  // نفترض أن المستخدم يمتلك نصف الخزان (للتجربة)، ويمكنك ربط هذا بحقل حقيقي لاحقاً
   const currentFuelLiters = safeNumber(currentCar?.currentFuel) || (tankCapacity / 2);
-  
-  // حساب المسافة المتبقية: (الوقود الحالي / معدل الاستهلاك) * 100
   let distanceToEmpty = 0;
   if (avgValue > 0) {
     distanceToEmpty = Math.floor((currentFuelLiters / avgValue) * 100);
   }
-
-  // حالة حرجة إذا كانت المسافة أقل من 50 كم
   const isFuelLow = distanceToEmpty > 0 && distanceToEmpty < 50;
-
-  // رابط البحث عن أقرب محطة وقود
   const findGasStationUrl = `https://www.google.com/maps/search/${encodeURIComponent('gas station محطة وقود')}`;
 
   if (isLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-40 bg-[var(--surface-2)] rounded-3xl"></div><div className="h-24 bg-[var(--surface-2)] rounded-2xl"></div></div>;
   if (!currentCar) return null;
 
   return (
-    <div className="space-y-5 pb-24 px-4 pt-2">
+    <div className="space-y-5 pb-24 px-4 pt-2 font-sans">
       {/* الشريط العلوي */}
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
         <div className="min-w-0 flex-1">
@@ -104,48 +92,56 @@ export default function Dashboard() {
           <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Link to="/notifications" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] relative"><Bell size={18} /></Link>
-          <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)]"><Settings size={18} /></Link>
+          <Link to="/notifications" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative"><Bell size={18} /></Link>
+          <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"><Settings size={18} /></Link>
         </div>
       </div>
 
-      {/* ✅ بطاقة السيارة (محدثة لتطابق المنافس) */}
-      <div className="relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-blue-500/20 shadow-xl">
+      {/* بطاقة السيارة - لمسة بشرية أكثر */}
+      <div className="relative overflow-hidden rounded-3xl p-5 bg-[var(--surface)] border border-[var(--border)] shadow-sm">
         <div className="flex justify-between items-center mb-4 relative z-10">
-          <span className="text-xs font-bold text-blue-200">{t('carDetails') || 'تفاصيل السيارة'}</span>
-          <button onClick={() => setIsCarModalOpen(true)} className="flex items-center gap-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 px-3 py-1.5 rounded-xl text-white text-xs font-bold transition-all active:scale-95">
+          <span className="text-xs font-bold text-[var(--text-muted)]">{t('carDetails') || 'تفاصيل السيارة'}</span>
+          <button onClick={() => setIsCarModalOpen(true)} className="flex items-center gap-1.5 bg-[var(--surface-2)] border border-[var(--border)] px-3 py-1.5 rounded-xl text-[var(--text)] text-xs font-bold transition-all active:scale-95 hover:border-[var(--primary)]">
             {t('switchCar') || 'تغيير السيارة'} <ChevronDown size={14} />
           </button>
         </div>
         
-        <div className="flex items-center justify-between relative z-10 mb-6 gap-4">
+        <div className="flex items-center justify-between relative z-10 mb-5 gap-4">
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-extrabold text-white leading-tight break-words">{currentCar.make} {currentCar.model}</h2>
-            <p className="text-xs font-mono text-blue-200 mt-2 bg-blue-500/20 px-3 py-1 rounded-md inline-block backdrop-blur-sm border border-blue-400/20">{currentCar.plate || t('noPlate')}</p>
+            <h2 className="text-xl font-extrabold text-[var(--text)] leading-tight truncate">{currentCar.make} {currentCar.model}</h2>
+            
+            {/* تصميم لوحة السيارة بشكل واقعي */}
+            <div className="mt-3 flex items-center">
+              <div className="bg-[var(--surface-2)] border-2 border-[var(--border)] rounded-md px-3 py-1 flex items-center gap-2 shadow-inner">
+                <span className="text-[10px] font-bold text-blue-500 border-r border-[var(--border)] pr-2">{lang === 'ar' ? 'المغرب' : 'MA'}</span>
+                <p className="text-sm font-mono font-bold tracking-widest text-[var(--text)] dir-ltr">{currentCar.plate || t('noPlate')}</p>
+              </div>
+            </div>
           </div>
-          <div className="w-24 h-24 bg-white/5 rounded-2xl flex items-center justify-center overflow-hidden border border-white/10 shrink-0 shadow-inner">
+          
+          <div className="w-24 h-24 bg-[var(--surface-2)] rounded-2xl flex items-center justify-center overflow-hidden border border-[var(--border)] shrink-0 shadow-sm">
             <CarBrandLogo carName={`${currentCar.make} ${currentCar.model}`} carImage={currentCar.image} />
           </div>
         </div>
 
         {/* مؤشر صحة السيارة */}
-        <div className="p-3 bg-black/30 rounded-xl border border-white/5 backdrop-blur-sm relative z-10">
+        <div className="p-3 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] relative z-10">
           <div className="flex justify-between items-center mb-1.5">
-            <span className="text-[10px] text-blue-200 font-bold flex items-center gap-1"><ShieldCheck size={12} className="text-green-400" /> {t('carHealth') || 'حالة السيارة'}</span>
-            <span className="text-[10px] font-bold text-green-400">{healthScore}%</span>
+            <span className="text-[10px] text-[var(--text)] font-bold flex items-center gap-1"><ShieldCheck size={14} className="text-green-500" /> {t('carHealth') || 'حالة السيارة'}</span>
+            <span className="text-[10px] font-bold text-green-500">{healthScore}%</span>
           </div>
-          <div className="w-full bg-black/50 rounded-full h-1.5 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000" style={{ width: `${healthScore}%` }}></div>
+          <div className="w-full bg-[var(--border)] rounded-full h-1.5 overflow-hidden">
+            <div className="h-full bg-green-500 rounded-full transition-all duration-1000" style={{ width: `${healthScore}%` }}></div>
           </div>
         </div>
       </div>
 
-      {/* ✅ التنبؤ بالوقود (جديد) */}
-      <div className={`p-4 rounded-2xl border ${isFuelLow ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm relative overflow-hidden`}>
+      {/* التنبؤ بالوقود - تمت الترجمة وإضافة لمسة بصرية */}
+      <div className={`p-4 rounded-2xl border transition-all ${isFuelLow ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm`}>
         <div className="flex justify-between items-center mb-2">
           <p className="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
             <Fuel size={16} className={isFuelLow ? 'text-red-500' : 'text-blue-500'} />
-            {t('fuelPrediction') || 'التنبؤ بالوقود'}
+            {t('fuelPrediction') || 'توقع الوقود المتبقي'}
           </p>
           {isFuelLow && <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">تحذير!</span>}
         </div>
@@ -175,16 +171,16 @@ export default function Dashboard() {
       </div>
 
       {/* زر الإنقاذ (SOS) */}
-      <Link to="/assistance" className="flex items-center justify-center gap-2 p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl hover:bg-red-500/20 active:scale-[0.98] transition-all mt-2 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+      <Link to="/assistance" className="flex items-center justify-center gap-2 p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl hover:bg-red-500/20 active:scale-[0.98] transition-all mt-2 shadow-sm">
         <AlertTriangle size={20} className="text-red-500 animate-pulse" />
         <span className="text-sm font-bold text-red-500">{t('emergencySOS') || 'إنقاذ طارئ (SOS) - سيارة معطلة؟'}</span>
       </Link>
 
       {/* الإحصائيات */}
       <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="bg-[var(--surface)] border border-green-500/20 p-4 rounded-2xl shadow-sm"><p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('totalIncome')}</p><p className="text-xl font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p></div>
-        <div className="bg-[var(--surface)] border border-red-500/20 p-4 rounded-2xl shadow-sm"><p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('totalExpenses')}</p><p className="text-xl font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p></div>
-        <div className={`col-span-2 border p-4 rounded-2xl flex justify-between items-center ${isNetPositive ? 'bg-gradient-to-r from-green-500/10 to-transparent border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-transparent border-red-500/30'}`}>
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl shadow-sm"><p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('totalIncome')}</p><p className="text-xl font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p></div>
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl shadow-sm"><p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('totalExpenses')}</p><p className="text-xl font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p></div>
+        <div className={`col-span-2 border p-4 rounded-2xl flex justify-between items-center ${isNetPositive ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
           <div><p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('netProfit')}</p><p className={`text-2xl font-extrabold ${isNetPositive ? 'text-green-500' : 'text-red-500'}`}>{netValue.toLocaleString()} <span className="text-xs font-normal">{currency}</span></p></div>
           <TrendingUp size={36} className={isNetPositive ? 'text-green-500/20' : 'text-red-500/20'} />
         </div>
@@ -193,7 +189,7 @@ export default function Dashboard() {
           {isEditingOdo ? (
             <div className="flex items-center gap-1 mt-1"><input type="number" value={newOdo} onChange={(e) => setNewOdo(e.target.value)} className="w-full bg-[var(--surface-2)] border border-[var(--primary)] rounded-md px-1 py-0.5 text-sm font-bold outline-none" autoFocus /><button onClick={handleSaveOdometer} className="text-green-500 p-1 bg-green-500/10 rounded"><Check size={14}/></button><button onClick={() => setIsEditingOdo(false)} className="text-red-500 p-1 bg-red-500/10 rounded"><X size={14}/></button></div>
           ) : (
-            <div className="flex items-center justify-between mt-1"><p className="text-lg font-extrabold text-blue-500">{odometerValue.toLocaleString()}</p><button onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-blue-500/10 text-blue-500 rounded-md"><Pencil size={14}/></button></div>
+            <div className="flex items-center justify-between mt-1"><p className="text-lg font-extrabold text-[var(--text)]">{odometerValue.toLocaleString()}</p><button onClick={() => { setNewOdo(String(odometerValue)); setIsEditingOdo(true); }} className="p-1.5 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--primary)] rounded-md transition-colors"><Pencil size={14}/></button></div>
           )}
         </div>
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-2xl"><p className="text-[10px] text-[var(--text-muted)] font-bold mb-1">{t('avgConsumption')}</p><p className="text-lg font-extrabold text-yellow-500 flex items-center gap-1 mt-1">{avgValue > 0 ? avgValue : '—'} <span className="text-[10px] font-normal text-[var(--text-muted)]">{avgUnit}</span></p></div>
@@ -225,7 +221,7 @@ export default function Dashboard() {
 
       {/* النافذة السفلية لتبديل السيارة (Bottom Sheet) */}
       {isCarModalOpen && (
-        <div className="fixed inset-0 bg-black/80 z-[150] flex items-end justify-center backdrop-blur-sm pb-0" onClick={() => setIsCarModalOpen(false)}>
+        <div className="fixed inset-0 bg-black/60 z-[150] flex items-end justify-center backdrop-blur-sm pb-0" onClick={() => setIsCarModalOpen(false)}>
           <div className="bg-[var(--surface)] w-full max-w-md rounded-t-3xl p-5 border-t border-[var(--border)] animate-slide-up flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg text-[var(--text)]">{t('switchCar') || 'تبديل السيارة'}</h3>
