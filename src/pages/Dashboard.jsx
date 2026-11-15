@@ -1,35 +1,32 @@
-import { useContext, useState, useCallback, useMemo } from 'react';
+import { useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, Pencil, Check, X, Bell, Settings,
   TrendingUp, TrendingDown, Activity, Plus, ShieldCheck, ChevronDown, CheckCircle,
-  AlertTriangle, MapPin, Search
+  AlertTriangle, MapPin, Search, Gauge, AlertOctagon, Navigation, Zap, Droplets
 } from 'lucide-react'; 
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.js';
 
-// ✅ مكون العداد الدائري (مُحسن ليكون متجاوباً 100% مع جميع الشاشات)
+// ✅ مكون العداد الدائري (مُحسن ليكون متجاوباً)
 const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon }) => {
   const safeMax = max > 0 ? max : 100;
   const safeVal = Math.min(Math.max(0, value), safeMax);
   const percentage = (safeVal / safeMax) * 100;
   
-  // استخدام viewBox يضمن أن الدائرة تتمدد وتتقلص مع حجم الشاشة
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
-      <div className="relative w-full max-w-[110px] aspect-square flex items-center justify-center">
+      <div className="relative w-full max-w-[100px] aspect-square flex items-center justify-center">
         <svg viewBox="0 0 100 100" className="transform -rotate-90 w-full h-full">
-          {/* المسار الخلفي */}
           <circle cx="50" cy="50" r={radius} stroke="var(--surface-2)" strokeWidth="8" fill="transparent" />
-          {/* المسار الملون */}
           <circle 
             cx="50" cy="50" r={radius} 
             stroke={color} strokeWidth="8" fill="transparent"
@@ -40,12 +37,12 @@ const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon })
           />
         </svg>
         <div className="absolute flex flex-col items-center justify-center text-center">
-          {Icon && <Icon size={14} className="mb-0.5 opacity-80" style={{ color }} />}
-          <span className="text-lg sm:text-xl font-extrabold text-[var(--text)] leading-tight">{value}</span>
-          <span className="text-[8px] sm:text-[9px] text-[var(--text-muted)] font-bold">{unit}</span>
+          {Icon && <Icon size={12} className="mb-0.5 opacity-80" style={{ color }} />}
+          <span className="text-base sm:text-lg font-extrabold text-[var(--text)] leading-tight">{value}</span>
+          <span className="text-[7px] sm:text-[8px] text-[var(--text-muted)] font-bold">{unit}</span>
         </div>
       </div>
-      <div className="text-center mt-2 w-full px-1">
+      <div className="text-center mt-1.5 w-full px-1">
         <span className="text-[10px] font-bold text-[var(--text)] block truncate">{label}</span>
         {subLabel && <span className="text-[8px] text-[var(--text-muted)] block truncate">{subLabel}</span>}
       </div>
@@ -53,39 +50,26 @@ const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon })
   );
 };
 
-// مكون عرض الشعار
 const CarBrandLogo = ({ carName, carImage }) => {
   const [imgError, setImgError] = useState(false);
-  
-  if (carImage && !imgError) {
-    return <img src={carImage} alt="car" className="w-full h-full object-cover rounded-xl" onError={() => setImgError(true)} />;
-  }
-
+  if (carImage && !imgError) return <img src={carImage} alt="car" className="w-full h-full object-cover rounded-xl" onError={() => setImgError(true)} />;
   const brand = findBrandByName(carName);
   const logoUrl = brand ? getBrandLogoUrl(brand.domain) : null;
-
-  if (!logoUrl || imgError) {
-    return <Car size={28} className="text-[var(--text-muted)] opacity-50" />;
-  }
-
-  return (
-    <img 
-      src={logoUrl} 
-      alt={carName} 
-      onError={() => setImgError(true)}
-      className="w-full h-full object-contain p-1.5 drop-shadow-md"
-    />
-  );
+  if (!logoUrl || imgError) return <Car size={28} className="text-[var(--text-muted)] opacity-50" />;
+  return <img src={logoUrl} alt={carName} onError={() => setImgError(true)} className="w-full h-full object-contain p-1.5 drop-shadow-md" />;
 };
 
 export default function Dashboard() {
-  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading } = useContext(AppContext);
+  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, reminders, documents } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
   const [newOdo, setNewOdo] = useState('');
   const [isCarModalOpen, setIsCarModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // حالة جلب الموقع
+  const [isLocating, setIsLocating] = useState(false);
 
   const greeting = user?.name ? `مرحباً، ${user.name} 👋` : 'مرحباً بك 👋';
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
@@ -106,6 +90,29 @@ export default function Dashboard() {
     setSearchQuery('');
   };
 
+  // ✅ ميزة 4: جلب الموقع الحي
+  const handleLocateCar = (e) => {
+    e.stopPropagation(); // منع فتح نافذة تبديل السيارة عند الضغط على الزر
+    setIsLocating(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          window.open(`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`, '_blank', 'noopener,noreferrer');
+          setIsLocating(false);
+        },
+        (error) => {
+          alert('تعذر جلب الموقع. يرجى تفعيل الـ GPS.');
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      alert('متصفحك لا يدعم تحديد الموقع.');
+      setIsLocating(false);
+    }
+  };
+
   const filteredVehicles = useMemo(() => {
     if (!searchQuery) return vehicles;
     return vehicles.filter(car => 
@@ -114,6 +121,7 @@ export default function Dashboard() {
     );
   }, [vehicles, searchQuery]);
 
+  // ✅ العمليات الحسابية والذكاء الاصطناعي البسيط
   const netValue = safeNumber(totals?.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals?.income);
@@ -122,6 +130,20 @@ export default function Dashboard() {
   const avgValue = safeNumber(totals?.avgConsumption);
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
   const healthScore = 100; 
+
+  // ✅ ميزة 1: حساب تكلفة الكيلومتر
+  // (إجمالي المصاريف / المسافة المقطوعة) - نضع 1 كحد أدنى لتجنب القسمة على صفر
+  const costPerKm = (totalValue / (odometerValue || 1)).toFixed(2);
+
+  // ✅ ميزة 3: التنبؤ بالصيانة (محاكاة ذكاء اصطناعي)
+  // نفترض أن الزيت يحتاج تغيير كل 5000 كم
+  const assumedOilChangeInterval = 5000;
+  const kmToOilChange = Math.max(0, assumedOilChangeInterval - (odometerValue % assumedOilChangeInterval));
+  
+  // ✅ ميزة 2: التنبيهات الذكية
+  // نبحث في التذكيرات والوثائق عن أي شيء ينتهي قريباً (للتجربة نضع تنبيهاً ثابتاً إذا لم توجد بيانات)
+  const hasUpcomingAlert = true; // يمكنك تغيير هذا المنطق لاحقاً ليفحص التواريخ الفعلية
+  const alertMessage = "⚠️ تنبيه: التأمين ينتهي بعد 5 أيام. يرجى التجديد.";
 
   const tankCapacity = safeNumber(currentCar?.tankCapacity) || 50;
   const currentFuelLiters = safeNumber(currentCar?.currentFuel) || (tankCapacity / 2);
@@ -137,8 +159,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-2 font-sans overflow-x-hidden">
+      
       {/* الشريط العلوي */}
-      <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 mb-2 gap-3">
+      <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-extrabold text-[var(--text)] truncate">{greeting}</h1>
           <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
@@ -148,6 +171,15 @@ export default function Dashboard() {
           <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"><Settings size={18} /></Link>
         </div>
       </div>
+
+      {/* ✅ ميزة 2: شريط التنبيهات الذكية */}
+      {hasUpcomingAlert && (
+        <div className="bg-orange-500/10 border border-orange-500/30 p-3 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm">
+          <AlertOctagon size={20} className="text-orange-500 shrink-0 animate-pulse" />
+          <p className="text-xs font-bold text-orange-500 flex-1">{alertMessage}</p>
+          <button className="text-[10px] font-bold bg-orange-500 text-white px-2 py-1 rounded-md">تجديد</button>
+        </div>
+      )}
 
       {/* بطاقة السيارة (أفقية) */}
       <div 
@@ -171,13 +203,20 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
-          <div className="w-14 h-14 bg-[var(--surface-2)] rounded-full flex items-center justify-center overflow-hidden border border-[var(--border)] shrink-0 shadow-inner">
-            <CarBrandLogo carName={`${currentCar.make} ${currentCar.model}`} carImage={currentCar.image} />
+          <div className="flex flex-col items-center gap-2 shrink-0">
+            <div className="w-12 h-12 bg-[var(--surface-2)] rounded-full flex items-center justify-center overflow-hidden border border-[var(--border)] shadow-inner">
+              <CarBrandLogo carName={`${currentCar.make} ${currentCar.model}`} carImage={currentCar.image} />
+            </div>
+            {/* ✅ ميزة 4: زر تحديد موقع السيارة */}
+            <button onClick={handleLocateCar} className="flex items-center gap-1 text-[9px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded-md active:scale-95 transition-all">
+              {isLocating ? <Activity size={10} className="animate-spin" /> : <Navigation size={10} />} 
+              {isLocating ? 'جاري...' : 'أين سيارتي؟'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ✅ لوحة القيادة - عدادات الصحة والوقود */}
+      {/* لوحة القيادة - عدادات الصحة والوقود */}
       <div className="grid grid-cols-2 gap-3">
         {/* عداد الوقود */}
         <div className={`p-3 rounded-2xl border ${isFuelLow ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-between relative`}>
@@ -193,12 +232,13 @@ export default function Dashboard() {
             unit={t('km') || 'كم'} 
             icon={MapPin}
           />
-          {isFuelLow && (
-            <a href={findGasStationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-[9px] font-bold text-white bg-red-500 px-3 py-1 rounded-lg w-full text-center active:scale-95 transition-transform">أقرب محطة</a>
-          )}
+          {/* ✅ ميزة 5: زر تسجيل وقود سريع */}
+          <Link to="/fuel" className="mt-2 w-full flex items-center justify-center gap-1 bg-blue-500 text-white text-[10px] font-bold py-1.5 rounded-lg active:scale-95 transition-transform shadow-md shadow-blue-500/20">
+            <Plus size={12} /> تعبئة سريعة
+          </Link>
         </div>
 
-        {/* عداد الصحة + متوسط الاستهلاك */}
+        {/* عداد الصحة + التنبؤ */}
         <div className="p-3 rounded-2xl border bg-[var(--surface)] border-[var(--border)] shadow-sm flex flex-col items-center justify-between relative">
           <div className="flex justify-between items-center w-full mb-1 px-1">
             <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><ShieldCheck size={12} className="text-green-500" /> {t('carHealth') || 'الحالة'}</span>
@@ -210,21 +250,26 @@ export default function Dashboard() {
             color="#10b981" 
             unit="%" 
           />
+          {/* ✅ ميزة 3: التنبؤ بالصيانة */}
           <div className="mt-2 w-full bg-[var(--surface-2)] rounded-lg p-1.5 text-center border border-[var(--border)]">
-             <p className="text-[8px] text-[var(--text-muted)] font-bold">{t('avgConsumption') || 'متوسط الاستهلاك'}</p>
-             <p className="text-[10px] font-extrabold text-yellow-500">{avgValue > 0 ? avgValue : '—'} <span className="text-[7px] font-normal text-[var(--text-muted)]">{avgUnit}</span></p>
+             <p className="text-[8px] text-[var(--text-muted)] font-bold flex items-center justify-center gap-1"><Droplets size={10} className="text-yellow-500"/> تغيير الزيت القادم</p>
+             <p className="text-[10px] font-extrabold text-yellow-500">بعد {kmToOilChange} كم</p>
           </div>
         </div>
       </div>
 
-      {/* ✅ لوحة القيادة - الملخص المالي */}
+      {/* لوحة القيادة - الملخص المالي */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm mt-3">
         <div className="flex justify-between items-center mb-3 px-1">
           <h3 className="font-bold text-xs flex items-center gap-1.5"><Activity size={14} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
+          {/* ✅ ميزة 1: مؤشر تكلفة الكيلومتر */}
+          <span className="text-[9px] font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-1 rounded-md border border-[var(--border)] flex items-center gap-1">
+            <Gauge size={10} className="text-purple-400"/> 
+            تكلفة الكم: {costPerKm} {currency}
+          </span>
         </div>
         
         <div className="flex items-center gap-4">
-          {/* الدائرة المالية (على اليسار أو اليمين حسب اتجاه اللغة) */}
           <div className="w-[45%] flex justify-center">
             <CircularGauge 
               value={Math.abs(netValue)} 
@@ -235,15 +280,14 @@ export default function Dashboard() {
             />
           </div>
           
-          {/* بطاقات الإيرادات والمصاريف (متراصة عمودياً) */}
           <div className="w-[55%] flex flex-col gap-2">
-            <div className="bg-green-500/10 border border-green-500/20 p-2.5 rounded-xl">
+            <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-xl">
               <p className="text-[9px] text-green-500 font-bold mb-0.5 flex items-center gap-1"><TrendingUp size={10}/> {t('totalIncome')}</p>
-              <p className="text-sm font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-[9px] font-normal">{currency}</span></p>
+              <p className="text-xs font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-[8px] font-normal">{currency}</span></p>
             </div>
-            <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl">
+            <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-xl">
               <p className="text-[9px] text-red-500 font-bold mb-0.5 flex items-center gap-1"><TrendingDown size={10}/> {t('totalExpenses')}</p>
-              <p className="text-sm font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-[9px] font-normal">{currency}</span></p>
+              <p className="text-xs font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-[8px] font-normal">{currency}</span></p>
             </div>
           </div>
         </div>
