@@ -504,16 +504,15 @@ export const fr = {
   helpDesc: 'Voiture en panne ? Appuyez ici pour trouver immédiatement le garage de réparation ou la dépanneuse le plus proche.',
   recommendedRating: 'Nous vous recommandons de choisir des services notés 4.5 ⭐ ou plus',
   skipSearchOpenMaps: 'Passer la recherche et ouvrir Google Maps directement',
-  nearbyPlaces: 'lieux à proximité'
+  nearbyPlaces: 'lieux à proximité', // ✅ تم إضافة الفاصلة هنا
 
   helpCenter: 'Centre d\'aide routière',
-serviceRepair: 'Garage de réparation',
-serviceTowing: 'Service de remorquage',
-servicePartsNew: 'Pièces détachées neuves',
-servicePartsUsed: 'Pièces détachées d\'occasion',
-serviceBattery: 'Batterie de voiture',
-searchViaGoogle: 'Recherche rapide via Google',
-nearbyResults: 'Services à proximité découverts',
-emergencyDesc: 'Choisissez le type d\'aide dont vous avez besoin',
-  
+  serviceRepair: 'Garage de réparation',
+  serviceTowing: 'Service de remorquage',
+  servicePartsNew: 'Pièces détachées neuves',
+  servicePartsUsed: 'Pièces détachées d\'occasion',
+  serviceBattery: 'Batterie de voiture',
+  searchViaGoogle: 'Recherche rapide via Google',
+  nearbyResults: 'Services à proximité découverts',
+  emergencyDesc: 'Choisissez le type d\'aide dont vous avez besoin',
 };
