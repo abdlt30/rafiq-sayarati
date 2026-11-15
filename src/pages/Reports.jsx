@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, useMemo } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import { dbService } from '../services/dbService.js';
 import { useNavigate } from 'react-router-dom';
-import { FileDown, Printer, TrendingUp, Wallet, Fuel, Wrench, PieChart as PieChartIcon, BarChart3, AlertCircle } from 'lucide-react';
+import { Printer, TrendingUp, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import { safeNumber } from '../shared/utils/safeNumber.js';
 
 // ✅ استيراد مكونات الرسوم البيانية
@@ -43,7 +43,7 @@ export default function Reports() {
           });
         }
       } catch (e) {
-        console.error(e);
+        console.error("Error loading reports data:", e);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -52,7 +52,7 @@ export default function Reports() {
     return () => { isMounted = false; };
   }, [currentCar]);
 
-  // ✅ تصفية البيانات بناءً على الفترة المحددة (هذا الشهر، هذه السنة، الكل)
+  // ✅ تصفية البيانات بناءً على الفترة المحددة
   const filteredData = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -61,6 +61,8 @@ export default function Reports() {
     const filterByDate = (arr) => arr.filter(r => {
       if (period === 'all' || !r.date) return true;
       const d = new Date(r.date);
+      if (isNaN(d.getTime())) return false; // حماية من التواريخ غير الصالحة
+      
       if (period === 'month') return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       if (period === 'year') return d.getFullYear() === currentYear;
       return true;
@@ -94,40 +96,43 @@ export default function Reports() {
       { name: t('fuelLabel') || 'وقود', value: totals.fuelCost },
       { name: t('maintenanceLabel') || 'صيانة', value: totals.maintCost },
       { name: t('expensesLabel') || 'مصاريف أخرى', value: totals.expCost },
-    ].filter(d => d.value > 0); // إخفاء القيم الصفرية
+    ].filter(d => d.value > 0); // إخفاء القيم الصفرية لتجنب ازدحام المخطط
   }, [totals, t]);
 
   // ✅ بيانات الرسم الشريطي (المصاريف الشهرية - آخر 6 أشهر)
   const barData = useMemo(() => {
     const months = {};
-    const now = new Date();
     const locale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
     // تجميع البيانات حسب الشهر
     [...filteredData.fuel, ...filteredData.maintenance, ...filteredData.expenses].forEach(r => {
       if (!r.date) return;
       const d = new Date(r.date);
+      if (isNaN(d.getTime())) return; // حماية من التواريخ غير الصالحة
+
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (!months[key]) {
         months[key] = { 
           name: d.toLocaleDateString(locale, { month: 'short' }), 
           total: 0, 
-          timestamp: d.getTime() 
+          timestamp: new Date(d.getFullYear(), d.getMonth(), 1).getTime() // ضبط التوقيت لأول يوم في الشهر للترتيب الدقيق
         };
       }
       months[key].total += safeNumber(r.cost);
     });
 
     // تحويلها لمصفوفة وترتيبها زمنياً
-    return Object.values(months).sort((a, b) => a.timestamp - b.timestamp).slice(-6);
-  }, [filteredData, lang]);
+    const sortedData = Object.values(months).sort((a, b) => a.timestamp - b.timestamp);
+    
+    // إذا كان الفلتر "هذا الشهر"، نعرض شهراً واحداً فقط. وإلا نعرض آخر 6 أشهر
+    return period === 'month' ? sortedData : sortedData.slice(-6);
+  }, [filteredData, lang, period]);
 
   if (isLoading) {
     return (
       <div className="p-4 space-y-4 animate-pulse">
         <div className="h-10 bg-[var(--surface-2)] rounded-lg w-1/3 mb-6"></div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>
+        <div className="grid grid-cols-2 gap-3">
           <div className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>
           <div className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>
         </div>
