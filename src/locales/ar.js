@@ -105,7 +105,7 @@ export const ar = {
   deleteImage: 'حذف الصورة',
   addImage: 'إضافة صورة',
   
-  // ✅ مفاتيح اختيار الماركة (المضافة حديثاً)
+  // ✅ مفاتيح اختيار الماركة
   carBrand: 'ماركة السيارة',
   chooseBrand: 'اختر ماركة السيارة',
   searchBrand: 'ابحث عن ماركة...',
@@ -504,16 +504,15 @@ export const ar = {
   helpDesc: 'سيارة معطلة؟ اضغط هنا للعثور على أقرب ورشة أو سطحة إنقاذ فوراً.',
   recommendedRating: 'ننصحك باختيار الخدمات 4.5 ⭐ فما فوق',
   skipSearchOpenMaps: 'تخطي البحث وفتح خرائط جوجل مباشرة',
-  nearbyPlaces: 'مكان قريب'
+  nearbyPlaces: 'مكان قريب', // ✅ تم إضافة الفاصلة المفقودة هنا
 
   helpCenter: 'مركز المساعدة على الطريق',
-serviceRepair: 'ورشة إصلاح',
-serviceTowing: 'سيارة سحب (سطحة)',
-servicePartsNew: 'قطع غيار جديدة',
-servicePartsUsed: 'قطع غيار مستعملة',
-serviceBattery: 'بطارية سيارة',
-searchViaGoogle: 'بحث سريع عبر جوجل',
-nearbyResults: 'أقرب الخدمات المكتشفة',
-emergencyDesc: 'اختر نوع المساعدة التي تحتاجها الآن',
-  
+  serviceRepair: 'ورشة إصلاح',
+  serviceTowing: 'سيارة سحب (سطحة)',
+  servicePartsNew: 'قطع غيار جديدة',
+  servicePartsUsed: 'قطع غيار مستعملة',
+  serviceBattery: 'بطارية سيارة',
+  searchViaGoogle: 'بحث سريع عبر جوجل',
+  nearbyResults: 'أقرب الخدمات المكتشفة',
+  emergencyDesc: 'اختر نوع المساعدة التي تحتاجها الآن',
 };
