@@ -107,7 +107,7 @@ export const fr = {
   carDetails: 'Détails de la voiture',
   carHealth: 'Santé de la voiture',
   
-  // ✅ مفاتيح اختيار الماركة (المضافة حديثاً)
+  // ✅ Car Brand Selection Keys
   carBrand: 'Marque de voiture',
   chooseBrand: 'Choisir la marque',
   searchBrand: 'Rechercher une marque...',
@@ -497,21 +497,26 @@ export const fr = {
   findSpareParts: 'Trouver des pièces détachées',
   requestTowing: 'Demander un remorquage',
   searchingHelp: 'Recherche d\'aide à proximité...',
-  noHelpFound: 'Aucune aide trouvée à proximité. Veuillez essayer une autre zone.',
+  
+  // ✅ Updated generic error message
+  noHelpFound: 'Aucun résultat trouvé dans un rayon de 5 km. Veuillez utiliser Google Maps pour rechercher.',
+  
   call: 'Appeler',
   navigate: 'Naviguer',
   locationRequired: 'L\'accès à la localisation est requis pour trouver de l\'aide à proximité.',
   helpDesc: 'Voiture en panne ? Appuyez ici pour trouver immédiatement le garage de réparation ou la dépanneuse le plus proche.',
   recommendedRating: 'Nous vous recommandons de choisir des services notés 4.5 ⭐ ou plus',
   skipSearchOpenMaps: 'Passer la recherche et ouvrir Google Maps directement',
-  nearbyPlaces: 'lieux à proximité', // ✅ تم إضافة الفاصلة هنا
+  nearbyPlaces: 'lieux à proximité',
 
+  // ✅ New keys for Help Center
   helpCenter: 'Centre d\'aide routière',
   serviceRepair: 'Garage de réparation',
   serviceTowing: 'Service de remorquage',
   servicePartsNew: 'Pièces détachées neuves',
   servicePartsUsed: 'Pièces détachées d\'occasion',
   serviceBattery: 'Batterie de voiture',
+  serviceMobileMechanic: 'Mécanicien mobile', // ✅ Added missing key
   searchViaGoogle: 'Recherche rapide via Google',
   nearbyResults: 'Services à proximité découverts',
   emergencyDesc: 'Choisissez le type d\'aide dont vous avez besoin',
