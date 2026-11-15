@@ -106,6 +106,8 @@ export const fr = {
   addImage: 'Ajouter une image',
   carDetails: 'Détails de la voiture',
   carHealth: 'Santé de la voiture',
+  carBrand: 'Marque de voiture',
+  chooseBrand: 'Choisir la marque',
 
   // ===================== Powertrain =====================
   powertrain: 'Groupe Motopropulseur',
@@ -143,6 +145,10 @@ export const fr = {
   consumptionKwh100km: 'kWh/100km',
   avgConsumption: 'Consommation Moyenne',
   totalLiters: 'Total Litres',
+  fuelPrediction: 'Prédiction de carburant',
+  distanceToEmpty: 'km restants',
+  fuelLowWarning: 'Avertissement : Carburant faible !',
+  nearestStation: 'Station la plus proche',
   noFuelRecordsDesc: 'Enregistrez votre premier plein pour commencer à suivre votre consommation et économiser de l\'argent.',
   startYourJourney: 'Commencez votre voyage !',
 
@@ -301,6 +307,10 @@ export const fr = {
   timeline: 'Historique',
   carTimeline: 'Historique de la Voiture',
   confirmLowerOdometer: 'Le nouveau compteur est inférieur à l\'actuel. Êtes-vous sûr ?',
+  week: 'Semaine',
+  month: 'Mois',
+  year: 'Année',
+  searchOnGoogleMaps: 'Rechercher sur Google Maps',
 
   // ===================== Reports & Print =====================
   reports: 'Rapports',
@@ -372,7 +382,7 @@ export const fr = {
   fuelStation: 'Station-service',
   addressUnavailable: 'Adresse indisponible',
   noStationsFound: 'Aucune station-service trouvée dans un rayon de 5 km.',
-  searchTimeout: 'Délai de recherche dépassé. Vérifiez votre connexion.',
+  searchTimeout: 'Le délai de recherche a expiré (le réseau est peut-être faible).',
   searchBusy: 'Le service des stations est occupé. Réessayez dans un instant.',
   searchSlow: 'Le service des stations est lent. Réessayez dans un instant.',
   searchFailed: 'Impossible de se connecter à la base de données. Vérifiez internet.',
@@ -442,7 +452,6 @@ export const fr = {
   // ===================== Shared =====================
   confirmDelete: 'Êtes-vous sûr de vouloir supprimer ?',
   confirmDeleteBtn: 'Oui, Supprimer',
-  month: 'Ce Mois',
   carInfo: 'Informations du Véhicule',
   car: 'Voiture',
   welcome: 'Bienvenue,',
@@ -477,7 +486,7 @@ export const fr = {
   backupMovedMsg: 'La sauvegarde et la restauration (JSON) ont été déplacées vers les paramètres.',
   goToSettings: 'Aller aux paramètres',
 
-  // ===================== Roadside Assistance (New) =====================
+  // ===================== Roadside Assistance (Updated) =====================
   roadsideAssistance: 'Assistance routière',
   emergencySOS: 'SOS Urgence',
   findRepairShop: 'Trouver un garage de réparation',
@@ -488,5 +497,8 @@ export const fr = {
   call: 'Appeler',
   navigate: 'Naviguer',
   locationRequired: 'L\'accès à la localisation est requis pour trouver de l\'aide à proximité.',
-  helpDesc: 'Voiture en panne ? Appuyez ici pour trouver immédiatement le garage de réparation ou la dépanneuse le plus proche.'
+  helpDesc: 'Voiture en panne ? Appuyez ici pour trouver immédiatement le garage de réparation ou la dépanneuse le plus proche.',
+  recommendedRating: 'Nous vous recommandons de choisir des services notés 4.5 ⭐ ou plus',
+  skipSearchOpenMaps: 'Passer la recherche et ouvrir Google Maps directement',
+  nearbyPlaces: 'lieux à proximité'
 };
