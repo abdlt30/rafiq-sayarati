@@ -6,7 +6,8 @@ import {
   Wrench, Settings, Truck, AlertTriangle, Loader2, Map, Star
 } from 'lucide-react';
 
-import { getKeywordsForCountry } from '../constants/regions.js';
+// ✅ استيراد الدوال المحدثة من ملف regions.js
+import { REGIONS, getSearchKeywords } from '../constants/regions.js';
 import { safeNumber } from '../shared/utils/safeNumber.js';
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -34,7 +35,7 @@ export default function Assistance() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [activeTab, setActiveTab] = useState('repair'); // repair | parts | towing
-  const [activeSubTab, setActiveSubTab] = useState(''); // ✅ حالة جديدة للرقائق (جديد، مستعمل...)
+  const [activeSubTab, setActiveSubTab] = useState(''); 
   const [errorMsg, setErrorMsg] = useState('');
   const [showFallback, setShowFallback] = useState(false);
 
@@ -51,26 +52,30 @@ export default function Assistance() {
     else navigate('/');
   };
 
-  // 🗺️ دالة فتح خرائط جوجل (محدثة لتدعم التخصيصات)
+  // 🗺️ دالة فتح خرائط جوجل (محدثة لتدعم التخصيصات واللغة)
   const openGoogleMapsSearch = useCallback(() => {
-    const countryCode = CURRENCY_TO_COUNTRY[currency] || 'MA';
-    const keywords = getKeywordsForCountry(countryCode);
+    // جلب الكلمات المفتاحية باللغة الحالية
+    const keywords = getSearchKeywords(currency, lang);
+    const regionConfig = REGIONS[currency] || REGIONS['MAD'];
 
     let searchQuery = '';
     
     // إذا كان هناك تخصيص محدد (مثل قطع غيار مستعملة)
-    if (activeSubTab && keywords.subKeywords && keywords.subKeywords[activeTab]) {
-      const sub = keywords.subKeywords[activeTab].find(s => s.id === activeSubTab);
+    if (activeSubTab) {
+      // جلب الرقائق الخاصة باللغة الحالية أو العربية كاحتياط
+      const subTabs = regionConfig?.subKeywords?.[lang]?.[activeTab] 
+                   || regionConfig?.subKeywords?.['ar']?.[activeTab] 
+                   || [];
+      const sub = subTabs.find(s => s.id === activeSubTab);
       if (sub) searchQuery = sub.query;
     }
     
     // إذا لم يوجد تخصيص، استخدم الكلمة العامة
     if (!searchQuery) {
-      if (activeTab === 'repair') searchQuery = keywords.repair;
-      else if (activeTab === 'parts') searchQuery = keywords.parts;
-      else if (activeTab === 'towing') searchQuery = keywords.towing;
+      searchQuery = keywords[activeTab] || keywords.repair;
     }
 
+    // فتح الرابط
     if (userLocation) {
       const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}/@${userLocation.lat},${userLocation.lon},14z`;
       window.open(url, '_blank', 'noopener,noreferrer');
@@ -78,7 +83,7 @@ export default function Assistance() {
       const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     }
-  }, [userLocation, activeTab, activeSubTab, currency]);
+  }, [userLocation, activeTab, activeSubTab, currency, lang]);
 
   // 📍 جلب الموقع بدقة عالية مع معالجة التعليق
   const fetchNearbyHelp = useCallback(async (type) => {
@@ -110,7 +115,7 @@ export default function Assistance() {
         if (type === 'repair') queryTag = 'nwr["amenity"="car_repair"]';
         else if (type === 'parts') queryTag = 'nwr["shop"="car_parts"]';
         else if (type === 'towing') {
-          queryTag = '(nwr["service"="towing"];nwr["amenity"="car_repair"]["name"~"دبناج|سطحة|Remorquage|Dépannage|ونش",i];)';
+          queryTag = '(nwr["service"="towing"];nwr["amenity"="car_repair"]["name"~"دبناج|سطحة|Remorquage|Dépannage|ونش|ت Bottom",i];)';
         }
 
         const query = `[out:json];(${queryTag}(around:10000,${latitude},${longitude}););out center 20;`;
@@ -120,7 +125,7 @@ export default function Assistance() {
           for (const endpoint of OVERPASS_ENDPOINTS) {
             try {
               const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 ثواني كحد أقصى لكل خادم
+              const timeoutId = setTimeout(() => controller.abort(), 6000);
 
               const res = await fetch(endpoint, { method: 'POST', body: query, signal: controller.signal });
               clearTimeout(timeoutId);
@@ -175,12 +180,18 @@ export default function Assistance() {
   useEffect(() => {
     fetchNearbyHelp(activeTab);
     setActiveSubTab(''); // إعادة تعيين التخصيص عند تغيير التبويب الرئيسي
+    
+    // ✅ تنظيف المؤقت عند مغادرة الصفحة
+    return () => {
+      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+    };
   }, [activeTab, fetchNearbyHelp]);
 
-  // ✅ جلب التخصيصات بناءً على الدولة والتبويب الحالي
-  const countryCode = CURRENCY_TO_COUNTRY[currency] || 'MA';
-  const currentKeywords = getKeywordsForCountry(countryCode);
-  const availableSubTabs = currentKeywords.subKeywords?.[activeTab] || [];
+  // ✅ جلب التخصيصات بناءً على الدولة واللغة والتبويب الحالي
+  const regionConfig = REGIONS[currency] || REGIONS['MAD'];
+  const availableSubTabs = regionConfig?.subKeywords?.[lang]?.[activeTab] 
+                        || regionConfig?.subKeywords?.['ar']?.[activeTab] 
+                        || [];
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-4 max-w-2xl mx-auto min-h-screen font-sans">
