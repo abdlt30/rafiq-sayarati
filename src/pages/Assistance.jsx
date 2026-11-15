@@ -4,11 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, ArrowLeft, MapPin, Phone, Navigation, 
   Wrench, Truck, Settings, Battery, AlertTriangle, 
-  Loader2, Map, Star, ShieldAlert, CheckCircle2
+  Loader2, Map, ShieldAlert, CheckCircle2, WrenchIcon, CarFront
 } from 'lucide-react';
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
-// ✅ استيراد دالة جلب كود الدولة
 import { getCountryCode } from '../shared/constants/regions.js';
 
 // دالة حساب المسافة (Haversine)
@@ -37,7 +36,6 @@ export default function Assistance() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState([]);
   
-  // الفئة النشطة (repair, towing, parts_new, parts_used, battery)
   const [activeTab, setActiveTab] = useState('repair'); 
   const [errorMsg, setErrorMsg] = useState('');
   const [showFallback, setShowFallback] = useState(false);
@@ -50,10 +48,11 @@ export default function Assistance() {
     else navigate('/');
   };
 
-  // الحصول على الكلمة المفتاحية لخرائط جوجل حسب اللغة والفئة
+  // الحصول على الكلمة المفتاحية لخرائط جوجل (تمت إضافة الميكانيكي المتنقل بدقة)
   const getGoogleMapsQuery = (tab, lang) => {
     const queries = {
-      repair: { ar: 'ميكانيكي سيارات', en: 'car repair shop', fr: 'garage automobile' },
+      repair: { ar: 'ورشة إصلاح سيارات', en: 'car repair shop', fr: 'garage automobile' },
+      mobile_mechanic: { ar: 'خدمة ميكانيكي متنقل', en: 'mobile mechanic service', fr: 'mécanicien mobile domicile' },
       towing: { ar: 'سطحة سحب سيارات', en: 'towing service', fr: 'service de remorquage' },
       parts_new: { ar: 'قطع غيار سيارات جديدة', en: 'new car parts', fr: 'pièces auto neuves' },
       parts_used: { ar: 'قطع غيار سيارات مستعملة', en: 'used car parts', fr: 'pièces auto occasion' },
@@ -62,31 +61,26 @@ export default function Assistance() {
     return queries[tab]?.[lang] || queries[tab]?.['en'] || 'car service';
   };
 
-  // ✅ فتح خرائط جوجل فوراً وتحديد بلد المستخدم
   const openGoogleMapsSearch = useCallback(() => {
     const query = getGoogleMapsQuery(activeTab, lang);
-    const countryCode = getCountryCode(currency); // جلب كود الدولة (مثلاً MA للمغرب)
+    const countryCode = getCountryCode(currency); 
 
     let url = '';
     if (userLocation) {
-      // إذا كان الموقع متاحاً، افتح الخريطة على الإحداثيات مباشرة
       url = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${userLocation.lat},${userLocation.lon},14z`;
     } else {
-      // إذا كان الموقع مرفوضاً، أجبر جوجل على البحث داخل بلد المستخدم (gl=ma)
       url = `https://www.google.com/maps/search/${encodeURIComponent(query)}?gl=${countryCode.toLowerCase()}`;
     }
     
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [userLocation, activeTab, lang, currency]); // أضفنا currency هنا
+  }, [userLocation, activeTab, lang, currency]);
 
-  // جلب الموقع والبحث في OSM
   const fetchNearbyHelp = useCallback(async (type) => {
     setErrorMsg('');
     setShowFallback(false);
     setIsLoading(true);
     setResults([]);
 
-    // مؤقت 6 ثوانٍ كحد أقصى للبحث في OSM
     if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
     loadingTimerRef.current = setTimeout(() => {
       setIsLoading(false);
@@ -108,12 +102,13 @@ export default function Assistance() {
         setGeoError(false);
 
         let queryTag = '';
+        // تحديث استعلامات OSM
         if (type === 'repair') queryTag = 'nwr["amenity"="car_repair"]';
         else if (type === 'towing') queryTag = '(nwr["service"="towing"];nwr["amenity"="car_repair"]["name"~"دبناج|سطحة|Remorquage|Dépannage|ونش",i];)';
         else if (type === 'parts_new' || type === 'parts_used') queryTag = 'nwr["shop"="car_parts"]';
         else if (type === 'battery') queryTag = '(nwr["shop"="car_parts"]["name"~"بطارية|batterie|battery",i];nwr["amenity"="car_repair"]["name"~"بطارية|batterie|battery",i];)';
+        else if (type === 'mobile_mechanic') queryTag = '(nwr["amenity"="car_repair"]["name"~"متنقل|mobile|domicile",i];nwr["shop"="car_repair"]["name"~"متنقل|mobile|domicile",i];)'; // البحث عن الكلمات المفتاحية للخدمة المتنقلة
 
-        // تقليل النطاق إلى 5000 متر لتسريع الاستجابة
         const query = `[out:json];(${queryTag}(around:5000,${latitude},${longitude}););out center 15;`;
 
         try {
@@ -121,7 +116,7 @@ export default function Assistance() {
           for (const endpoint of OVERPASS_ENDPOINTS) {
             try {
               const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 ثواني لكل خادم
+              const timeoutId = setTimeout(() => controller.abort(), 5000); 
 
               const res = await fetch(endpoint, { method: 'POST', body: query, signal: controller.signal });
               clearTimeout(timeoutId);
@@ -155,7 +150,8 @@ export default function Assistance() {
           }
 
           if (!success) {
-            setErrorMsg(t('noStationsFound') || 'لم نجد نتائج قريبة جداً. جرب خرائط جوجل.');
+            // ✅ تم إصلاح رسالة الخطأ لتكون عامة وليست خاصة بمحطات الوقود
+            setErrorMsg(t('noHelpFound') || 'لم يتم العثور على خدمات قريبة جداً. جرب البحث في خرائط جوجل.');
             setShowFallback(true);
           }
         } finally {
@@ -181,9 +177,10 @@ export default function Assistance() {
     };
   }, [activeTab, fetchNearbyHelp]);
 
-  // قائمة الخدمات (شبكة)
+  // ✅ إضافة الميكانيكي المتنقل إلى القائمة
   const services = [
     { id: 'repair', label: t('serviceRepair') || 'ورشة إصلاح', icon: Wrench, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { id: 'mobile_mechanic', label: t('serviceMobileMechanic') || 'ميكانيكي متنقل', icon: CarFront, color: 'text-teal-500', bg: 'bg-teal-500/10' },
     { id: 'towing', label: t('serviceTowing') || 'سيارة سحب (سطحة)', icon: Truck, color: 'text-red-500', bg: 'bg-red-500/10' },
     { id: 'battery', label: t('serviceBattery') || 'بطارية سيارة', icon: Battery, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
     { id: 'parts_new', label: t('servicePartsNew') || 'قطع غيار جديدة', icon: Settings, color: 'text-purple-500', bg: 'bg-purple-500/10' },
@@ -193,7 +190,6 @@ export default function Assistance() {
   return (
     <div className="space-y-4 pb-24 px-4 pt-4 max-w-2xl mx-auto min-h-screen font-sans">
       
-      {/* الشريط العلوي */}
       <div className="flex items-center gap-4 mb-2">
         <button onClick={handleBack} className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl text-[var(--text)] hover:bg-[var(--surface-2)] active:scale-95 transition-all shadow-sm">
           {lang === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
@@ -208,7 +204,7 @@ export default function Assistance() {
         {t('emergencyDesc') || 'اختر نوع المساعدة التي تحتاجها الآن'}
       </p>
 
-      {/* شبكة الخدمات (Emergency Grid) */}
+      {/* شبكة الخدمات (أصبحت 6 خدمات) */}
       <div className="grid grid-cols-2 gap-3">
         {services.map(service => {
           const Icon = service.icon;
@@ -259,7 +255,6 @@ export default function Assistance() {
         </div>
       </div>
 
-      {/* حالة التحميل */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-8">
           <Loader2 size={32} className="animate-spin text-[var(--primary)] mb-3" />
@@ -267,7 +262,6 @@ export default function Assistance() {
         </div>
       )}
 
-      {/* حالة الخطأ */}
       {errorMsg && !isLoading && (
         <div className="bg-orange-500/10 border border-orange-500/20 p-5 rounded-3xl text-center animate-fade-in shadow-sm mt-4">
           <AlertTriangle size={32} className="text-orange-500 mx-auto mb-3 opacity-80" />
@@ -279,7 +273,6 @@ export default function Assistance() {
         </div>
       )}
 
-      {/* قائمة النتائج */}
       {!isLoading && !errorMsg && results.length > 0 && (
         <div className="space-y-3 animate-fade-in mt-4">
           <div className="flex items-center justify-between px-1 mb-2">
@@ -314,7 +307,6 @@ export default function Assistance() {
         </div>
       )}
 
-      {/* ملاحظة أمان */}
       <div className="flex items-start gap-2 bg-[var(--surface-2)] p-3 rounded-xl border border-[var(--border)] mt-6">
         <ShieldAlert size={16} className="text-[var(--text-muted)] shrink-0 mt-0.5" />
         <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
