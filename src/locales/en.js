@@ -105,7 +105,7 @@ export const en = {
   deleteImage: 'Delete Image',
   addImage: 'Add Image',
   
-  // ✅ مفاتيح اختيار الماركة (المضافة حديثاً)
+  // ✅ مفاتيح اختيار الماركة
   carBrand: 'Car Brand',
   chooseBrand: 'Choose Car Brand',
   searchBrand: 'Search for a brand...',
@@ -504,16 +504,15 @@ export const en = {
   helpDesc: 'Car broken down? Tap here to find the nearest repair shop or tow truck immediately.',
   recommendedRating: 'We recommend choosing services rated 4.5 ⭐ or above',
   skipSearchOpenMaps: 'Skip search and open Google Maps directly',
-  nearbyPlaces: 'nearby places'
+  nearbyPlaces: 'nearby places', // ✅ تم إضافة الفاصلة هنا
 
   helpCenter: 'Roadside Help Center',
-serviceRepair: 'Repair Shop',
-serviceTowing: 'Towing Service',
-servicePartsNew: 'New Spare Parts',
-servicePartsUsed: 'Used Spare Parts',
-serviceBattery: 'Car Battery',
-searchViaGoogle: 'Quick Search via Google',
-nearbyResults: 'Nearby Discovered Services',
-emergencyDesc: 'Choose the type of help you need now',
-  
+  serviceRepair: 'Repair Shop',
+  serviceTowing: 'Towing Service',
+  servicePartsNew: 'New Spare Parts',
+  servicePartsUsed: 'Used Spare Parts',
+  serviceBattery: 'Car Battery',
+  searchViaGoogle: 'Quick Search via Google',
+  nearbyResults: 'Nearby Discovered Services',
+  emergencyDesc: 'Choose the type of help you need now',
 };
