@@ -104,8 +104,12 @@ export const en = {
   invalidYear: 'Please enter a valid manufacturing year.',
   deleteImage: 'Delete Image',
   addImage: 'Add Image',
+  
+  // ✅ مفاتيح اختيار الماركة (المضافة حديثاً)
   carBrand: 'Car Brand',
   chooseBrand: 'Choose Car Brand',
+  searchBrand: 'Search for a brand...',
+  addCustomBrand: 'Add as custom brand',
 
   // ===================== Powertrain =====================
   powertrain: 'Powertrain',
