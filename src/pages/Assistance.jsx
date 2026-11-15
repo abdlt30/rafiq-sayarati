@@ -36,7 +36,6 @@ export default function Assistance() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState([]);
   
-  // الفئات: repair, mobile_repair, towing, battery, parts_new, parts_used
   const [activeTab, setActiveTab] = useState('repair'); 
   const [errorMsg, setErrorMsg] = useState('');
   const [showFallback, setShowFallback] = useState(false);
@@ -74,17 +73,15 @@ export default function Assistance() {
     return queries[tab]?.[lang] || queries[tab]?.['en'] || `car service in ${country}`;
   };
 
-  // ✅ إصلاح زر خرائط جوجل ليفتح في بلد المستخدم
+  // ✅ فتح خرائط جوجل فوراً وتحديد بلد المستخدم
   const openGoogleMapsSearch = useCallback(() => {
     const countryCode = getCountryCode(currency); 
     const query = getGoogleMapsQuery(activeTab, lang, countryCode);
     
     let url = '';
     if (userLocation) {
-      // إذا كان الموقع متاحاً، افتح الخريطة على الإحداثيات مباشرة
       url = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${userLocation.lat},${userLocation.lon},12z`;
     } else {
-      // إذا كان الموقع مرفوضاً، نستخدم gl=countryCode
       url = `https://www.google.com/maps/search/${encodeURIComponent(query)}?gl=${countryCode.toLowerCase()}`;
     }
     
@@ -166,7 +163,6 @@ export default function Assistance() {
           }
 
           if (!success) {
-            // ✅ إصلاح الرسالة
             setErrorMsg(t('noHelpFound') || 'لم نجد نتائج في نطاق 5 كم. يرجى استخدام زر خرائط جوجل للبحث.');
             setShowFallback(true);
           }
@@ -193,7 +189,7 @@ export default function Assistance() {
     };
   }, [activeTab, fetchNearbyHelp]);
 
-  // ✅ قائمة الخدمات (المحدثة)
+  // ✅ قائمة الخدمات (مع إضافة الميكانيكي المتنقل)
   const services = [
     { id: 'repair', label: t('serviceRepair') || 'ورشة إصلاح', icon: Wrench, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { id: 'mobile_repair', label: t('serviceMobileMechanic') || 'ميكانيكي متنقل', icon: UserCog, color: 'text-green-500', bg: 'bg-green-500/10' }, 
