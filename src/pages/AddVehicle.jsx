@@ -1,14 +1,12 @@
 import { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext.jsx';
-import { Camera, X, Search, CheckCircle, ChevronDown } from 'lucide-react';
+import { X, Search, CheckCircle, ChevronDown, Car } from 'lucide-react';
 
 import Input from '../shared/components/ui/Input.jsx';
 import Button from '../shared/components/ui/Button.jsx';
 import OptionPicker from '../shared/components/ui/OptionPicker.jsx';
-// ✅ استيراد دالة الحماية الرياضية
 import { safeNumber } from '../shared/utils/safeNumber.js';
-// ✅ استيراد ملف الماركات والشعارات
 import { CAR_BRANDS, getBrandLogoUrl } from '../shared/constants/carBrands.js';
 
 const EMPTY_CAR = { 
@@ -20,8 +18,6 @@ const EMPTY_CAR = {
   category: 'car'
 };
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;       
-const MAX_IMAGE_DIM = 800;                     
 const MAX_MAKE_LEN = 50;
 const MAX_MODEL_LEN = 50;
 const MAX_PLATE_LEN = 20;
@@ -41,15 +37,15 @@ export default function AddVehicle() {
   const [error, setError] = useState('');
   const [car, setCar] = useState(EMPTY_CAR);
 
-  // ✅ حالات جديدة لاختيار الماركة
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [brandSearch, setBrandSearch] = useState('');
 
-  // ✅ دالة الفلترة للبحث عن الماركة
+  // ✅ إصلاح البحث: إزالة المسافات وتجاهل حالة الأحرف
   const filteredBrands = useMemo(() => {
-    if (!brandSearch) return CAR_BRANDS;
+    const query = brandSearch.trim().toLowerCase();
+    if (!query) return CAR_BRANDS;
     return CAR_BRANDS.filter(brand => 
-      brand.name.toLowerCase().includes(brandSearch.toLowerCase())
+      brand.name.toLowerCase().includes(query)
     );
   }, [brandSearch]);
 
@@ -74,7 +70,6 @@ export default function AddVehicle() {
   const needsBattery = car.powertrain === 'ev' || car.powertrain === 'hybrid' || car.powertrain === 'phev';
   const needsFuelType = car.powertrain === 'ice' || car.powertrain === 'hybrid' || car.powertrain === 'phev';
 
-  /* ===================== تحميل بيانات التعديل ===================== */
   useEffect(() => {
     if (!isEditing || vehicles.length === 0) return;
     const carToEdit = vehicles.find(v => String(v.id) === String(editId));
@@ -95,127 +90,41 @@ export default function AddVehicle() {
     });
   }, [isEditing, editId, vehicles]);
 
-  /* ===================== ضغط الصور (Canvas) ===================== */
-  const compressImage = (file, maxDim = MAX_IMAGE_DIM) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('read_failed'));
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onerror = () => reject(new Error('image_load_failed'));
-        img.onload = () => {
-          try {
-            let w = img.width;
-            let h = img.height;
-            if (w > maxDim || h > maxDim) {
-              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
-              else { w = Math.round((w * maxDim) / h); h = maxDim; }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return reject(new Error('canvas_context_failed'));
-            ctx.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
-          } catch (err) {
-            reject(err);
-          }
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleImageUpload = async (e) => {
-    const input = e.target;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setError(t('invalidFileType') || 'الرجاء اختيار ملف صورة صالح.');
-      input.value = null;
-      return;
-    }
-
-    if (file.size > MAX_IMAGE_SIZE) {
-      setError(t('imageTooLarge') || 'حجم الصورة كبير جداً. الحد 5 ميجابايت.');
-      input.value = null;
-      return;
-    }
-
-    try {
-      const compressed = await compressImage(file);
-      setCar(prev => ({ ...prev, image: compressed }));
-      setError(''); 
-    } catch (err) {
-      console.error('image compress failed:', err);
-      setError(t('imageProcessingFailed') || 'تعذر معالجة الصورة.');
-    } finally {
-      input.value = null;
-    }
-  };
-
-  /* ===================== التحقق الرياضي (Math Validation) ===================== */
   const validate = () => {
     const make = (car.make || '').trim();
     const model = (car.model || '').trim();
-    if (!make || !model) {
-      return t('fillRequiredFields') || 'الرجاء تعبئة الحقول الأساسية';
-    }
-
-    if (make.length > MAX_MAKE_LEN || model.length > MAX_MODEL_LEN) {
-      return t('fieldTooLong') || 'النص طويل جداً.';
-    }
+    if (!make || !model) return t('fillRequiredFields') || 'الرجاء تعبئة الحقول الأساسية';
+    if (make.length > MAX_MAKE_LEN || model.length > MAX_MODEL_LEN) return t('fieldTooLong') || 'النص طويل جداً.';
 
     const odoNum = safeNumber(car.odometer, -1);
-    if (odoNum < 0 || odoNum > MAX_ODO) {
-      return t('invalidOdometer') || 'العداد غير صالح.';
-    }
-    if (!Number.isInteger(odoNum)) {
-      return t('invalidOdometer') || 'العداد يجب أن يكون رقماً صحيحاً.';
-    }
+    if (odoNum < 0 || odoNum > MAX_ODO || !Number.isInteger(odoNum)) return t('invalidOdometer') || 'العداد غير صالح.';
 
     const yearRaw = String(car.year ?? '').trim();
     if (yearRaw !== '') {
       const yearNum = Number(yearRaw);
       const currentYear = new Date().getFullYear();
-      if (!Number.isInteger(yearNum) || yearNum < MIN_YEAR || yearNum > currentYear + 1) {
-        return t('invalidYear') || 'يرجى إدخال سنة صنع صحيحة.';
-      }
+      if (!Number.isInteger(yearNum) || yearNum < MIN_YEAR || yearNum > currentYear + 1) return t('invalidYear') || 'يرجى إدخال سنة صنع صحيحة.';
     }
 
     const battRaw = String(car.batteryCapacity ?? '').trim();
     if (needsBattery && battRaw !== '') {
       const battNum = Number(battRaw);
-      if (!Number.isFinite(battNum) || battNum < MIN_BATTERY || battNum > MAX_BATTERY) {
-        return t('invalidBattery') || 'سعة البطارية غير صالحة.';
-      }
+      if (!Number.isFinite(battNum) || battNum < MIN_BATTERY || battNum > MAX_BATTERY) return t('invalidBattery') || 'سعة البطارية غير صالحة.';
     }
 
-    if ((car.plate || '').length > MAX_PLATE_LEN) {
-      return t('fieldTooLong') || 'رقم اللوحة طويل جداً.';
-    }
-
+    if ((car.plate || '').length > MAX_PLATE_LEN) return t('fieldTooLong') || 'رقم اللوحة طويل جداً.';
     return null;
   };
 
-  /* ===================== الحفظ (Save) ===================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    if (validationError) return setError(validationError);
 
     const odoNum = safeNumber(car.odometer);
     const yearStr = String(car.year ?? '').trim();
     const yearNum = yearStr !== '' ? Number(yearStr) : null;
-    
     const battStr = String(car.batteryCapacity ?? '').trim();
     const battNum = (needsBattery && battStr !== '') ? Number(battStr) : null;
 
@@ -224,7 +133,7 @@ export default function AddVehicle() {
       model: car.model.trim(),
       plate: (car.plate || '').trim(),
       color: (car.color || '').trim(),
-      image: car.image || '',
+      image: car.image || '', // سيتم تركه فارغاً لأننا أزلنا حقل الصورة
       odometer: odoNum,
       year: yearNum,
       powertrain: car.powertrain,
@@ -235,22 +144,11 @@ export default function AddVehicle() {
 
     setIsSaving(true);
     try {
-      let success = false;
-      if (isEditing) {
-        success = updateCar(editId, carData);
-      } else {
-        success = addNewCar(carData);
-      }
-
-      if (!success) {
-        throw new Error('SAVE_FAILED');
-      }
-
+      let success = isEditing ? updateCar(editId, carData) : addNewCar(carData);
+      if (!success) throw new Error('SAVE_FAILED');
       navigate(isEditing ? '/vehicles' : '/');
     } catch (err) {
-      console.error('save failed:', err);
-      if (err.message === 'SAVE_FAILED') setError(t('errorSaving') || 'حدث خطأ أثناء الحفظ. قد تكون المساحة ممتلئة.');
-      else if (err.code === 'INVALID_ODOMETER') setError(t('invalidOdometer') || 'العداد غير صالح.');
+      if (err.message === 'SAVE_FAILED') setError(t('errorSaving') || 'حدث خطأ أثناء الحفظ.');
       else setError(t('errorSaving') || 'حدث خطأ غير متوقع.');
     } finally {
       setIsSaving(false);
@@ -266,48 +164,16 @@ export default function AddVehicle() {
       </div>
 
       {error && (
-        <div 
-          role="alert"
-          className="bg-red-500/10 border border-red-500/30 text-red-500 p-3 rounded-xl text-sm font-bold mb-4 animate-fade-in"
-        >
+        <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-3 rounded-xl text-sm font-bold mb-4 animate-fade-in">
           {error}
         </div>
       )}
 
-      <div className="flex justify-center mb-8">
-        <div className="relative w-32 h-32 rounded-3xl bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden group hover:border-[var(--primary)] transition-colors">
-          {car.image ? (
-            <>
-              <img src={car.image} alt="Car" className="w-full h-full object-cover" />
-              <button 
-                type="button" 
-                onClick={() => setCar(prev => ({...prev, image: ''}))} 
-                aria-label={t('deleteImage') || 'حذف الصورة'}
-                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full backdrop-blur-sm active:scale-90 transition-transform"
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            </>
-          ) : (
-            <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
-              <Camera size={32} className="mb-2" aria-hidden="true" />
-              <span className="text-[10px] font-bold">{t('addImage') || 'إضافة صورة'}</span>
-              <input 
-                type="file" 
-                accept="image/*" 
-                capture="environment" 
-                onChange={handleImageUpload} 
-                className="hidden" 
-                aria-label={t('addImage') || 'إضافة صورة'} 
-              />
-            </label>
-          )}
-        </div>
-      </div>
+      {/* ✅ تم حذف قسم رفع الصورة بناءً على طلبك */}
 
       <form onSubmit={handleSubmit} noValidate className="flex-1 space-y-1">
         
-        {/* ✅ حقل الماركة التفاعلي (يفتح النافذة السفلية) */}
+        {/* حقل الماركة */}
         <div className="flex flex-col gap-1.5 mt-2 mb-4">
           <label className="text-xs font-bold text-[var(--text-muted)] mr-1">
             {t('carMake') || 'الماركة'} <span className="text-red-500">*</span>
@@ -416,7 +282,7 @@ export default function AddVehicle() {
         </div>
       </form>
 
-      {/* ✅ النافذة السفلية لاختيار الماركة (Bottom Sheet) */}
+      {/* ✅ النافذة السفلية لاختيار الماركة */}
       {isBrandModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[150] flex items-end justify-center backdrop-blur-sm pb-0" onClick={() => setIsBrandModalOpen(false)}>
           <div className="bg-[var(--surface)] w-full max-w-md rounded-t-3xl border-t border-[var(--border)] animate-slide-up flex flex-col h-[85vh]" onClick={e => e.stopPropagation()}>
@@ -443,7 +309,7 @@ export default function AddVehicle() {
               </div>
             </div>
             
-            <div className="overflow-y-auto flex-1 p-2">
+            <div className="overflow-y-auto flex-1 p-3">
               {filteredBrands.length > 0 ? (
                 <div className="grid grid-cols-2 gap-2">
                   {filteredBrands.map(brand => (
@@ -460,11 +326,15 @@ export default function AddVehicle() {
                           : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--text-muted)]'
                       }`}
                     >
-                      <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-[var(--border)]">
+                      {/* ✅ حل مشكلة الدوائر البيضاء: إضافة خلفية نصية احتياطية */}
+                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-[var(--border)] relative">
+                        <span className="absolute text-[10px] font-black text-gray-300 uppercase">
+                          {brand.name.substring(0, 2)}
+                        </span>
                         <img 
                           src={getBrandLogoUrl(brand.domain)} 
                           alt={brand.name} 
-                          className="w-full h-full object-contain p-1"
+                          className="w-full h-full object-contain p-1.5 z-10 relative bg-white"
                           onError={(e) => { e.target.style.display = 'none'; }} 
                         />
                       </div>
@@ -483,7 +353,7 @@ export default function AddVehicle() {
                     setIsBrandModalOpen(false);
                     setBrandSearch('');
                   }} className="text-xs font-bold text-white bg-[var(--primary)] px-4 py-2 rounded-lg">
-                    {t('addCustomBrand') || `إضافة "${brandSearch}" كماركة مخصصة`}
+                    {t('addCustomBrand') || `إضافة "${brandSearch}"`}
                   </button>
                 </div>
               )}
