@@ -105,7 +105,7 @@ export const en = {
   deleteImage: 'Delete Image',
   addImage: 'Add Image',
   
-  // ✅ مفاتيح اختيار الماركة
+  // ✅ Car Brand Selection Keys
   carBrand: 'Car Brand',
   chooseBrand: 'Choose Car Brand',
   searchBrand: 'Search for a brand...',
@@ -497,21 +497,26 @@ export const en = {
   findSpareParts: 'Find Spare Parts',
   requestTowing: 'Request Towing',
   searchingHelp: 'Searching for nearby help...',
-  noHelpFound: 'No nearby help found. Please try another area.',
+  
+  // ✅ Updated generic error message
+  noHelpFound: 'No results found within 5km. Please use Google Maps to search.',
+  
   call: 'Call',
   navigate: 'Navigate',
   locationRequired: 'Location access is required to find nearby help.',
   helpDesc: 'Car broken down? Tap here to find the nearest repair shop or tow truck immediately.',
   recommendedRating: 'We recommend choosing services rated 4.5 ⭐ or above',
   skipSearchOpenMaps: 'Skip search and open Google Maps directly',
-  nearbyPlaces: 'nearby places', // ✅ تم إضافة الفاصلة هنا
+  nearbyPlaces: 'nearby places',
 
+  // ✅ New keys for Help Center
   helpCenter: 'Roadside Help Center',
   serviceRepair: 'Repair Shop',
   serviceTowing: 'Towing Service',
   servicePartsNew: 'New Spare Parts',
   servicePartsUsed: 'Used Spare Parts',
   serviceBattery: 'Car Battery',
+  serviceMobileMechanic: 'Mobile Mechanic', // ✅ Added missing key
   searchViaGoogle: 'Quick Search via Google',
   nearbyResults: 'Nearby Discovered Services',
   emergencyDesc: 'Choose the type of help you need now',
