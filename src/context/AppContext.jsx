@@ -59,10 +59,12 @@ export const AppProvider = ({ children }) => {
   });
 
   // ===================== الحالة المركزية للبيانات =====================
-  const [totals, setTotals] = useState({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km' });
+  const [totals, setTotals] = useState({ 
+    fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, 
+    avgConsumption: null, avgUnit: 'L/100km', 
+    costPerKm: null, totalDistance: 0, nextOilChangeOdo: null // ✅ المتغيرات الجديدة
+  });
   const [recentActivity, setRecentActivity] = useState([]);
-  
-  // ✅ إضافة الحالات الجديدة المطلوبة للوحة البيانات (Dashboard)
   const [documents, setDocuments] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState([]);
@@ -70,10 +72,10 @@ export const AppProvider = ({ children }) => {
   const [dataVersion, setDataVersion] = useState(0);
   const bumpDataVersion = useCallback(() => setDataVersion(v => v + 1), []);
 
-  // ===================== المعادلة الرياضية (refreshDashboard) =====================
+  // ===================== المعادلة الرياضية المركزية (refreshDashboard) =====================
   const refreshDashboard = useCallback(async () => {
     if (!currentCar) {
-      setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km' });
+      setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km', costPerKm: null, totalDistance: 0, nextOilChangeOdo: null });
       setRecentActivity([]);
       setDocuments([]);
       setReminders([]);
@@ -83,7 +85,7 @@ export const AppProvider = ({ children }) => {
     
     setIsLoading(true);
     try {
-      // جلب جميع البيانات من قاعدة البيانات
+      // 1. جلب جميع البيانات الحقيقية
       const fetchedTotals = await dbService.getTotals(currentCar.id);
       const fuelRecords = await dbService.getFuel() || [];
       const allMaintenance = await dbService.getMaintenance() || [];
@@ -100,51 +102,79 @@ export const AppProvider = ({ children }) => {
       const myDocs = filter(allDocs);
       const myReminders = filter(allReminders);
 
-      // 🧮 حساب الاستهلاك (Math Fix: استخدام اللترات أو الكيلوواط فقط، وليس المبلغ المالي)
+      // 2. حساب المسافة الحقيقية المقطوعة (بناءً على جميع السجلات)
+      const allOdometerReadings = [
+        ...myFuel.map(f => safeNumber(f.odometer)),
+        ...myMaintenance.map(m => safeNumber(m.odometer))
+      ].filter(odo => odo > 0); // تجاهل الأصفار
+
+      let totalDistanceDriven = 0;
+      if (allOdometerReadings.length >= 2) {
+        const maxOdo = Math.max(...allOdometerReadings);
+        const minOdo = Math.min(...allOdometerReadings);
+        totalDistanceDriven = maxOdo - minOdo;
+      }
+
+      // 3. حساب استهلاك الوقود الحقيقي (الطريقة التراكمية لتفادي مشكلة التعبئة الجزئية)
       const powertrain = currentCar.powertrain || 'ice';
       const isEV = powertrain === 'ev';
       const unit = isEV ? 'kWh/100km' : 'L/100km';
       
-      const validFuelRecords = myFuel.filter(f => 
-        safeNumber(f.odometer) > 0 && 
-        (safeNumber(f.liters) > 0 || safeNumber(f.kwh) > 0)
-      );
+      const validFuelRecords = myFuel
+        .filter(f => safeNumber(f.odometer) > 0 && (safeNumber(f.liters) > 0 || safeNumber(f.kwh) > 0))
+        .sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
 
       let avgVal = null;
       if (validFuelRecords.length >= 2) {
-        const sorted = [...validFuelRecords].sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
-        let totalDistance = 0;
-        let totalVolume = 0;
+        const firstOdo = safeNumber(validFuelRecords[0].odometer);
+        const lastOdo = safeNumber(validFuelRecords[validFuelRecords.length - 1].odometer);
+        const fuelDistance = lastOdo - firstOdo;
 
-        for (let i = 1; i < sorted.length; i++) {
-          const dist = safeNumber(sorted[i].odometer) - safeNumber(sorted[i - 1].odometer);
-          // نستخدم كمية الوقود (liters أو kwh) وليس المبلغ المدفوع
-          const vol = safeNumber(sorted[i].liters ?? sorted[i].kwh ?? 0);
-          
-          if (dist > 0 && vol > 0) {
-            totalDistance += dist;
-            totalVolume += vol;
-          }
+        let totalVolume = 0;
+        // نبدأ من التعبئة الثانية (لأن وقود التعبئة الأولى يُستهلك في المسافة بعدها)
+        for (let i = 1; i < validFuelRecords.length; i++) {
+          totalVolume += safeNumber(validFuelRecords[i].liters ?? validFuelRecords[i].kwh ?? 0);
         }
         
-        if (totalDistance > 0) {
-          const res = (totalVolume / totalDistance) * 100;
+        if (fuelDistance > 0 && totalVolume > 0) {
+          const res = (totalVolume / fuelDistance) * 100;
           if (Number.isFinite(res) && res > 0) avgVal = Number(res.toFixed(1));
         }
       }
 
-      // بناء النشاط الأخير
+      // 4. حساب تكلفة الكيلومتر (Cost per KM)
+      const actualTotalExpenses = safeNumber(fetchedTotals?.total) || 0;
+      let realCostPerKm = null;
+      if (totalDistanceDriven > 0 && actualTotalExpenses > 0) {
+        realCostPerKm = Number((actualTotalExpenses / totalDistanceDriven).toFixed(2));
+      }
+
+      // 5. التنبؤ بتغيير الزيت القادم (بناءً على آخر سجل صيانة حقيقي)
+      let nextOilChangeOdo = null;
+      const oilChanges = myMaintenance
+        .filter(m => (m.subType?.toLowerCase().includes('زيت') || m.subType?.toLowerCase().includes('oil')) && safeNumber(m.nextOdometer) > 0)
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))); // الأحدث أولاً
+      
+      if (oilChanges.length > 0) {
+        nextOilChangeOdo = safeNumber(oilChanges[0].nextOdometer);
+      }
+
+      // 6. بناء النشاط الأخير
       const activities = [
         ...myFuel.map(f => ({ ...f, type: 'fuel' })),
         ...myMaintenance.map(m => ({ ...m, type: 'maintenance' })),
         ...filter(expenseRecords).map(e => ({ ...e, type: 'expense' })),
         ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
-      ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 4);
+      ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 5);
 
+      // 7. تحديث الحالة المركزية
       setTotals({ 
         ...(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 }),
         avgConsumption: avgVal,
-        avgUnit: unit
+        avgUnit: unit,
+        costPerKm: realCostPerKm,
+        totalDistance: totalDistanceDriven,
+        nextOilChangeOdo: nextOilChangeOdo
       });
       
       setRecentActivity(activities);
@@ -229,7 +259,6 @@ export const AppProvider = ({ children }) => {
         const updated = prev.filter(v => String(v.id) !== String(id));
         localStorage.setItem('vehicles', JSON.stringify(updated));
         
-        // تحديث السيارة الحالية بأمان داخل الـ callback
         setCurrentCar(prevCar => {
           if (String(prevCar?.id) === String(id)) {
             const nextCar = updated.length > 0 ? updated[0] : null;
@@ -284,7 +313,7 @@ export const AppProvider = ({ children }) => {
       isLoading, setIsLoading, theme, toggleTheme, lang, changeLang, currency, setCurrency, t,
       user, setUser, dataVersion, bumpDataVersion,
       totals, recentActivity, refreshDashboard,
-      documents, reminders, maintenanceRecords // ✅ تمرير البيانات الجديدة للواجهة
+      documents, reminders, maintenanceRecords 
     }}>
       {children}
     </AppContext.Provider>
