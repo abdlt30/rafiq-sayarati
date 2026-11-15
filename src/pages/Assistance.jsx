@@ -6,8 +6,8 @@ import {
   Wrench, Settings, Truck, AlertTriangle, Loader2, Map, Star
 } from 'lucide-react';
 
-// ✅ استيراد الدوال المحدثة من ملف regions.js
-import { REGIONS, getSearchKeywords } from '../constants/regions.js';
+// ✅ تم إصلاح المسار هنا ليتطابق مع مجلد shared
+import { REGIONS, getSearchKeywords } from '../shared/constants/regions.js';
 import { safeNumber } from '../shared/utils/safeNumber.js';
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
