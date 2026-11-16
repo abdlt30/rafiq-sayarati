@@ -32,12 +32,12 @@
    2. متغيرات الوضع الفاتح (Light Mode)
    ========================================= */
 [data-theme="light"] {
-  --bg: #f3f4f6;
-  --surface: #ffffff;
-  --surface-2: #f9fafb;
+  --bg: #f3f4f6;         /* خلفية رمادية فاتحة مريحة */
+  --surface: #ffffff;    /* البطاقات بيضاء */
+  --surface-2: #f9fafb;  /* خلفية الحقول */
   --surface-3: #e5e7eb;
-  --text: #111827;
-  --text-muted: #6b7280;
+  --text: #111827;       /* نص أسود داكن (تباين ممتاز) */
+  --text-muted: #4b5563; /* نص ثانوي رمادي غامق (مقروء) */
   --border: #e5e7eb;
   --shadow-sm: 0 4px 14px rgba(0,0,0,.05);
   
@@ -47,8 +47,14 @@
 }
 
 /* =========================================
-   3. الإعدادات العامة (Global)
+   3. الإعدادات العامة (Global & Accessibility)
    ========================================= */
+html {
+  /* ✅ تكبير حجم الخط الأساسي لتحسين الوصولية */
+  font-size: 16px; 
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--bg) !important;
   color: var(--text) !important;
@@ -57,18 +63,24 @@ body {
   padding: 0;
   transition: background-color 0.3s ease, color 0.3s ease;
   
-  /* ✅ تحسين وضوح الخطوط (Anti-aliasing) */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-/* ✅ لون تحديد النص (Selection) */
+/* ✅ إجبار النصوص على اللون الصحيح في الوضع الفاتح */
+[data-theme="light"] .text-white {
+  color: var(--text) !important;
+}
+[data-theme="light"] .text-gray-400 {
+  color: var(--text-muted) !important;
+}
+
 ::selection {
   background-color: var(--primary);
   color: #ffffff;
 }
 
-/* ✅ شريط تمرير مخصص وأنيق (Custom Scrollbar) */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -84,22 +96,18 @@ body {
   background: var(--text-muted);
 }
 
-/* ✅ إصلاح ارتفاع الشاشة في الهواتف */
 html, body, #root {
-  min-height: 100dvh; /* دعم الهواتف الحديثة */
+  min-height: 100dvh;
   height: 100%;
   margin: 0;
   overflow-x: hidden; 
-  scroll-behavior: smooth;
 }
 
-/* ✅ حماية الوصولية: إظهار إطار التركيز بلوحة المفاتيح */
 *:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
-/* إجبار منتقي التاريخ على التكيف مع الثيم */
 input[type="date"] {
   color-scheme: light;
   background-color: var(--surface-2);
@@ -109,7 +117,6 @@ input[type="date"] {
   color-scheme: dark;
 }
 
-/* ✅ إخفاء أسهم حقول الأرقام (Spinners) */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
   -webkit-appearance: none; 
@@ -132,43 +139,6 @@ input[type=number] {
   transition: all 0.3s ease;
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 15px !important;
-  padding: 13px 14px !important;
-  width: 100%;
-  text-align: start;
-  color: var(--text) !important;
-  transition: all 0.3s ease;
-}
-
-.hero-card {
-  background: var(--hero-bg) !important;
-  border: 1px solid var(--hero-border) !important;
-  border-radius: var(--radius-lg) !important;
-  padding: 20px !important;
-  position: relative;
-  overflow: hidden;
-  color: var(--text) !important; 
-}
-[data-theme="dark"] .hero-card {
-  color: #fff !important; 
-}
-
-.stat {
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 16px !important;
-  padding: 14px !important;
-  color: var(--text) !important;
-  transition: all 0.3s ease;
-}
-
-/* Bottom Nav */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -192,8 +162,8 @@ input[type=number] {
   align-items: center;
   gap: 3px;
   color: var(--text-muted) !important;
-  font-size: 10.5px;
-  font-weight: 600;
+  font-size: 11.5px; /* ✅ تكبير خط القائمة السفلية */
+  font-weight: 700;
   flex: 1;
   padding: 8px 0;
   transition: .18s;
@@ -201,36 +171,6 @@ input[type=number] {
 
 .bn-item.active {
   color: var(--primary-2) !important;
-}
-
-/* Header */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  margin-bottom: 16px;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text) !important;
-}
-
-.icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--surface-2) !important;
-  border: 1px solid var(--border) !important;
-  display: grid;
-  place-items: center;
-  color: var(--text-muted) !important;
-  transition: all 0.3s ease;
 }
 
 /* =========================================
@@ -242,12 +182,7 @@ input[type=number] {
 }
 
 @media print {
-  /* ✅ إخفاء كل العناصر غير المرغوب بطباعتها */
-  .no-print, 
-  .bottom-nav, 
-  .header, 
-  button,
-  .fixed {
+  .no-print, .bottom-nav, .header, button, .fixed {
     display: none !important;
   }
 
@@ -280,7 +215,7 @@ input[type=number] {
   th, td {
     border: 1px solid #000000 !important;
     padding: 6px !important;
-    text-align: right !important; /* دعم اللغة العربية */
+    text-align: right !important;
   }
 
   th {
