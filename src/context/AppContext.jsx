@@ -33,6 +33,18 @@ export const AppProvider = ({ children }) => {
   const [lang, setLang] = useState(() => { try { const saved = localStorage.getItem('lang'); return ['ar', 'en', 'fr'].includes(saved) ? saved : 'ar'; } catch { return 'ar'; } });
   const [currency, setCurrencyRaw] = useState(() => { try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; } });
 
+  // ✅ إصلاح: تطبيق الثيم على مستوى الـ HTML لتفعيل ملف CSS
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   // ✅ الحالة المركزية للبيانات
   const [totals, setTotals] = useState({ 
     fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, 
