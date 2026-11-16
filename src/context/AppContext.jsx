@@ -33,7 +33,6 @@ export const AppProvider = ({ children }) => {
   const [lang, setLang] = useState(() => { try { const saved = localStorage.getItem('lang'); return ['ar', 'en', 'fr'].includes(saved) ? saved : 'ar'; } catch { return 'ar'; } });
   const [currency, setCurrencyRaw] = useState(() => { try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; } });
 
-  // ✅ إصلاح الثيم
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     if (theme === 'dark') {
@@ -45,7 +44,6 @@ export const AppProvider = ({ children }) => {
     }
   }, [theme]);
 
-  // ✅ الحالة المركزية
   const [totals, setTotals] = useState({ 
     fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, 
     avgConsumption: null, avgUnit: 'L/100km', 
@@ -109,14 +107,12 @@ export const AppProvider = ({ children }) => {
         totalDistanceDriven = Math.max(...allOdometerReadings) - Math.min(...allOdometerReadings);
       }
 
-      // ✅ دالة مساعدة لقراءة كمية الوقود مهما كان اسم الحقل
       const getFuelVolume = (record) => safeNumber(record.liters ?? record.kwh ?? record.amount ?? record.volume ?? 0);
 
       // 2. حساب استهلاك الوقود التراكمي
       const powertrain = currentCar.powertrain || 'ice';
       const unit = powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
       
-      // نستخدم دالة getFuelVolume لضمان قراءة البيانات حتى لو كان الحقل اسمه amount
       const validFuelRecords = myFuel
         .filter(f => safeNumber(f.odometer) > 0 && getFuelVolume(f) > 0)
         .sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
@@ -145,7 +141,7 @@ export const AppProvider = ({ children }) => {
         realCostPerKm = Number((actualTotalExpenses / totalDistanceDriven).toFixed(2));
       }
 
-      // ✅ 4. حساب توقع المسافة المتبقية (Distance To Empty) - معادلة دقيقة
+      // 4. حساب توقع المسافة المتبقية (Distance To Empty)
       let distanceToEmpty = null;
       if (avgVal > 0 && myFuel.length > 0) {
          const sortedByOdo = [...myFuel].sort((a, b) => safeNumber(b.odometer) - safeNumber(a.odometer));
@@ -162,14 +158,13 @@ export const AppProvider = ({ children }) => {
                remainingLiters = Math.max(0, remainingLiters - used);
             }
             
-            // التحقق من أن avgVal أكبر من صفر لتجنب القسمة على صفر
             if (avgVal > 0) {
                distanceToEmpty = Math.floor((remainingLiters / avgVal) * 100);
             }
          }
       }
 
-      // 5. التنبؤ بتغيير الزيت القادم
+      // 5. التنبؤ بتغيير الزيت القادم (لمحرك الحسابات)
       let nextOilChangeOdo = null;
       const oilMaintenance = myMaintenance
         .filter(m => {
@@ -180,6 +175,7 @@ export const AppProvider = ({ children }) => {
         .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
       
       if (oilMaintenance.length > 0) nextOilChangeOdo = safeNumber(oilMaintenance[0].nextOdometer);
+      
       if (!nextOilChangeOdo) {
         const oilReminder = myReminders.find(r => {
           const titleStr = String(r.title || '').toLowerCase();
@@ -197,10 +193,11 @@ export const AppProvider = ({ children }) => {
         ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
       ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 5);
 
-      // 7. محرك الإشعارات المركزي
+      // ✅ 7. محرك الإشعارات المركزي (تم دمج الصيانة هنا لضمان الدقة)
       const generatedNotifications = [];
       const now = new Date();
       
+      // أ. فحص الوثائق
       myDocs.forEach(doc => {
         const expDateStr = doc.expiryDate || doc.date;
         if (expDateStr) {
@@ -219,6 +216,7 @@ export const AppProvider = ({ children }) => {
         }
       });
 
+      // ب. فحص التذكيرات اليدوية
       myReminders.forEach(rem => {
          if (rem.type === 'date' && rem.targetDate) {
              const targetDate = new Date(rem.targetDate);
@@ -236,6 +234,36 @@ export const AppProvider = ({ children }) => {
          }
       });
 
+      // ✅ ج. فحص الصيانة (الزيت) - هذا هو الإصلاح الجذري
+      if (oilMaintenance.length > 0) {
+         const latestOil = oilMaintenance[0];
+         const nextOdo = safeNumber(latestOil.nextOdometer);
+         const currentOdo = safeNumber(currentCar.odometer);
+         const diffKm = nextOdo - currentOdo;
+
+         if (currentOdo >= nextOdo) {
+             // الزيت متأخر
+             generatedNotifications.push({
+                 id: `maint-oil-${latestOil.id}`,
+                 type: 'maintenance',
+                 title: t('oilChange') || 'تغيير الزيت',
+                 message: `${t('overdueBy') || 'متأخر بـ'} ${Math.abs(diffKm)} ${t('km') || 'كم'}`,
+                 isUrgent: true,
+                 date: latestOil.date
+             });
+         } else if (diffKm <= 500) {
+             // الزيت يقترب من الموعد
+             generatedNotifications.push({
+                 id: `maint-oil-${latestOil.id}`,
+                 type: 'maintenance',
+                 title: t('oilChange') || 'تغيير الزيت',
+                 message: `${t('dueIn') || 'مستحق بعد'} ${diffKm} ${t('km') || 'كم'}`,
+                 isUrgent: false,
+                 date: latestOil.date
+             });
+         }
+      }
+
       // 8. تحديث الحالة
       setTotals({ 
         ...(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 }),
@@ -244,7 +272,7 @@ export const AppProvider = ({ children }) => {
         costPerKm: realCostPerKm,
         totalDistance: totalDistanceDriven, 
         nextOilChangeOdo: nextOilChangeOdo,
-        distanceToEmpty: distanceToEmpty // ✅ تمرير المسافة المتبقية
+        distanceToEmpty: distanceToEmpty 
       });
       
       setRecentActivity(activities);
