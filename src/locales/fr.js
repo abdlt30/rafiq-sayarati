@@ -43,7 +43,7 @@ export const fr = {
   resetting: 'Effacement...',
   loading: 'Chargement...',
 
-  // ===================== Onboarding & Welcome (Updated Strategy) =====================
+  // ===================== Onboarding & Welcome =====================
   welcomeMessagePart1: 'Contrôlez les dépenses de votre voiture, suivez son entretien,',
   welcomeMessagePart2: 'et vivez l\'esprit tranquille.',
   startNow: 'Commencer',
@@ -242,7 +242,7 @@ export const fr = {
   uploadImage: 'Prendre une photo ou télécharger',
   technicalInspection: 'Contrôle technique',
   license: 'Permis',
-  expired: 'Expiré',
+  expired: 'Expiré !', // ✅ Updated for alerts
   expiringSoon: 'Expire bientôt',
   expiresToday: 'Expire aujourd\'hui',
   expiresTomorrow: 'Expire demain',
@@ -260,6 +260,10 @@ export const fr = {
   invalidDate: 'Date invalide.',
   secureDocuments: 'Vos documents sont en sécurité',
 
+  // ✅ New Alert Keys
+  documentExpiryTitle: 'Expiration du document',
+  expiresIn: 'Expire dans',
+
   // ===================== Reminders & Alerts =====================
   reminders: 'Rappels',
   addReminder: 'Ajouter un rappel',
@@ -269,17 +273,20 @@ export const fr = {
   completeReminder: 'Terminer le Rappel',
   oil: 'Huile',
   inspection: 'Inspection',
-  overdue: 'En retard',
+  overdue: 'En retard !', // ✅ Updated for alerts
   soon: 'Bientôt',
   after: 'Après',
-  days: 'jours',
+  days: 'jours', // ✅ Required for alerts
   km: 'km',
   overdueBy: 'En retard de',
   dueToday: 'Dû aujourd\'hui',
   dueNow: 'Dû maintenant (compteur)',
+  dueIn: 'Dû dans', // ✅ New Alert Key
   done: 'Terminé',
   confirmQuickDone: 'Êtes-vous sûr de vouloir terminer : {title} ?\n{target} sera supprimé définitivement.',
   viewDetails: 'Voir Détails',
+  startYourJourney: 'Commencez votre voyage !',
+  noFuelRecordsDesc: 'Enregistrez votre premier plein pour commencer à suivre votre consommation et économiser de l\'argent.',
 
   // ===================== Notifications =====================
   notifications: 'Notifications',
@@ -497,10 +504,7 @@ export const fr = {
   findSpareParts: 'Trouver des pièces détachées',
   requestTowing: 'Demander un remorquage',
   searchingHelp: 'Recherche d\'aide à proximité...',
-  
-  // ✅ Updated generic error message
   noHelpFound: 'Aucun résultat trouvé dans un rayon de 5 km. Veuillez utiliser Google Maps pour rechercher.',
-  
   call: 'Appeler',
   navigate: 'Naviguer',
   locationRequired: 'L\'accès à la localisation est requis pour trouver de l\'aide à proximité.',
@@ -516,7 +520,7 @@ export const fr = {
   servicePartsNew: 'Pièces détachées neuves',
   servicePartsUsed: 'Pièces détachées d\'occasion',
   serviceBattery: 'Batterie de voiture',
-  serviceMobileMechanic: 'Mécanicien mobile', // ✅ Added missing key
+  serviceMobileMechanic: 'Mécanicien mobile',
   searchViaGoogle: 'Recherche rapide via Google',
   nearbyResults: 'Services à proximité découverts',
   emergencyDesc: 'Choisissez le type d\'aide dont vous avez besoin',
