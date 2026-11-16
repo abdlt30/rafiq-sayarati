@@ -92,23 +92,45 @@ export default function Maintenance() {
     }
   };
 
+  // ✅ دمج التحقق الذكي (Smart Validation)
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!currentCar || !formData.date || !formData.type || !formData.cost) return showToast(t('fillRequiredFields') || 'الرجاء تعبئة الحقول', 'error');
+    
+    if (!currentCar || !formData.date || !formData.type || !formData.cost) {
+      return showToast(t('fillRequiredFields') || 'الرجاء تعبئة الحقول', 'error');
+    }
+
+    const costNum = safeNumber(formData.cost);
+    const nextOdoNum = formData.nextOdometer ? safeNumber(formData.nextOdometer) : null;
+    const currentOdo = safeNumber(currentCar.odometer);
+
+    // ✅ التحقق الذكي: منع إدخال مسافة قادمة أقل من العداد الحالي
+    if (nextOdoNum !== null && nextOdoNum <= currentOdo) {
+      return showToast(
+        t('smartValidationWarning') || `العداد القادم (${nextOdoNum}) يجب أن يكون أكبر من العداد الحالي (${currentOdo})`, 
+        'error'
+      );
+    }
     
     const data = { 
       carId: currentCar.id, 
       date: formData.date, 
       type: formData.type, 
-      cost: Number(formData.cost), 
-      nextOdometer: formData.nextOdometer ? Number(formData.nextOdometer) : null 
+      cost: costNum, 
+      nextOdometer: nextOdoNum 
     };
     
     try {
       if (editingId) await dbService.updateMaintenance(editingId, data);
       else await dbService.addMaintenance(data);
-      await loadData(); bumpDataVersion(); closeModal(); showToast(t('saveSuccess') || 'تم الحفظ بنجاح', 'success');
-    } catch (error) { showToast(t('errorSaving') || 'حدث خطأ', 'error'); }
+      
+      await loadData(); 
+      bumpDataVersion(); 
+      closeModal(); 
+      showToast(t('saveSuccess') || 'تم الحفظ بنجاح', 'success');
+    } catch (error) { 
+      showToast(t('errorSaving') || 'حدث خطأ', 'error'); 
+    }
   };
 
   const handleDelete = async () => {
@@ -195,7 +217,6 @@ export default function Maintenance() {
               <div className="flex items-center gap-3">
                 <div className="text-end">
                   <p className="font-extrabold text-[var(--primary)] text-sm">{safeNumber(record.cost).toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
-                  {/* دعم البيانات القديمة (nextKm) والجديدة (nextOdometer) */}
                   {(record.nextOdometer || record.nextKm) && safeNumber(record.nextOdometer || record.nextKm) > 0 ? (
                     <p className="text-[10px] text-[var(--text-muted)] flex items-center justify-end gap-1 mt-0.5">
                       <Gauge size={10} /> {safeNumber(record.nextOdometer || record.nextKm).toLocaleString()} {t('km') || 'كم'}
