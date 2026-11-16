@@ -33,7 +33,7 @@ export const AppProvider = ({ children }) => {
   const [lang, setLang] = useState(() => { try { const saved = localStorage.getItem('lang'); return ['ar', 'en', 'fr'].includes(saved) ? saved : 'ar'; } catch { return 'ar'; } });
   const [currency, setCurrencyRaw] = useState(() => { try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; } });
 
-  // ✅ إصلاح الثيم ليعمل على مستوى الـ HTML (للوصولية والوضع الفاتح)
+  // ✅ إصلاح الثيم
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     if (theme === 'dark') {
@@ -45,12 +45,12 @@ export const AppProvider = ({ children }) => {
     }
   }, [theme]);
 
-  // ✅ الحالة المركزية للبيانات (مع إضافة distanceToEmpty)
+  // ✅ الحالة المركزية
   const [totals, setTotals] = useState({ 
     fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, 
     avgConsumption: null, avgUnit: 'L/100km', 
     costPerKm: null, totalDistance: 0, nextOilChangeOdo: null,
-    distanceToEmpty: null // ✅ إضافة حقل المسافة المتبقية
+    distanceToEmpty: null 
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -109,10 +109,17 @@ export const AppProvider = ({ children }) => {
         totalDistanceDriven = Math.max(...allOdometerReadings) - Math.min(...allOdometerReadings);
       }
 
-      // 2. حساب استهلاك الوقود التراكمي (المعادلة المحاسبية الدقيقة)
+      // ✅ دالة مساعدة لقراءة كمية الوقود مهما كان اسم الحقل
+      const getFuelVolume = (record) => safeNumber(record.liters ?? record.kwh ?? record.amount ?? record.volume ?? 0);
+
+      // 2. حساب استهلاك الوقود التراكمي
       const powertrain = currentCar.powertrain || 'ice';
       const unit = powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
-      const validFuelRecords = myFuel.filter(f => safeNumber(f.odometer) > 0 && (safeNumber(f.liters) > 0 || safeNumber(f.kwh) > 0)).sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
+      
+      // نستخدم دالة getFuelVolume لضمان قراءة البيانات حتى لو كان الحقل اسمه amount
+      const validFuelRecords = myFuel
+        .filter(f => safeNumber(f.odometer) > 0 && getFuelVolume(f) > 0)
+        .sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
 
       let avgVal = null;
       if (validFuelRecords.length >= 2) {
@@ -121,11 +128,10 @@ export const AppProvider = ({ children }) => {
         const fuelDistance = lastOdo - firstOdo;
         let totalVolume = 0;
         for (let i = 1; i < validFuelRecords.length; i++) {
-          totalVolume += safeNumber(validFuelRecords[i].liters ?? validFuelRecords[i].kwh ?? 0);
+          totalVolume += getFuelVolume(validFuelRecords[i]);
         }
         if (fuelDistance > 0 && totalVolume > 0) {
           const res = (totalVolume / fuelDistance) * 100;
-          // حماية رياضية: إذا كان الاستهلاك أكبر من 50 لتر/100كم فهذا خطأ في البيانات
           if (Number.isFinite(res) && res > 0 && res < 50) {
             avgVal = Number(res.toFixed(1));
           }
@@ -139,24 +145,27 @@ export const AppProvider = ({ children }) => {
         realCostPerKm = Number((actualTotalExpenses / totalDistanceDriven).toFixed(2));
       }
 
-      // ✅ 4. حساب توقع المسافة المتبقية (Distance To Empty)
+      // ✅ 4. حساب توقع المسافة المتبقية (Distance To Empty) - معادلة دقيقة
       let distanceToEmpty = null;
       if (avgVal > 0 && myFuel.length > 0) {
-         // نجد آخر تعبئة تم تسجيلها
          const sortedByOdo = [...myFuel].sort((a, b) => safeNumber(b.odometer) - safeNumber(a.odometer));
          const lastFill = sortedByOdo[0];
+         const lastFillVolume = getFuelVolume(lastFill);
          
-         if (lastFill && safeNumber(lastFill.liters) > 0) {
-            let remainingLiters = safeNumber(lastFill.liters);
+         if (lastFill && lastFillVolume > 0) {
+            let remainingLiters = lastFillVolume;
             const currentOdo = safeNumber(currentCar.odometer);
             
-            // إذا قطعت مسافة منذ آخر تعبئة، نخصم الوقود المستهلك
             if (currentOdo > safeNumber(lastFill.odometer)) {
                const driven = currentOdo - safeNumber(lastFill.odometer);
                const used = (driven / 100) * avgVal;
                remainingLiters = Math.max(0, remainingLiters - used);
             }
-            distanceToEmpty = Math.floor((remainingLiters / avgVal) * 100);
+            
+            // التحقق من أن avgVal أكبر من صفر لتجنب القسمة على صفر
+            if (avgVal > 0) {
+               distanceToEmpty = Math.floor((remainingLiters / avgVal) * 100);
+            }
          }
       }
 
