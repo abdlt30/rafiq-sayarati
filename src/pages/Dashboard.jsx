@@ -15,7 +15,7 @@ import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.
 // مكون العداد الدائري (بخطوط كبيرة وواضحة)
 const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon }) => {
   const safeMax = max > 0 ? max : 100;
-  const displayVal = value !== null && value !== undefined ? value : 0;
+  const displayVal = (value !== null && value !== undefined) ? value : 0;
   const safeVal = Math.min(Math.max(0, displayVal), safeMax);
   const percentage = (safeVal / safeMax) * 100;
   
@@ -115,21 +115,24 @@ export default function Dashboard() {
     );
   }, [vehicles, searchQuery]);
 
-  // --- الحسابات الحقيقية ---
+  // --- الحسابات الحقيقية (تعتمد كلياً على AppContext) ---
   const netValue = safeNumber(totals?.net);
   const isNetPositive = netValue >= 0;
   const incomeValue = safeNumber(totals?.income);
   const totalValue = safeNumber(totals?.total);
   const odometerValue = safeNumber(currentCar?.odometer);
-  const avgValue = safeNumber(totals?.avgConsumption);
-  const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
-  const realCostPerKm = totals?.costPerKm;
   
-  // ✅ قراءة توقع الوقود الجاهز من الدماغ المركزي
-  const distanceToEmpty = totals?.distanceToEmpty; 
+  // القيم القادمة من الدماغ المركزي
+  const avgValue = safeNumber(totals?.avgConsumption); // قد تكون null
+  const distanceToEmpty = totals?.distanceToEmpty; // قد تكون null
+  const realCostPerKm = totals?.costPerKm; // قد تكون null
 
+  const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
   const nextOilChangeOdo = totals?.nextOilChangeOdo;
-  const kmToOilChange = (nextOilChangeOdo !== null && odometerValue > 0) ? Math.max(0, nextOilChangeOdo - odometerValue) : null;
+  
+  const kmToOilChange = (nextOilChangeOdo !== null && odometerValue > 0) 
+    ? Math.max(0, nextOilChangeOdo - odometerValue) 
+    : null;
   const isOilOverdue = nextOilChangeOdo !== null && odometerValue >= nextOilChangeOdo;
 
   // التنبيهات
@@ -150,7 +153,8 @@ export default function Dashboard() {
   else if (kmToOilChange !== null && kmToOilChange < 500) healthScore -= 10;
   healthScore = Math.max(0, healthScore);
 
-  const isFuelLow = distanceToEmpty !== null && distanceToEmpty > 0 && distanceToEmpty < 50;
+  // ✅ إصلاح رياضي: التحقق من أن المسافة المتبقية أقل من 50 أو أنها صفر
+  const isFuelLow = distanceToEmpty !== null && distanceToEmpty <= 50;
   const findGasStationUrl = `https://www.google.com/maps/search/${encodeURIComponent('gas station محطة وقود')}`;
 
   if (isLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-40 bg-[var(--surface-2)] rounded-3xl"></div></div>;
@@ -217,22 +221,23 @@ export default function Dashboard() {
       {/* لوحة القيادة - عدادات */}
       <div className="grid grid-cols-2 gap-3">
         {/* عداد الوقود */}
-        <div className={`p-4 rounded-2xl border ${isFuelLow || distanceToEmpty === 0 ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-between relative`}>
+        <div className={`p-4 rounded-2xl border ${isFuelLow ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-between relative`}>
           <div className="flex justify-between items-center w-full mb-2 px-1">
-            <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={14} className={isFuelLow || distanceToEmpty === 0 ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
+            <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={14} className={isFuelLow ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
           </div>
           
-          {distanceToEmpty !== null ? (
+          {/* ✅ منطق العرض الصادق والواضح */}
+          {distanceToEmpty !== null && distanceToEmpty !== undefined ? (
             <CircularGauge 
               value={distanceToEmpty} max={600} label={t('distanceToEmpty') || 'كم متبقية'} 
-              color={distanceToEmpty === 0 ? '#ef4444' : isFuelLow ? '#ef4444' : '#3b82f6'} unit={t('km') || 'كم'} icon={MapPin}
+              color={isFuelLow ? '#ef4444' : '#3b82f6'} unit={t('km') || 'كم'} icon={MapPin}
             />
           ) : avgValue > 0 ? (
             <CircularGauge value={avgValue} max={20} label={t('avgConsumption') || 'متوسط الاستهلاك'} color="#eab308" unit={avgUnit} icon={Fuel} />
           ) : (
              <div className="flex flex-col items-center justify-center h-[110px] text-center px-2">
                <Fuel size={28} className="text-[var(--text-muted)] opacity-30 mb-2" />
-               <span className="text-xs font-bold text-[var(--text-muted)]">سجل تعبئة لتوقع المسافة</span>
+               <span className="text-xs font-bold text-[var(--text-muted)]">أضف تعبئتين لحساب التوقع</span>
              </div>
           )}
           
