@@ -1,40 +1,40 @@
 import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext.jsx'; // ✅ إضافة .jsx
+import { AppContext } from '../../context/AppContext.jsx';
 
-// ✅ 1. الهيكل الجديد (shared)
-import Layout from '../../shared/components/layout/Layout.jsx'; // ✅ إضافة .jsx
+// ✅ 1. الهيكل الأساسي
+import Layout from '../../shared/components/layout/Layout.jsx';
 
 // ✅ 2. صفحات التسويق (متاحة للجميع)
-import Welcome from '../../pages/Welcome.jsx'; // ✅ إضافة .jsx
-import Onboarding from '../../pages/Onboarding.jsx'; // ✅ إضافة .jsx
-import Login from '../../pages/Login.jsx'; // ✅ إضافة .jsx
-import AddVehicle from '../../pages/AddVehicle.jsx'; // ✅ إضافة .jsx
-import About from '../../pages/About.jsx'; // ✅ إضافة .jsx
+import Welcome from '../../pages/Welcome.jsx';
+import Onboarding from '../../pages/Onboarding.jsx';
+import Login from '../../pages/Login.jsx';
+import AddVehicle from '../../pages/AddVehicle.jsx';
+import About from '../../pages/About.jsx';
 
 // ✅ 3. الصفحات الأساسية (تتطلب سيارة)
-import Dashboard from '../../pages/Dashboard.jsx'; // ✅ إضافة .jsx
-import Fuel from '../../pages/Fuel.jsx'; // ✅ إضافة .jsx
-import Maintenance from '../../pages/Maintenance.jsx'; // ✅ إضافة .jsx
-import Expenses from '../../pages/Expenses.jsx'; // ✅ إضافة .jsx
-import Income from '../../pages/Income.jsx'; // ✅ إضافة .jsx
-import Documents from '../../pages/Documents.jsx'; // ✅ إضافة .jsx
-import Reminders from '../../pages/Reminders.jsx'; // ✅ إضافة .jsx
-import Vehicles from '../../pages/Vehicles.jsx'; // ✅ إضافة .jsx
-import More from '../../pages/More.jsx'; // ✅ إضافة .jsx
+import Dashboard from '../../pages/Dashboard.jsx';
+import Fuel from '../../pages/Fuel.jsx';
+import Maintenance from '../../pages/Maintenance.jsx';
+import Expenses from '../../pages/Expenses.jsx';
+import Income from '../../pages/Income.jsx';
+import Documents from '../../pages/Documents.jsx';
+import Reminders from '../../pages/Reminders.jsx';
+import Vehicles from '../../pages/Vehicles.jsx'; // ⚠️ هنا كان الخطأ (يجب أن يكون الملف يصدّر default)
+import More from '../../pages/More.jsx';
 
 // ✅ 4. الصفحات المتقدمة (تتطلب سيارة)
-import Notifications from '../../pages/Notifications.jsx'; // ✅ إضافة .jsx
-import Reports from '../../pages/Reports.jsx'; // ✅ إضافة .jsx
-import Timeline from '../../pages/Timeline.jsx'; // ✅ إضافة .jsx
-import Valuation from '../../pages/Valuation.jsx'; // ✅ إضافة .jsx
-import FuelStations from '../../pages/FuelStations.jsx'; // ✅ إضافة .jsx
-import ReportPrint from '../../pages/ReportPrint.jsx'; // ✅ إضافة .jsx
-import Assistance from '../../pages/Assistance.jsx'; // ✅ إضافة صفحة الإنقاذ الجديدة
+import Notifications from '../../pages/Notifications.jsx';
+import Reports from '../../pages/Reports.jsx';
+import Timeline from '../../pages/Timeline.jsx';
+import Valuation from '../../pages/Valuation.jsx';
+import FuelStations from '../../pages/FuelStations.jsx';
+import ReportPrint from '../../pages/ReportPrint.jsx';
+import Assistance from '../../pages/Assistance.jsx';
 
-// ✅ 5. الصفحات النظامية (لا تتطلب سيارة)
-import Settings from '../../pages/Settings.jsx'; // ✅ إضافة .jsx
-import Backup from '../../pages/Backup.jsx'; // ✅ إضافة .jsx
+// ✅ 5. الصفحات النظامية
+import Settings from '../../pages/Settings.jsx';
+import Backup from '../../pages/Backup.jsx';
 
 /* =========================================================
    ✅ الحماية (Route Guard)
@@ -70,10 +70,7 @@ export default function AppRoutes() {
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
-        
-        {/* ✅ إصلاح حرج: /add-vehicle يجب أن يكون عاماً (لإنشاء السيارة الأولى) */}
         <Route path="/add-vehicle" element={<AddVehicle />} />
-        
         <Route path="/settings" element={<Settings />} />
         <Route path="/backup" element={<Backup />} />
         <Route path="/about" element={<About />} />
@@ -98,7 +95,6 @@ export default function AppRoutes() {
             <Route path="/valuation" element={<Valuation />} />
             <Route path="/fuel-stations" element={<FuelStations />} /> 
             <Route path="/report-print" element={<ReportPrint />} />
-            {/* ✅ إضافة مسار الإنقاذ الجديد */}
             <Route path="/assistance" element={<Assistance />} />
           </Route>
         </Route>
