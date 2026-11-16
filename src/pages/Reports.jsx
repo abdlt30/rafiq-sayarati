@@ -5,10 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Printer, TrendingUp, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import { safeNumber } from '../shared/utils/safeNumber.js';
 
-// ✅ استيراد مكونات الرسوم البيانية
+// ✅ استيراد مكونات الرسوم البيانية (تمت إضافة LineChart و Line)
 import { 
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line 
 } from 'recharts';
 
 const COLORS = ['#3b82f6', '#eab308', '#a855f7']; // أزرق للوقود، أصفر للصيانة، بنفسجي للمصاريف
@@ -128,6 +128,42 @@ export default function Reports() {
     return period === 'month' ? sortedData : sortedData.slice(-6);
   }, [filteredData, lang, period]);
 
+  // ✅ حساب تكلفة الكيلومتر لكل شهر (تم دمج الكود مع إصلاح خطأ الـ Mutation)
+  const costPerKmData = useMemo(() => {
+    const monthlyData = {};
+    const locale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
+
+    // تجميع البيانات
+    [...filteredData.fuel, ...filteredData.maintenance, ...filteredData.expenses].forEach(r => {
+      if (!r.date) return;
+      const d = new Date(r.date);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!monthlyData[key]) {
+        monthlyData[key] = { name: d.toLocaleDateString(locale, { month: 'short' }), totalCost: 0, distance: 0, timestamp: new Date(d.getFullYear(), d.getMonth(), 1).getTime() };
+      }
+      monthlyData[key].totalCost += safeNumber(r.cost);
+    });
+
+    // حساب المسافة لكل شهر (من سجلات الوقود بناءً على العداد)
+    // ✅ إصلاح: استخدام نسخة من المصفوفة لتجنب تعديل الـ useMemo
+    [...filteredData.fuel].sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer)).forEach((r, i, arr) => {
+       if (i > 0) {
+          const dist = safeNumber(r.odometer) - safeNumber(arr[i-1].odometer);
+          const d = new Date(r.date);
+          const key = `${d.getFullYear()}-${d.getMonth()}`;
+          if (monthlyData[key] && dist > 0) monthlyData[key].distance += dist;
+       }
+    });
+
+    return Object.values(monthlyData)
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(m => ({
+         ...m,
+         costPerKm: m.distance > 0 ? Number((m.totalCost / m.distance).toFixed(2)) : 0
+      })).filter(m => m.costPerKm > 0); // عرض الأشهر التي بها مسافة فقط
+  }, [filteredData, lang]);
+
   if (isLoading) {
     return (
       <div className="p-4 space-y-4 animate-pulse">
@@ -136,6 +172,7 @@ export default function Reports() {
           <div className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>
           <div className="h-20 bg-[var(--surface-2)] rounded-2xl"></div>
         </div>
+        <div className="h-64 bg-[var(--surface-2)] rounded-2xl mt-4"></div>
         <div className="h-64 bg-[var(--surface-2)] rounded-2xl mt-4"></div>
         <div className="h-64 bg-[var(--surface-2)] rounded-2xl mt-4"></div>
       </div>
@@ -259,6 +296,36 @@ export default function Reports() {
                 />
                 <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={30} />
               </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {/* ✅ 3. رسم بياني لتكلفة الكيلومتر (تمت الإضافة) */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={18} className="text-[var(--primary)]" />
+          <h3 className="font-bold text-sm">{t('costPerKmTrend') || 'تطور تكلفة الكيلومتر'}</h3>
+        </div>
+
+        {costPerKmData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-[var(--text-muted)]">
+            <TrendingUp size={32} className="opacity-20 mb-2" />
+            <p className="text-xs font-bold">{t('noDataForChart') || 'لا توجد بيانات كافية'}</p>
+          </div>
+        ) : (
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={costPerKmData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <RechartsTooltip 
+                  formatter={(value) => [`${value} ${currency}/km`, t('costPerKm') || 'تكلفة الكم']}
+                  contentStyle={{ backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)', color: 'var(--text)' }}
+                />
+                <Line type="monotone" dataKey="costPerKm" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         )}
