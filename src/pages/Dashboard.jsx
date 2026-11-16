@@ -5,7 +5,7 @@ import {
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, X, Bell, Settings,
   TrendingUp, TrendingDown, Activity, Plus, ShieldCheck, ChevronDown, CheckCircle,
-  AlertTriangle, MapPin, Search, Gauge, AlertOctagon, Navigation, Droplets
+  AlertTriangle, MapPin, Search, Gauge, AlertOctagon, Navigation, Droplets, Lightbulb
 } from 'lucide-react'; 
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
@@ -226,7 +226,6 @@ export default function Dashboard() {
             <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={14} className={isFuelLow ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
           </div>
           
-          {/* ✅ منطق العرض الصادق والواضح */}
           {distanceToEmpty !== null && distanceToEmpty !== undefined ? (
             <CircularGauge 
               value={distanceToEmpty} max={600} label={t('distanceToEmpty') || 'كم متبقية'} 
@@ -301,6 +300,16 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* ✅ إضافة السطر التوضيحي للشفافية المالية */}
+        {realCostPerKm !== null && (
+          <div className="mt-3 pt-3 border-t border-[var(--border)]/50">
+            <p className="text-[10px] sm:text-xs text-[var(--text-muted)] text-center leading-relaxed flex items-center justify-center gap-1.5">
+              <Lightbulb size={14} className="text-yellow-500 shrink-0" />
+              {t('costPerKmExplanation') || 'تكلفة الكم تشمل التأمين والضرائب (تكاليف ثابتة). ستقل مع زيادة المسافة المقطوعة.'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* الإجراءات السريعة */}
