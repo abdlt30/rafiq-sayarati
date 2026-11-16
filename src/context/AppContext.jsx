@@ -33,7 +33,7 @@ export const AppProvider = ({ children }) => {
   const [lang, setLang] = useState(() => { try { const saved = localStorage.getItem('lang'); return ['ar', 'en', 'fr'].includes(saved) ? saved : 'ar'; } catch { return 'ar'; } });
   const [currency, setCurrencyRaw] = useState(() => { try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; } });
 
-  // ✅ إصلاح: تطبيق الثيم على مستوى الـ HTML لتفعيل ملف CSS
+  // ✅ إصلاح الثيم ليعمل على مستوى الـ HTML (للوصولية والوضع الفاتح)
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     if (theme === 'dark') {
@@ -45,11 +45,12 @@ export const AppProvider = ({ children }) => {
     }
   }, [theme]);
 
-  // ✅ الحالة المركزية للبيانات
+  // ✅ الحالة المركزية للبيانات (مع إضافة distanceToEmpty)
   const [totals, setTotals] = useState({ 
     fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, 
     avgConsumption: null, avgUnit: 'L/100km', 
-    costPerKm: null, totalDistance: 0, nextOilChangeOdo: null 
+    costPerKm: null, totalDistance: 0, nextOilChangeOdo: null,
+    distanceToEmpty: null // ✅ إضافة حقل المسافة المتبقية
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -60,7 +61,6 @@ export const AppProvider = ({ children }) => {
   const [dataVersion, setDataVersion] = useState(0);
   const bumpDataVersion = useCallback(() => setDataVersion(v => v + 1), []);
 
-  // دالة الترجمة (t) نحتاجها داخل refreshDashboard
   const t = useCallback((key, variables = {}) => {
     let text = translations[lang]?.[key] ?? translations['en']?.[key] ?? key;
     text = String(text);
@@ -75,7 +75,7 @@ export const AppProvider = ({ children }) => {
 
   const refreshDashboard = useCallback(async () => {
     if (!currentCar) {
-      setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km', costPerKm: null, totalDistance: 0, nextOilChangeOdo: null });
+      setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km', costPerKm: null, totalDistance: 0, nextOilChangeOdo: null, distanceToEmpty: null });
       setRecentActivity([]); setDocuments([]); setReminders([]); setMaintenanceRecords([]); setNotifications([]);
       return;
     }
@@ -109,7 +109,7 @@ export const AppProvider = ({ children }) => {
         totalDistanceDriven = Math.max(...allOdometerReadings) - Math.min(...allOdometerReadings);
       }
 
-      // 2. حساب استهلاك الوقود التراكمي
+      // 2. حساب استهلاك الوقود التراكمي (المعادلة المحاسبية الدقيقة)
       const powertrain = currentCar.powertrain || 'ice';
       const unit = powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
       const validFuelRecords = myFuel.filter(f => safeNumber(f.odometer) > 0 && (safeNumber(f.liters) > 0 || safeNumber(f.kwh) > 0)).sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
@@ -125,7 +125,10 @@ export const AppProvider = ({ children }) => {
         }
         if (fuelDistance > 0 && totalVolume > 0) {
           const res = (totalVolume / fuelDistance) * 100;
-          if (Number.isFinite(res) && res > 0) avgVal = Number(res.toFixed(1));
+          // حماية رياضية: إذا كان الاستهلاك أكبر من 50 لتر/100كم فهذا خطأ في البيانات
+          if (Number.isFinite(res) && res > 0 && res < 50) {
+            avgVal = Number(res.toFixed(1));
+          }
         }
       }
 
@@ -136,7 +139,28 @@ export const AppProvider = ({ children }) => {
         realCostPerKm = Number((actualTotalExpenses / totalDistanceDriven).toFixed(2));
       }
 
-      // 4. التنبؤ بتغيير الزيت القادم
+      // ✅ 4. حساب توقع المسافة المتبقية (Distance To Empty)
+      let distanceToEmpty = null;
+      if (avgVal > 0 && myFuel.length > 0) {
+         // نجد آخر تعبئة تم تسجيلها
+         const sortedByOdo = [...myFuel].sort((a, b) => safeNumber(b.odometer) - safeNumber(a.odometer));
+         const lastFill = sortedByOdo[0];
+         
+         if (lastFill && safeNumber(lastFill.liters) > 0) {
+            let remainingLiters = safeNumber(lastFill.liters);
+            const currentOdo = safeNumber(currentCar.odometer);
+            
+            // إذا قطعت مسافة منذ آخر تعبئة، نخصم الوقود المستهلك
+            if (currentOdo > safeNumber(lastFill.odometer)) {
+               const driven = currentOdo - safeNumber(lastFill.odometer);
+               const used = (driven / 100) * avgVal;
+               remainingLiters = Math.max(0, remainingLiters - used);
+            }
+            distanceToEmpty = Math.floor((remainingLiters / avgVal) * 100);
+         }
+      }
+
+      // 5. التنبؤ بتغيير الزيت القادم
       let nextOilChangeOdo = null;
       const oilMaintenance = myMaintenance
         .filter(m => {
@@ -156,7 +180,7 @@ export const AppProvider = ({ children }) => {
         if (oilReminder) nextOilChangeOdo = safeNumber(oilReminder.targetOdometer);
       }
 
-      // 5. بناء سجل النشاط
+      // 6. بناء سجل النشاط
       const activities = [
         ...myFuel.map(f => ({ ...f, type: 'fuel' })),
         ...myMaintenance.map(m => ({ ...m, type: 'maintenance' })),
@@ -164,11 +188,10 @@ export const AppProvider = ({ children }) => {
         ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
       ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 5);
 
-      // ✅ 6. محرك الإشعارات المركزي (مع التوطين)
+      // 7. محرك الإشعارات المركزي
       const generatedNotifications = [];
       const now = new Date();
       
-      // فحص الوثائق
       myDocs.forEach(doc => {
         const expDateStr = doc.expiryDate || doc.date;
         if (expDateStr) {
@@ -187,7 +210,6 @@ export const AppProvider = ({ children }) => {
         }
       });
 
-      // فحص التذكيرات
       myReminders.forEach(rem => {
          if (rem.type === 'date' && rem.targetDate) {
              const targetDate = new Date(rem.targetDate);
@@ -205,10 +227,15 @@ export const AppProvider = ({ children }) => {
          }
       });
 
+      // 8. تحديث الحالة
       setTotals({ 
         ...(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 }),
-        avgConsumption: avgVal, avgUnit: unit, costPerKm: realCostPerKm,
-        totalDistance: totalDistanceDriven, nextOilChangeOdo: nextOilChangeOdo
+        avgConsumption: avgVal, 
+        avgUnit: unit, 
+        costPerKm: realCostPerKm,
+        totalDistance: totalDistanceDriven, 
+        nextOilChangeOdo: nextOilChangeOdo,
+        distanceToEmpty: distanceToEmpty // ✅ تمرير المسافة المتبقية
       });
       
       setRecentActivity(activities);
