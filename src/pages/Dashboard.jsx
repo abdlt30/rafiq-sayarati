@@ -12,7 +12,7 @@ import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.js';
 
-// مكون العداد الدائري (مُحسن ليكون متجاوباً)
+// ✅ مكون العداد الدائري (تم تكبير الخطوط لتناسب الجميع)
 const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon }) => {
   const safeMax = max > 0 ? max : 100;
   const displayVal = value !== null && value !== undefined ? value : 0;
@@ -25,7 +25,7 @@ const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon })
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
-      <div className="relative w-full max-w-[100px] aspect-square flex items-center justify-center">
+      <div className="relative w-full max-w-[110px] aspect-square flex items-center justify-center">
         <svg viewBox="0 0 100 100" className="transform -rotate-90 w-full h-full">
           <circle cx="50" cy="50" r={radius} stroke="var(--surface-2)" strokeWidth="8" fill="transparent" />
           <circle 
@@ -38,14 +38,17 @@ const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon })
           />
         </svg>
         <div className="absolute flex flex-col items-center justify-center text-center">
-          {Icon && <Icon size={12} className="mb-0.5 opacity-80" style={{ color }} />}
-          <span className="text-base sm:text-lg font-extrabold text-[var(--text)] leading-tight">{displayVal}</span>
-          <span className="text-[7px] sm:text-[8px] text-[var(--text-muted)] font-bold">{unit}</span>
+          {Icon && <Icon size={16} className="mb-1 opacity-80" style={{ color }} />}
+          {/* ✅ تكبير خط الرقم */}
+          <span className="text-xl sm:text-2xl font-extrabold text-[var(--text)] leading-tight">{displayVal}</span>
+          {/* ✅ تكبير خط الوحدة */}
+          <span className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold">{unit}</span>
         </div>
       </div>
-      <div className="text-center mt-1.5 w-full px-1">
-        <span className="text-[10px] font-bold text-[var(--text)] block truncate">{label}</span>
-        {subLabel && <span className="text-[8px] text-[var(--text-muted)] block truncate">{subLabel}</span>}
+      <div className="text-center mt-2 w-full px-1">
+        {/* ✅ تكبير خط التسمية */}
+        <span className="text-xs sm:text-sm font-bold text-[var(--text)] block truncate">{label}</span>
+        {subLabel && <span className="text-[10px] text-[var(--text-muted)] block truncate">{subLabel}</span>}
       </div>
     </div>
   );
@@ -61,7 +64,6 @@ const CarBrandLogo = ({ carName, carImage }) => {
 };
 
 export default function Dashboard() {
-  // ✅ الاعتماد على الإشعارات المركزية بدلاً من حسابها يدوياً
   const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, notifications } = useContext(AppContext);
   const navigate = useNavigate();
 
@@ -128,26 +130,22 @@ export default function Dashboard() {
   const realCostPerKm = totals?.costPerKm;
   const nextOilChangeOdo = totals?.nextOilChangeOdo;
   
-  // ✅ إصلاح رياضي: لا نحسب المسافة المتبقية إلا إذا كان العداد أكبر من صفر
   const kmToOilChange = (nextOilChangeOdo !== null && odometerValue > 0) 
     ? Math.max(0, nextOilChangeOdo - odometerValue) 
     : null;
   const isOilOverdue = nextOilChangeOdo !== null && odometerValue >= nextOilChangeOdo;
 
-  // ✅ التنبيهات الذكية (تقرأ من المصدر المركزي الموحد)
+  // ✅ التنبيهات الذكية
   const activeAlert = useMemo(() => {
     if (!notifications || notifications.length === 0) return null;
-    
-    // نبحث عن الأكثر إلحاحاً أولاً (isUrgent)، وإلا نعرض الأول
     const primaryAlert = notifications.find(n => n.isUrgent) || notifications[0];
-    
     return { 
       message: `⚠️ ${primaryAlert.title}: ${primaryAlert.message}`, 
       isUrgent: primaryAlert.isUrgent 
     };
   }, [notifications]);
 
-  // ✅ حساب صحة السيارة بناءً على عدد الإشعارات الحقيقية
+  // ✅ حساب صحة السيارة بناءً على الإشعارات
   let healthScore = 100;
   if (notifications && notifications.length > 0) {
     const urgentCount = notifications.filter(n => n.isUrgent).length;
@@ -158,12 +156,29 @@ export default function Dashboard() {
   else if (kmToOilChange !== null && kmToOilChange < 500) healthScore -= 10;
   healthScore = Math.max(0, healthScore);
 
-  // التنبؤ بالوقود
+  // ✅ إصلاح رياضي: توقع الوقود الذكي
   const currentFuelLiters = safeNumber(currentCar?.currentFuel);
   let distanceToEmpty = null;
+
   if (avgValue > 0 && currentFuelLiters > 0) {
+    // إذا كان المستخدم قد أدخل كمية الوقود الحالية
     distanceToEmpty = Math.floor((currentFuelLiters / avgValue) * 100);
+  } else if (avgValue > 0) {
+    // التقدير بناءً على آخر تعبئة
+    const lastFuelRecord = recentActivity?.find(a => a.type === 'fuel');
+    if (lastFuelRecord && lastFuelRecord.liters) {
+       const distanceSinceLastFill = odometerValue - safeNumber(lastFuelRecord.odometer);
+       const litersUsed = (distanceSinceLastFill * avgValue) / 100;
+       const estimatedRemainingLiters = Math.max(0, safeNumber(lastFuelRecord.liters) - litersUsed);
+       
+       if (estimatedRemainingLiters > 0) {
+          distanceToEmpty = Math.floor((estimatedRemainingLiters / avgValue) * 100);
+       } else {
+          distanceToEmpty = 0; 
+       }
+    }
   }
+
   const isFuelLow = distanceToEmpty !== null && distanceToEmpty > 0 && distanceToEmpty < 50;
   const findGasStationUrl = `https://www.google.com/maps/search/${encodeURIComponent('gas station محطة وقود')}`;
 
@@ -177,20 +192,20 @@ export default function Dashboard() {
       <div className="flex justify-between items-start sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-extrabold text-[var(--text)] truncate">{greeting}</h1>
-          <p className="text-[11px] text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1 font-bold truncate">{today}</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Link to="/notifications" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative"><Bell size={18} /></Link>
-          <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"><Settings size={18} /></Link>
+          <Link to="/notifications" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors relative"><Bell size={20} /></Link>
+          <Link to="/settings" className="p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"><Settings size={20} /></Link>
         </div>
       </div>
 
       {/* التنبيهات الذكية */}
       {activeAlert && (
-        <Link to="/notifications" className={`p-3 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm border block ${activeAlert.isUrgent ? 'bg-red-500/10 border-red-500/30' : 'bg-orange-500/10 border-orange-500/30'}`}>
-          <AlertOctagon size={20} className={`shrink-0 ${activeAlert.isUrgent ? 'text-red-500' : 'text-orange-500'}`} />
-          <p className={`text-xs font-bold flex-1 ${activeAlert.isUrgent ? 'text-red-500' : 'text-orange-500'}`}>{activeAlert.message}</p>
-          <span className="text-[10px] font-bold bg-[var(--surface)] px-2 py-1 rounded-md border border-[var(--border)] text-[var(--text)]">عرض</span>
+        <Link to="/notifications" className={`p-4 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm border block ${activeAlert.isUrgent ? 'bg-red-500/10 border-red-500/30' : 'bg-orange-500/10 border-orange-500/30'}`}>
+          <AlertOctagon size={24} className={`shrink-0 ${activeAlert.isUrgent ? 'text-red-500' : 'text-orange-500'}`} />
+          <p className={`text-sm font-bold flex-1 ${activeAlert.isUrgent ? 'text-red-500' : 'text-orange-500'}`}>{activeAlert.message}</p>
+          <span className="text-xs font-bold bg-[var(--surface)] px-2.5 py-1.5 rounded-md border border-[var(--border)] text-[var(--text)]">عرض</span>
         </Link>
       )}
 
@@ -201,27 +216,27 @@ export default function Dashboard() {
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <h2 className="text-base sm:text-lg font-extrabold text-[var(--text)] leading-tight truncate">
+            <h2 className="text-lg sm:text-xl font-extrabold text-[var(--text)] leading-tight truncate">
               {currentCar.make} {currentCar.model}
             </h2>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+            <p className="text-sm text-[var(--text-muted)] mt-1 truncate">
               {currentCar.plate || t('noPlate')} • {odometerValue.toLocaleString()} {t('km') || 'كم'}
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <span className={`text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${healthScore >= 90 ? 'text-green-500 bg-green-500/10' : healthScore >= 70 ? 'text-orange-500 bg-orange-500/10' : 'text-red-500 bg-red-500/10'}`}>
-                <ShieldCheck size={12} /> {healthScore}% {t('carHealth') || 'صحة'}
+              <span className={`text-xs font-bold flex items-center gap-1 px-2 py-1 rounded-md ${healthScore >= 90 ? 'text-green-500 bg-green-500/10' : healthScore >= 70 ? 'text-orange-500 bg-orange-500/10' : 'text-red-500 bg-red-500/10'}`}>
+                <ShieldCheck size={14} /> {healthScore}% {t('carHealth') || 'صحة'}
               </span>
-              <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1 bg-[var(--surface-2)] px-2 py-0.5 rounded-md">
-                <ChevronDown size={12} /> {t('switchCar') || 'تغيير'}
+              <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1 bg-[var(--surface-2)] px-2 py-1 rounded-md">
+                <ChevronDown size={14} /> {t('switchCar') || 'تغيير'}
               </span>
             </div>
           </div>
           <div className="flex flex-col items-center gap-2 shrink-0">
-            <div className="w-12 h-12 bg-[var(--surface-2)] rounded-full flex items-center justify-center overflow-hidden border border-[var(--border)] shadow-inner">
+            <div className="w-14 h-14 bg-[var(--surface-2)] rounded-full flex items-center justify-center overflow-hidden border border-[var(--border)] shadow-inner">
               <CarBrandLogo carName={`${currentCar.make} ${currentCar.model}`} carImage={currentCar.image} />
             </div>
-            <button onClick={handleLocateCar} className="flex items-center gap-1 text-[9px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded-md active:scale-95 transition-all">
-              {isLocating ? <Activity size={10} className="animate-spin" /> : <Navigation size={10} />} 
+            <button onClick={handleLocateCar} className="flex items-center gap-1 text-[11px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1.5 rounded-md active:scale-95 transition-all">
+              {isLocating ? <Activity size={12} className="animate-spin" /> : <Navigation size={12} />} 
               {isLocating ? 'جاري...' : 'موقعي'}
             </button>
           </div>
@@ -231,48 +246,48 @@ export default function Dashboard() {
       {/* لوحة القيادة - عدادات */}
       <div className="grid grid-cols-2 gap-3">
         {/* عداد الوقود */}
-        <div className={`p-3 rounded-2xl border ${isFuelLow ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-between relative`}>
-          <div className="flex justify-between items-center w-full mb-1 px-1">
-            <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={12} className={isFuelLow ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
+        <div className={`p-4 rounded-2xl border ${isFuelLow || distanceToEmpty === 0 ? 'bg-red-500/5 border-red-500/30' : 'bg-[var(--surface)] border-[var(--border)]'} shadow-sm flex flex-col items-center justify-between relative`}>
+          <div className="flex justify-between items-center w-full mb-2 px-1">
+            <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1"><Fuel size={14} className={isFuelLow || distanceToEmpty === 0 ? 'text-red-500' : 'text-blue-500'} /> {t('fuelPrediction') || 'الوقود'}</span>
           </div>
           
           {distanceToEmpty !== null ? (
             <CircularGauge 
               value={distanceToEmpty} max={600} label={t('distanceToEmpty') || 'كم متبقية'} 
-              color={isFuelLow ? '#ef4444' : '#3b82f6'} unit={t('km') || 'كم'} icon={MapPin}
+              color={distanceToEmpty === 0 ? '#ef4444' : isFuelLow ? '#ef4444' : '#3b82f6'} unit={t('km') || 'كم'} icon={MapPin}
             />
-          ) : avgValue !== null ? (
+          ) : avgValue > 0 ? (
             <CircularGauge value={avgValue} max={20} label={t('avgConsumption') || 'متوسط الاستهلاك'} color="#eab308" unit={avgUnit} icon={Fuel} />
           ) : (
-             <div className="flex flex-col items-center justify-center h-[100px] text-center px-2">
-               <Fuel size={24} className="text-[var(--text-muted)] opacity-30 mb-2" />
-               <span className="text-[9px] font-bold text-[var(--text-muted)]">سجل تعبئة لتوقع المسافة</span>
+             <div className="flex flex-col items-center justify-center h-[110px] text-center px-2">
+               <Fuel size={28} className="text-[var(--text-muted)] opacity-30 mb-2" />
+               <span className="text-xs font-bold text-[var(--text-muted)]">سجل تعبئة لتوقع المسافة</span>
              </div>
           )}
           
-          <Link to="/fuel" className="mt-2 w-full flex items-center justify-center gap-1 bg-blue-500 text-white text-[10px] font-bold py-1.5 rounded-lg active:scale-95 transition-transform shadow-md shadow-blue-500/20">
-            <Plus size={12} /> تعبئة
+          <Link to="/fuel" className="mt-3 w-full flex items-center justify-center gap-1 bg-blue-500 text-white text-xs font-bold py-2 rounded-lg active:scale-95 transition-transform shadow-md shadow-blue-500/20">
+            <Plus size={14} /> تعبئة
           </Link>
         </div>
 
         {/* عداد الصحة + التنبؤ */}
-        <div className="p-3 rounded-2xl border bg-[var(--surface)] border-[var(--border)] shadow-sm flex flex-col items-center justify-between relative">
-          <div className="flex justify-between items-center w-full mb-1 px-1">
-            <span className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1"><ShieldCheck size={12} className="text-green-500" /> {t('carHealth') || 'الحالة'}</span>
+        <div className="p-4 rounded-2xl border bg-[var(--surface)] border-[var(--border)] shadow-sm flex flex-col items-center justify-between relative">
+          <div className="flex justify-between items-center w-full mb-2 px-1">
+            <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1"><ShieldCheck size={14} className="text-green-500" /> {t('carHealth') || 'الحالة'}</span>
           </div>
           <CircularGauge 
             value={healthScore} max={100} label={t('carHealth') || 'ممتازة'} 
             color={healthScore >= 90 ? "#10b981" : healthScore >= 70 ? "#f59e0b" : "#ef4444"} unit="%" 
           />
           
-          <div className={`mt-2 w-full rounded-lg p-1.5 text-center border ${isOilOverdue ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface-2)] border-[var(--border)]'}`}>
-             <p className={`text-[8px] font-bold flex items-center justify-center gap-1 ${isOilOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}><Droplets size={10} className={isOilOverdue ? 'text-red-500' : 'text-yellow-500'}/> تغيير الزيت</p>
+          <div className={`mt-3 w-full rounded-lg p-2 text-center border ${isOilOverdue ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface-2)] border-[var(--border)]'}`}>
+             <p className={`text-[10px] font-bold flex items-center justify-center gap-1 ${isOilOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}><Droplets size={12} className={isOilOverdue ? 'text-red-500' : 'text-yellow-500'}/> تغيير الزيت</p>
              {kmToOilChange !== null ? (
-               <p className={`text-[10px] font-extrabold ${isOilOverdue ? 'text-red-500' : 'text-yellow-500'}`}>
+               <p className={`text-xs font-extrabold mt-0.5 ${isOilOverdue ? 'text-red-500' : 'text-yellow-500'}`}>
                  {isOilOverdue ? 'متأخر!' : `بعد ${kmToOilChange} كم`}
                </p>
              ) : (
-               <p className="text-[9px] font-bold text-[var(--text-muted)]">غير مسجل</p>
+               <p className="text-[11px] font-bold text-[var(--text-muted)] mt-0.5">غير مسجل</p>
              )}
           </div>
         </div>
@@ -280,10 +295,10 @@ export default function Dashboard() {
 
       {/* الملخص المالي */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm mt-3">
-        <div className="flex justify-between items-center mb-3 px-1">
-          <h3 className="font-bold text-xs flex items-center gap-1.5"><Activity size={14} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
-          <span className="text-[9px] font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-1 rounded-md border border-[var(--border)] flex items-center gap-1">
-            <Gauge size={10} className="text-purple-400"/> 
+        <div className="flex justify-between items-center mb-4 px-1">
+          <h3 className="font-bold text-sm flex items-center gap-1.5"><Activity size={16} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
+          <span className="text-[11px] font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-1.5 rounded-md border border-[var(--border)] flex items-center gap-1">
+            <Gauge size={12} className="text-purple-400"/> 
             {realCostPerKm !== null 
               ? `تكلفة الكم: ${realCostPerKm} ${currency}` 
               : 'سجل تعبئتين لحساب التكلفة'}
@@ -300,13 +315,13 @@ export default function Dashboard() {
           </div>
           
           <div className="w-[55%] flex flex-col gap-2">
-            <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-xl">
-              <p className="text-[9px] text-green-500 font-bold mb-0.5 flex items-center gap-1"><TrendingUp size={10}/> {t('totalIncome')}</p>
-              <p className="text-xs font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-[8px] font-normal">{currency}</span></p>
+            <div className="bg-green-500/10 border border-green-500/20 p-2.5 rounded-xl">
+              <p className="text-[11px] text-green-500 font-bold mb-1 flex items-center gap-1"><TrendingUp size={12}/> {t('totalIncome')}</p>
+              <p className="text-sm font-extrabold text-green-500 truncate">{incomeValue.toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
             </div>
-            <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-xl">
-              <p className="text-[9px] text-red-500 font-bold mb-0.5 flex items-center gap-1"><TrendingDown size={10}/> {t('totalExpenses')}</p>
-              <p className="text-xs font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-[8px] font-normal">{currency}</span></p>
+            <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl">
+              <p className="text-[11px] text-red-500 font-bold mb-1 flex items-center gap-1"><TrendingDown size={12}/> {t('totalExpenses')}</p>
+              <p className="text-sm font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
             </div>
           </div>
         </div>
@@ -314,35 +329,35 @@ export default function Dashboard() {
 
       {/* الإجراءات السريعة */}
       <div className="grid grid-cols-4 gap-2 mt-2">
-        <Link to="/fuel" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all"><div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-1.5"><Fuel size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('fuel')}</span></Link>
-        <Link to="/maintenance" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 active:scale-95 transition-all"><div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-1.5"><Wrench size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('maintenance')}</span></Link>
-        <Link to="/expenses" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all"><div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-1.5"><Wallet size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('expenses')}</span></Link>
-        <Link to="/documents" className="flex flex-col items-center p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all"><div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-1.5"><FileText size={18}/></div><span className="text-[9px] sm:text-[10px] font-bold text-center">{t('documents')}</span></Link>
+        <Link to="/fuel" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-blue-500/50 active:scale-95 transition-all"><div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg mb-2"><Fuel size={20}/></div><span className="text-[11px] sm:text-xs font-bold text-center">{t('fuel')}</span></Link>
+        <Link to="/maintenance" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-yellow-500/50 active:scale-95 transition-all"><div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg mb-2"><Wrench size={20}/></div><span className="text-[11px] sm:text-xs font-bold text-center">{t('maintenance')}</span></Link>
+        <Link to="/expenses" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-purple-500/50 active:scale-95 transition-all"><div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg mb-2"><Wallet size={20}/></div><span className="text-[11px] sm:text-xs font-bold text-center">{t('expenses')}</span></Link>
+        <Link to="/documents" className="flex flex-col items-center p-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl hover:border-green-500/50 active:scale-95 transition-all"><div className="p-2 bg-green-500/10 text-green-500 rounded-lg mb-2"><FileText size={20}/></div><span className="text-[11px] sm:text-xs font-bold text-center">{t('documents')}</span></Link>
       </div>
 
       {/* زر الإنقاذ (SOS) */}
-      <Link to="/assistance" className="flex items-center justify-center gap-2 p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl hover:bg-red-500/20 active:scale-[0.98] transition-all mt-2 shadow-sm">
-        <AlertTriangle size={20} className="text-red-500 animate-pulse shrink-0" />
-        <span className="text-xs sm:text-sm font-bold text-red-500 text-center">{t('emergencySOS') || 'إنقاذ طارئ (SOS) - سيارة معطلة؟'}</span>
+      <Link to="/assistance" className="flex items-center justify-center gap-2 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl hover:bg-red-500/20 active:scale-[0.98] transition-all mt-2 shadow-sm">
+        <AlertTriangle size={22} className="text-red-500 animate-pulse shrink-0" />
+        <span className="text-sm font-bold text-red-500 text-center">{t('emergencySOS') || 'إنقاذ طارئ (SOS) - سيارة معطلة؟'}</span>
       </Link>
 
       {/* آخر العمليات */}
-      <div className="mt-4">
-        <div className="flex justify-between items-center mb-3"><h3 className="font-bold text-sm">{t('recentActivity')}</h3><Link to="/timeline" className="text-xs text-[var(--primary)] font-bold flex items-center">{t('viewAll')} <ChevronLeft size={14} className="rtl:rotate-0 ltr:rotate-180"/></Link></div>
+      <div className="mt-5">
+        <div className="flex justify-between items-center mb-3"><h3 className="font-bold text-sm">{t('recentActivity')}</h3><Link to="/timeline" className="text-xs text-[var(--primary)] font-bold flex items-center">{t('viewAll')} <ChevronLeft size={16} className="rtl:rotate-0 ltr:rotate-180"/></Link></div>
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
           {recentActivity.length === 0 ? (
             <div className="p-8 text-center flex flex-col items-center justify-center animate-fade-in">
-              <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-3"><Activity size={24} className="text-[var(--text-muted)]" /></div>
-              <p className="text-sm font-bold text-[var(--text)] mb-2">{t('noData')}</p>
-              <Link to="/fuel" className="flex items-center gap-1 text-xs text-white bg-[var(--primary)] px-4 py-2 rounded-lg"><Plus size={14}/> {t('addFuel')}</Link>
+              <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-3"><Activity size={28} className="text-[var(--text-muted)]" /></div>
+              <p className="text-sm font-bold text-[var(--text)] mb-3">{t('noData')}</p>
+              <Link to="/fuel" className="flex items-center gap-1 text-xs text-white bg-[var(--primary)] px-4 py-2 rounded-lg"><Plus size={16}/> {t('addFuel')}</Link>
             </div>
           ) : (
             recentActivity.map((activity, index) => {
               const isFuel = activity.type === 'fuel'; const isIncome = activity.type === 'income'; const safeCost = safeNumber(activity.cost);
               return (
-                <div key={index} className="flex justify-between items-center p-3 border-b border-[var(--border)] last:border-0">
-                  <div className="flex items-center gap-3 min-w-0"><div className={`p-2 rounded-lg shrink-0 ${isFuel ? 'bg-blue-500/10 text-blue-500' : isIncome ? 'bg-green-500/10 text-green-500' : 'bg-purple-500/10 text-purple-500'}`}>{isFuel ? <Fuel size={16}/> : isIncome ? <TrendingUp size={16}/> : <Wallet size={16}/>}</div><div className="min-w-0"><p className="text-xs font-bold truncate">{isFuel ? t('fuel') : isIncome ? t('income') : t('expense')}</p><p className="text-[10px] text-[var(--text-muted)]">{formatDate(activity.date, todayLocale)}</p></div></div>
-                  <p className={`text-xs font-bold shrink-0 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>{isIncome ? '+' : ''}{safeCost} {currency}</p>
+                <div key={index} className="flex justify-between items-center p-3.5 border-b border-[var(--border)] last:border-0">
+                  <div className="flex items-center gap-3 min-w-0"><div className={`p-2 rounded-lg shrink-0 ${isFuel ? 'bg-blue-500/10 text-blue-500' : isIncome ? 'bg-green-500/10 text-green-500' : 'bg-purple-500/10 text-purple-500'}`}>{isFuel ? <Fuel size={18}/> : isIncome ? <TrendingUp size={18}/> : <Wallet size={18}/>}</div><div className="min-w-0"><p className="text-sm font-bold truncate">{isFuel ? t('fuel') : isIncome ? t('income') : t('expense')}</p><p className="text-xs text-[var(--text-muted)] mt-0.5">{formatDate(activity.date, todayLocale)}</p></div></div>
+                  <p className={`text-sm font-bold shrink-0 ${isIncome ? 'text-green-500' : 'text-[var(--text)]'}`}>{isIncome ? '+' : ''}{safeCost} {currency}</p>
                 </div>
               );
             })
@@ -357,11 +372,11 @@ export default function Dashboard() {
             <div className="p-5 border-b border-[var(--border)]">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-lg text-[var(--text)]">{t('vehicles') || 'المركبات'}</h3>
-                <button onClick={() => setIsCarModalOpen(false)} className="p-1.5 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)]"><X size={18}/></button>
+                <button onClick={() => setIsCarModalOpen(false)} className="p-2 bg-[var(--surface-2)] rounded-full text-[var(--text-muted)]"><X size={20}/></button>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><Search size={16} className="text-[var(--text-muted)]" /></div>
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('searchCar') || 'ابحث عن سيارة...'} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl py-2.5 pr-10 pl-4 text-sm font-bold text-[var(--text)] outline-none focus:border-[var(--primary)] transition-colors" />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><Search size={18} className="text-[var(--text-muted)]" /></div>
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('searchCar') || 'ابحث عن سيارة...'} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl py-3 pr-10 pl-4 text-sm font-bold text-[var(--text)] outline-none focus:border-[var(--primary)] transition-colors" />
               </div>
             </div>
             <div className="overflow-y-auto flex-1">
@@ -371,11 +386,11 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <div>
                         <p className={`font-bold text-sm ${String(car.id) === String(currentCar.id) ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>{car.make} {car.model}</p>
-                        <p className="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">{car.plate || t('noPlate')}</p>
+                        <p className="text-xs font-mono text-[var(--text-muted)] mt-0.5">{car.plate || t('noPlate')}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      {String(car.id) === String(currentCar.id) && <CheckCircle className="text-[var(--primary)]" size={18} />}
+                      {String(car.id) === String(currentCar.id) && <CheckCircle className="text-[var(--primary)]" size={20} />}
                       <div className="w-10 h-10 rounded-full bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
                         <CarBrandLogo carName={`${car.make} ${car.model}`} carImage={car.image} />
                       </div>
@@ -387,8 +402,8 @@ export default function Dashboard() {
               )}
             </div>
             <div className="p-4 border-t border-[var(--border)]">
-              <button onClick={() => { setIsCarModalOpen(false); navigate('/add-vehicle'); }} className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-[var(--primary)]/20">
-                <Plus size={18} /> {t('addNewCar') || 'إضافة سيارة'}
+              <button onClick={() => { setIsCarModalOpen(false); navigate('/add-vehicle'); }} className="w-full bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-[var(--primary)]/20 text-sm">
+                <Plus size={20} /> {t('addNewCar') || 'إضافة سيارة'}
               </button>
             </div>
           </div>
