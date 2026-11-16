@@ -61,8 +61,8 @@ const CarBrandLogo = ({ carName, carImage }) => {
 };
 
 export default function Dashboard() {
-  // تمت إزالة maintenanceRecords لأننا نعتمد على totals.nextOilChangeOdo
-  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, documents } = useContext(AppContext);
+  // ✅ تمت إضافة reminders لفحص تنبيهات التأمين
+  const { currentCar, updateCar, t, currency, user, lang, totals, recentActivity, vehicles, selectCar, isLoading, documents, reminders } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [isEditingOdo, setIsEditingOdo] = useState(false);
@@ -125,40 +125,49 @@ export default function Dashboard() {
   const avgValue = safeNumber(totals?.avgConsumption);
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
 
-  // تكلفة الكيلومتر الحقيقية
+  // تكلفة الكيلومتر الحقيقية (تظهر القيمة المحسوبة في AppContext)
   const realCostPerKm = totals?.costPerKm;
 
-  // التنبؤ بالزيت الحقيقي
+  // التنبؤ بالزيت الحقيقي (يقرأ القيمة التي تم إصلاح حسابها في AppContext)
   const nextOilChangeOdo = totals?.nextOilChangeOdo;
   const kmToOilChange = (nextOilChangeOdo && odometerValue > 0) 
     ? Math.max(0, nextOilChangeOdo - odometerValue) 
     : null;
   const isOilOverdue = nextOilChangeOdo !== null && odometerValue >= nextOilChangeOdo;
 
-  // التنبيهات الذكية (الوثائق التي تنتهي قريباً)
+  // ✅ التنبيهات الذكية (تفحص الوثائق + التذكيرات مثل التأمين)
   const activeAlert = useMemo(() => {
-    if (!documents || documents.length === 0) return null;
     const now = new Date();
     const soon = new Date();
     soon.setDate(now.getDate() + 30);
 
-    const expiringDoc = documents.find(doc => {
+    // 1. فحص الوثائق
+    const expiringDoc = documents?.find(doc => {
       if (!doc.expiryDate) return false;
-      const expDate = new Date(doc.expiryDate);
-      return expDate <= soon;
+      return new Date(doc.expiryDate) <= soon;
     });
-
     if (expiringDoc) {
       const daysLeft = Math.ceil((new Date(expiringDoc.expiryDate) - now) / (1000 * 60 * 60 * 24));
-      return { 
-        message: `⚠️ تنبيه: ${t(expiringDoc.type) || expiringDoc.type} ينتهي بعد ${daysLeft} أيام. يرجى التجديد.`,
-        isUrgent: daysLeft < 7
-      };
+      return { message: `⚠️ تنبيه: ${t(expiringDoc.type) || expiringDoc.type} ينتهي بعد ${daysLeft} أيام.`, isUrgent: daysLeft <= 0 };
     }
-    return null;
-  }, [documents, t]);
 
-  // حساب صحة السيارة الديناميكي (وثائق + زيت)
+    // 2. فحص التذكيرات (التأمين، الفحص، إلخ)
+    const urgentReminder = reminders?.find(rem => {
+       if (rem.type === 'date' && rem.targetDate) {
+           return new Date(rem.targetDate) <= soon;
+       }
+       return false;
+    });
+    if (urgentReminder) {
+       const daysLeft = Math.ceil((new Date(urgentReminder.targetDate) - now) / (1000 * 60 * 60 * 24));
+       if (daysLeft <= 0) return { message: `⚠️ تنبيه: ${urgentReminder.title} متأخر!`, isUrgent: true };
+       return { message: `⚠️ تنبيه: ${urgentReminder.title} ينتهي بعد ${daysLeft} أيام.`, isUrgent: false };
+    }
+
+    return null;
+  }, [documents, reminders, t]);
+
+  // حساب صحة السيارة الديناميكي
   let healthScore = 100;
   if (activeAlert) healthScore -= 15;
   if (isOilOverdue) healthScore -= 30;
@@ -291,7 +300,10 @@ export default function Dashboard() {
           <h3 className="font-bold text-xs flex items-center gap-1.5"><Activity size={14} className="text-[var(--primary)]"/> {t('financialSummary') || 'الملخص المالي'}</h3>
           <span className="text-[9px] font-bold text-[var(--text)] bg-[var(--surface-2)] px-2 py-1 rounded-md border border-[var(--border)] flex items-center gap-1">
             <Gauge size={10} className="text-purple-400"/> 
-            {realCostPerKm !== null ? `تكلفة الكم: ${realCostPerKm} ${currency}` : 'يحتاج بيانات أكثر'}
+            {/* ✅ نص واضح وبدون تضليل للمستخدم */}
+            {realCostPerKm !== null 
+              ? `تكلفة الكم: ${realCostPerKm} ${currency}` 
+              : 'سجل تعبئتين لحساب التكلفة'}
           </span>
         </div>
         
