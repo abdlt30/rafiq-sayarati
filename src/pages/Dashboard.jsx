@@ -245,7 +245,7 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* عداد الصحة + التنبؤ */}
+        {/* ✅ عداد الصحة + التنبؤ (تم دمج الكود المحدث) */}
         <div className="p-4 rounded-2xl border bg-[var(--surface)] border-[var(--border)] shadow-sm flex flex-col items-center justify-between relative">
           <div className="flex justify-between items-center w-full mb-2 px-1">
             <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1"><ShieldCheck size={14} className="text-green-500" /> {t('carHealth') || 'الحالة'}</span>
@@ -256,11 +256,21 @@ export default function Dashboard() {
           />
           
           <div className={`mt-3 w-full rounded-lg p-2 text-center border ${isOilOverdue ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface-2)] border-[var(--border)]'}`}>
-             <p className={`text-[10px] font-bold flex items-center justify-center gap-1 ${isOilOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}><Droplets size={12} className={isOilOverdue ? 'text-red-500' : 'text-yellow-500'}/> تغيير الزيت</p>
+             <p className={`text-[10px] font-bold flex items-center justify-center gap-1 ${isOilOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>
+               <Droplets size={12} className={isOilOverdue ? 'text-red-500' : 'text-yellow-500'}/> {t('oilChange') || 'تغيير الزيت'}
+             </p>
              {kmToOilChange !== null ? (
-               <p className={`text-xs font-extrabold mt-0.5 ${isOilOverdue ? 'text-red-500' : 'text-yellow-500'}`}>
-                 {isOilOverdue ? 'متأخر!' : `بعد ${kmToOilChange} كم`}
-               </p>
+               <div className="flex flex-col items-center mt-0.5">
+                 <p className={`text-xs font-extrabold ${isOilOverdue ? 'text-red-500' : 'text-yellow-500'}`}>
+                   {isOilOverdue ? 'متأخر!' : `بعد ${kmToOilChange} كم`}
+                 </p>
+                 {/* ✅ زر البحث عن ورشة عند تأخر الزيت */}
+                 {isOilOverdue && (
+                   <Link to="/assistance" className="mt-1 text-[9px] bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">
+                     أبحث عن ورشة
+                   </Link>
+                 )}
+               </div>
              ) : (
                <p className="text-[11px] font-bold text-[var(--text-muted)] mt-0.5">غير مسجل</p>
              )}
