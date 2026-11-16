@@ -96,7 +96,6 @@ export default function Maintenance() {
     e.preventDefault();
     if (!currentCar || !formData.date || !formData.type || !formData.cost) return showToast(t('fillRequiredFields') || 'الرجاء تعبئة الحقول', 'error');
     
-    // ✅ حفظ الحقل باسم nextOdometer ليتوافق مع لوحة البيانات
     const data = { 
       carId: currentCar.id, 
       date: formData.date, 
@@ -196,7 +195,7 @@ export default function Maintenance() {
               <div className="flex items-center gap-3">
                 <div className="text-end">
                   <p className="font-extrabold text-[var(--primary)] text-sm">{safeNumber(record.cost).toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
-                  {/* ✅ دعم البيانات القديمة (nextKm) والجديدة (nextOdometer) */}
+                  {/* دعم البيانات القديمة (nextKm) والجديدة (nextOdometer) */}
                   {(record.nextOdometer || record.nextKm) && safeNumber(record.nextOdometer || record.nextKm) > 0 ? (
                     <p className="text-[10px] text-[var(--text-muted)] flex items-center justify-end gap-1 mt-0.5">
                       <Gauge size={10} /> {safeNumber(record.nextOdometer || record.nextKm).toLocaleString()} {t('km') || 'كم'}
