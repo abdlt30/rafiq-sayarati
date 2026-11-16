@@ -5,7 +5,6 @@ import { safeNumber } from '../shared/utils/safeNumber.js';
 
 export const AppContext = createContext();
 
-// ✅ توليد IDs آمن ومتوافق
 const generateId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     try { return crypto.randomUUID(); } catch { /* fallback */ }
@@ -14,7 +13,6 @@ const generateId = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  // ===================== حالة المستخدم =====================
   const [user, setUserState] = useState(() => {
     try { const savedName = localStorage.getItem('user_name'); return savedName ? { name: savedName } : null; } catch { return null; }
   });
@@ -27,7 +25,6 @@ export const AppProvider = ({ children }) => {
     } catch (e) { console.error('Save user failed:', e); }
   }, []);
 
-  // ===================== حالة السيارات =====================
   const [currentCar, setCurrentCar] = useState(() => {
     try {
       const saved = localStorage.getItem('savedCar');
@@ -46,7 +43,6 @@ export const AppProvider = ({ children }) => {
     } catch { return []; }
   });
 
-  // ===================== حالة الإعدادات =====================
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState(() => {
     try { const saved = localStorage.getItem('theme'); return saved === 'light' || saved === 'dark' ? saved : 'dark'; } catch { return 'dark'; }
@@ -58,7 +54,6 @@ export const AppProvider = ({ children }) => {
     try { const saved = localStorage.getItem('currency'); return saved && /^[A-Z]{3}$/.test(saved) ? saved : 'MAD'; } catch { return 'MAD'; }
   });
 
-  // ===================== الحالة المركزية للبيانات =====================
   const [totals, setTotals] = useState({ 
     fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, 
     avgConsumption: null, avgUnit: 'L/100km', 
@@ -72,7 +67,6 @@ export const AppProvider = ({ children }) => {
   const [dataVersion, setDataVersion] = useState(0);
   const bumpDataVersion = useCallback(() => setDataVersion(v => v + 1), []);
 
-  // ===================== المعادلة الرياضية المركزية (refreshDashboard) =====================
   const refreshDashboard = useCallback(async () => {
     if (!currentCar) {
       setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km', costPerKm: null, totalDistance: 0, nextOilChangeOdo: null });
@@ -101,7 +95,6 @@ export const AppProvider = ({ children }) => {
       const myDocs = filter(allDocs);
       const myReminders = filter(allReminders);
 
-      // 1. حساب المسافة الحقيقية المقطوعة
       const allOdometerReadings = [
         ...myFuel.map(f => safeNumber(f.odometer)),
         ...myMaintenance.map(m => safeNumber(m.odometer))
@@ -112,7 +105,6 @@ export const AppProvider = ({ children }) => {
         totalDistanceDriven = Math.max(...allOdometerReadings) - Math.min(...allOdometerReadings);
       }
 
-      // 2. حساب استهلاك الوقود التراكمي
       const powertrain = currentCar.powertrain || 'ice';
       const unit = powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
       const validFuelRecords = myFuel.filter(f => safeNumber(f.odometer) > 0 && (safeNumber(f.liters) > 0 || safeNumber(f.kwh) > 0)).sort((a, b) => safeNumber(a.odometer) - safeNumber(b.odometer));
@@ -132,17 +124,14 @@ export const AppProvider = ({ children }) => {
         }
       }
 
-      // 3. حساب تكلفة الكيلومتر
       const actualTotalExpenses = safeNumber(fetchedTotals?.total) || 0;
       let realCostPerKm = null;
       if (totalDistanceDriven > 0 && actualTotalExpenses > 0) {
         realCostPerKm = Number((actualTotalExpenses / totalDistanceDriven).toFixed(2));
       }
 
-      // 4. التنبؤ بتغيير الزيت القادم
       let nextOilChangeOdo = null;
       
-      // أ. البحث في سجلات الصيانة
       const oilMaintenance = myMaintenance
         .filter(m => {
           const typeStr = String(m.type || '').toLowerCase();
@@ -155,7 +144,6 @@ export const AppProvider = ({ children }) => {
         nextOilChangeOdo = safeNumber(oilMaintenance[0].nextOdometer);
       }
 
-      // ب. البحث في التذكيرات (إذا لم نجد في الصيانة)
       if (!nextOilChangeOdo) {
         const oilReminder = myReminders.find(r => {
           const titleStr = String(r.title || '').toLowerCase();
@@ -167,7 +155,6 @@ export const AppProvider = ({ children }) => {
         }
       }
 
-      // 5. بناء سجل النشاط الأخير
       const activities = [
         ...myFuel.map(f => ({ ...f, type: 'fuel' })),
         ...myMaintenance.map(m => ({ ...m, type: 'maintenance' })),
@@ -175,7 +162,6 @@ export const AppProvider = ({ children }) => {
         ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
       ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 5);
 
-      // 6. تحديث الحالة
       setTotals({ 
         ...(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 }),
         avgConsumption: avgVal,
@@ -199,7 +185,6 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => { refreshDashboard(); }, [currentCar, dataVersion, refreshDashboard]);
 
-  // ===================== التحقق من العداد =====================
   const validateOdometer = (input, { required = false } = {}) => {
     if (input === undefined || input === null || String(input).trim() === '') return required ? { valid: false } : { valid: true, value: 0 };
     const num = Number(String(input).trim());
@@ -207,7 +192,6 @@ export const AppProvider = ({ children }) => {
     return { valid: true, value: Math.round(num) };
   };
 
-  // ===================== CRUD السيارات =====================
   const addNewCar = useCallback((carData) => {
     if (!carData || typeof carData !== 'object') return false;
     const odoCheck = validateOdometer(carData.odometer, { required: false });
@@ -295,14 +279,12 @@ export const AppProvider = ({ children }) => {
     } catch (e) { console.error('selectCar failed:', e); return false; }
   }, [bumpDataVersion]);
 
-  // ===================== الإعدادات واللغة =====================
   const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
   const changeLang = useCallback((newLang) => { if (['ar', 'en', 'fr'].includes(newLang)) setLang(newLang); }, []);
   const setCurrency = useCallback((newCurrency) => {
     if (typeof newCurrency === 'string' && /^[A-Z]{3}$/.test(newCurrency.trim())) setCurrencyRaw(newCurrency.trim());
   }, []);
 
-  // ===================== دالة الترجمة (t) =====================
   const t = useCallback((key, variables = {}) => {
     let text = translations[lang]?.[key] ?? translations['en']?.[key] ?? key;
     text = String(text);
