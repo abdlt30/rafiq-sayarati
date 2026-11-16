@@ -43,7 +43,7 @@ export const ar = {
   resetting: 'جاري المسح...',
   loading: 'جاري التحميل...',
 
-  // ===================== Onboarding & Welcome (Updated Strategy) =====================
+  // ===================== Onboarding & Welcome =====================
   welcomeMessagePart1: 'تحكم في مصاريف سيارتك، تابع صيانتها،',
   welcomeMessagePart2: 'وتمتع براحة البال.',
   startNow: 'ابدأ الآن',
@@ -238,7 +238,7 @@ export const ar = {
   uploadImage: 'التقط صورة أو ارفعها',
   technicalInspection: 'فحص تقني',
   license: 'رخصة',
-  expired: 'منتهية',
+  expired: 'منتهية الصلاحية!', // ✅ تم تحديثها لتطابق محرك الإشعارات
   expiringSoon: 'تنتهي قريباً',
   expiresToday: 'تنتهي اليوم',
   expiresTomorrow: 'تنتهي غداً',
@@ -256,6 +256,10 @@ export const ar = {
   invalidDate: 'تاريخ غير صالح.',
   secureDocuments: 'وثائقك في أمان',
 
+  // ✅ مفاتيح التنبيهات الجديدة (تمت إضافتها هنا)
+  documentExpiryTitle: 'انتهاء وثيقة',
+  expiresIn: 'تنتهي بعد',
+
   // ===================== Reminders & Alerts =====================
   reminders: 'التذكيرات',
   addReminder: 'إضافة تذكير',
@@ -265,14 +269,15 @@ export const ar = {
   completeReminder: 'إتمام التذكير',
   oil: 'زيت',
   inspection: 'فحص',
-  overdue: 'متأخر',
+  overdue: 'متأخر!', // ✅ تم تحديثها لتطابق محرك الإشعارات
   soon: 'قريب',
   after: 'بعد',
-  days: 'يوم',
+  days: 'يوم', // ✅ موجودة ومطلوبة للإشعارات
   km: 'كم',
   overdueBy: 'متأخر بـ',
   dueToday: 'مستحق اليوم',
   dueNow: 'مستحق الآن (عداد)',
+  dueIn: 'مستحق بعد', // ✅ تمت إضافتها
   done: 'إنجاز',
   confirmQuickDone: 'هل أنت متأكد من إتمام: {title}؟\nسيتم حذف {target} نهائياً.',
   viewDetails: 'عرض التفاصيل',
@@ -497,10 +502,7 @@ export const ar = {
   findSpareParts: 'محلات قطع الغيار',
   requestTowing: 'طلب سحب (سطحة)',
   searchingHelp: 'جاري البحث عن أقرب مساعدة...',
-  
-  // ✅ تم تحديث هذه الرسالة لتكون عامة وتناسب كل الخدمات
   noHelpFound: 'لم نجد نتائج مسجلة في نطاق 5 كم. يرجى استخدام زر خرائط جوجل للبحث.',
-  
   call: 'اتصال',
   navigate: 'اتجاهات',
   locationRequired: 'نحتاج لتفعيل الموقع للعثور على المساعدة القريبة.',
@@ -516,7 +518,7 @@ export const ar = {
   servicePartsNew: 'قطع غيار جديدة',
   servicePartsUsed: 'قطع غيار مستعملة',
   serviceBattery: 'بطارية سيارة',
-  serviceMobileMechanic: 'ميكانيكي متنقل', // ✅ تم إضافة هذا المفتاح
+  serviceMobileMechanic: 'ميكانيكي متنقل',
   searchViaGoogle: 'بحث سريع عبر جوجل',
   nearbyResults: 'أقرب الخدمات المكتشفة',
   emergencyDesc: 'اختر نوع المساعدة التي تحتاجها الآن',
