@@ -44,11 +44,12 @@ export const AppProvider = ({ children }) => {
     }
   }, [theme]);
 
+  // ✅ تحديث الحالة المركزية لتشمل المتوسط اليومي وتوقع الإطارات
   const [totals, setTotals] = useState({ 
     fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, 
     avgConsumption: null, avgUnit: 'L/100km', 
     costPerKm: null, totalDistance: 0, nextOilChangeOdo: null,
-    distanceToEmpty: null 
+    distanceToEmpty: null, dailyAverage: 0, nextTireChangeOdo: null 
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -73,7 +74,7 @@ export const AppProvider = ({ children }) => {
 
   const refreshDashboard = useCallback(async () => {
     if (!currentCar) {
-      setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km', costPerKm: null, totalDistance: 0, nextOilChangeOdo: null, distanceToEmpty: null });
+      setTotals({ fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0, avgConsumption: null, avgUnit: 'L/100km', costPerKm: null, totalDistance: 0, nextOilChangeOdo: null, distanceToEmpty: null, dailyAverage: 0, nextTireChangeOdo: null });
       setRecentActivity([]); setDocuments([]); setReminders([]); setMaintenanceRecords([]); setNotifications([]);
       return;
     }
@@ -164,7 +165,7 @@ export const AppProvider = ({ children }) => {
          }
       }
 
-      // 5. التنبؤ بتغيير الزيت القادم (لمحرك الحسابات)
+      // 5. التنبؤ بتغيير الزيت القادم
       let nextOilChangeOdo = null;
       const oilMaintenance = myMaintenance
         .filter(m => {
@@ -185,7 +186,38 @@ export const AppProvider = ({ children }) => {
         if (oilReminder) nextOilChangeOdo = safeNumber(oilReminder.targetOdometer);
       }
 
-      // 6. بناء سجل النشاط
+      // ✅ 6. التنبؤ بتغيير الإطارات
+      let nextTireChangeOdo = null;
+      const tireMaintenance = myMaintenance
+        .filter(m => {
+          const typeStr = String(m.type || '').toLowerCase();
+          const isTire = typeStr === 'tires' || typeStr.includes('إطار') || typeStr.includes('tire');
+          return isTire && safeNumber(m.nextOdometer) > 0;
+        })
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+      if (tireMaintenance.length > 0) {
+        nextTireChangeOdo = safeNumber(tireMaintenance[0].nextOdometer);
+      }
+
+      // ✅ 7. حساب متوسط التكلفة اليومية الحقيقي (بناءً على أيام الاستخدام الفعلية)
+      let actualDailyAverage = 0;
+      let earliestDate = new Date(); // نبدأ بتاريخ اليوم
+      
+      const allRecordsForDate = [...myFuel, ...myMaintenance, ...filter(expenseRecords), ...filter(incomeRecords)];
+      allRecordsForDate.forEach(r => {
+         if (r.date) {
+            const d = new Date(r.date);
+            if (!isNaN(d.getTime()) && d < earliestDate) earliestDate = d;
+         }
+      });
+      
+      const daysSpan = Math.max(1, Math.ceil((new Date() - earliestDate) / (1000 * 60 * 60 * 24)));
+      if (actualTotalExpenses > 0) {
+         actualDailyAverage = Number((actualTotalExpenses / daysSpan).toFixed(2));
+      }
+
+      // 8. بناء سجل النشاط
       const activities = [
         ...myFuel.map(f => ({ ...f, type: 'fuel' })),
         ...myMaintenance.map(m => ({ ...m, type: 'maintenance' })),
@@ -193,7 +225,7 @@ export const AppProvider = ({ children }) => {
         ...filter(incomeRecords).map(i => ({ ...i, type: 'income', cost: i.amount }))
       ].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 5);
 
-      // ✅ 7. محرك الإشعارات المركزي (تم دمج الصيانة هنا لضمان الدقة)
+      // ✅ 9. محرك الإشعارات المركزي (الوثائق + التذكيرات + الزيت + الإطارات)
       const generatedNotifications = [];
       const now = new Date();
       
@@ -234,7 +266,7 @@ export const AppProvider = ({ children }) => {
          }
       });
 
-      // ✅ ج. فحص الصيانة (الزيت) - هذا هو الإصلاح الجذري
+      // ج. فحص الصيانة (الزيت)
       if (oilMaintenance.length > 0) {
          const latestOil = oilMaintenance[0];
          const nextOdo = safeNumber(latestOil.nextOdometer);
@@ -242,7 +274,6 @@ export const AppProvider = ({ children }) => {
          const diffKm = nextOdo - currentOdo;
 
          if (currentOdo >= nextOdo) {
-             // الزيت متأخر
              generatedNotifications.push({
                  id: `maint-oil-${latestOil.id}`,
                  type: 'maintenance',
@@ -252,7 +283,6 @@ export const AppProvider = ({ children }) => {
                  date: latestOil.date
              });
          } else if (diffKm <= 500) {
-             // الزيت يقترب من الموعد
              generatedNotifications.push({
                  id: `maint-oil-${latestOil.id}`,
                  type: 'maintenance',
@@ -264,7 +294,35 @@ export const AppProvider = ({ children }) => {
          }
       }
 
-      // 8. تحديث الحالة
+      // ✅ د. فحص الصيانة (الإطارات)
+      if (tireMaintenance.length > 0) {
+         const latestTire = tireMaintenance[0];
+         const nextOdo = safeNumber(latestTire.nextOdometer);
+         const currentOdo = safeNumber(currentCar.odometer);
+         const diffKm = nextOdo - currentOdo;
+
+         if (currentOdo >= nextOdo) {
+             generatedNotifications.push({
+                 id: `maint-tire-${latestTire.id}`,
+                 type: 'maintenance',
+                 title: t('tires') || 'الإطارات',
+                 message: `${t('overdueBy') || 'متأخر بـ'} ${Math.abs(diffKm)} ${t('km') || 'كم'}`,
+                 isUrgent: true,
+                 date: latestTire.date
+             });
+         } else if (diffKm <= 500) {
+             generatedNotifications.push({
+                 id: `maint-tire-${latestTire.id}`,
+                 type: 'maintenance',
+                 title: t('tires') || 'الإطارات',
+                 message: `${t('dueIn') || 'مستحق بعد'} ${diffKm} ${t('km') || 'كم'}`,
+                 isUrgent: false,
+                 date: latestTire.date
+             });
+         }
+      }
+
+      // 10. تحديث الحالة المركزية
       setTotals({ 
         ...(fetchedTotals || { fuel: 0, maintenance: 0, expenses: 0, total: 0, income: 0, net: 0 }),
         avgConsumption: avgVal, 
@@ -272,7 +330,9 @@ export const AppProvider = ({ children }) => {
         costPerKm: realCostPerKm,
         totalDistance: totalDistanceDriven, 
         nextOilChangeOdo: nextOilChangeOdo,
-        distanceToEmpty: distanceToEmpty 
+        distanceToEmpty: distanceToEmpty,
+        dailyAverage: actualDailyAverage, // ✅ تمرير المتوسط اليومي
+        nextTireChangeOdo: nextTireChangeOdo // ✅ تمرير توقع الإطارات
       });
       
       setRecentActivity(activities);
