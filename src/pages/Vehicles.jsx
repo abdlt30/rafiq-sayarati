@@ -28,6 +28,30 @@ const getPowertrainIcon = (powertrain) => {
   return Car;
 };
 
+/* ✅ مكون الصورة الآمن (يمنع ظهور الصور المكسورة) */
+const CarImage = ({ src, alt, isActive, FallbackIcon }) => {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <FallbackIcon 
+        size={28} 
+        className={isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] opacity-50'} 
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <img 
+      src={src} 
+      alt={alt} 
+      className="w-full h-full object-cover"
+      onError={() => setHasError(true)}
+    />
+  );
+};
+
 export default function Vehicles() {
   const { currentCar, vehicles, selectCar, deleteCar, t } = useContext(AppContext);
   const navigate = useNavigate();
@@ -191,20 +215,12 @@ export default function Vehicles() {
                     ? 'border-[var(--primary)]/30 bg-[var(--primary)]/10' 
                     : 'border-[var(--border)] bg-[var(--surface-2)]'
                 }`}>
-                  {car.image ? (
-                    <img 
-                      src={car.image} 
-                      alt={`${title}`} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <PowertrainIcon 
-                      size={28} 
-                      className={isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] opacity-50'} 
-                      aria-hidden="true"
-                    />
-                  )}
+                  <CarImage 
+                    src={car.image} 
+                    alt={title} 
+                    isActive={isActive} 
+                    FallbackIcon={PowertrainIcon} 
+                  />
                 </div>
 
                 {/* بيانات السيارة */}
