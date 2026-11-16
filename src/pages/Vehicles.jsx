@@ -139,14 +139,13 @@ export const AppProvider = ({ children }) => {
         realCostPerKm = Number((actualTotalExpenses / totalDistanceDriven).toFixed(2));
       }
 
-      // ✅ 4. إصلاح التنبؤ بتغيير الزيت القادم (تم إصلاحه لقراءة حقل type)
+      // 4. التنبؤ بتغيير الزيت القادم
       let nextOilChangeOdo = null;
       
       // أ. البحث في سجلات الصيانة
       const oilMaintenance = myMaintenance
         .filter(m => {
           const typeStr = String(m.type || '').toLowerCase();
-          // نبحث عن 'oilchange' (المعرف البرمجي) أو الكلمة العربية أو الإنجليزية
           const isOil = typeStr === 'oilchange' || typeStr.includes('زيت') || typeStr.includes('oil');
           return isOil && safeNumber(m.nextOdometer) > 0;
         })
