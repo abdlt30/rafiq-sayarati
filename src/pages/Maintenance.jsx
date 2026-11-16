@@ -4,7 +4,7 @@ import { dbService } from '../services/dbService.js';
 import { Link } from 'react-router-dom';
 import { 
   Plus, Trash2, Edit2, X, Wrench, Gauge, Settings2, 
-  AlertCircle, CheckCircle, Check, ChevronLeft 
+  AlertCircle, CheckCircle, Check, ChevronLeft, Calculator 
 } from 'lucide-react';
 
 import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx'; 
@@ -30,6 +30,10 @@ export default function Maintenance() {
   const [isAddingType, setIsAddingType] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
 
+  // ✅ حالات مركز الصيانة التقديري (Maintenance Hub)
+  const [isHubOpen, setIsHubOpen] = useState(false);
+  const [selectedHubItems, setSelectedHubItems] = useState([]);
+
   const toastTimeoutRef = useRef(null);
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
@@ -52,6 +56,26 @@ export default function Maintenance() {
     const custom = (customTypes || []).map(ct => ({ value: ct, label: ct }));
     return [...baseTypes, ...custom];
   }, [baseTypes, customTypes]);
+
+  // ✅ بيانات وأسعار مركز الصيانة (يجب تعديلها حسب السوق المحلي)
+  const hubItems = useMemo(() => [
+    { id: 'oil', name: t('engineOil') || 'تغيير الزيت', price: 200 },
+    { id: 'filter', name: t('oilFilter') || 'فلتر الزيت', price: 40 },
+    { id: 'brakes', name: t('brakes') || 'فحص/تغيير الفرامل', price: 300 },
+    { id: 'tires', name: t('tires') || 'فحص/تغيير الإطارات', price: 800 },
+    { id: 'battery', name: t('battery') || 'فحص/تغيير البطارية', price: 500 },
+  ], [t]);
+
+  const toggleHubItem = useCallback((id) => {
+    setSelectedHubItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  }, []);
+
+  const estimatedTotal = useMemo(() => {
+    return selectedHubItems.reduce((total, id) => {
+      const item = hubItems.find(i => i.id === id);
+      return total + (item ? item.price : 0);
+    }, 0);
+  }, [selectedHubItems, hubItems]);
 
   const showToast = useCallback((message, type = 'error') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -171,6 +195,12 @@ export default function Maintenance() {
         <h1 className="text-2xl font-bold text-[var(--text)]">{t('maintenance') || 'الصيانة'}</h1>
       </div>
 
+      {/* ✅ زر فتح مركز الصيانة التقديري */}
+      <button onClick={() => setIsHubOpen(true)} className="w-full flex items-center justify-center gap-2 p-3.5 bg-gradient-to-r from-green-500/10 to-transparent border border-green-500/20 rounded-2xl mb-3 active:scale-[0.98] transition-transform">
+        <Calculator size={18} className="text-green-500" />
+        <span className="text-sm font-bold text-[var(--text)]">{t('maintenanceHubBtn') || 'احسب تكلفة الصيانة التقديرية'}</span>
+      </button>
+
       {/* رابط البحث عن ورشة إصلاح */}
       <Link to="/assistance" className="flex items-center justify-between p-3.5 bg-gradient-to-r from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl mb-3 active:scale-[0.98] transition-transform">
         <div className="flex items-center gap-3">
@@ -289,6 +319,39 @@ export default function Maintenance() {
             </div>
             <button type="submit" className="w-full mt-5 bg-[var(--primary)] text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95">{t('save') || 'حفظ'}</button>
           </form>
+        </div>
+      )}
+
+      {/* ✅ نافذة مركز الصيانة (Maintenance Hub) */}
+      {isHubOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-[var(--surface)] p-5 rounded-3xl w-full max-w-md border border-[var(--border)] relative shadow-2xl max-h-[90vh] flex flex-col">
+            <button type="button" onClick={() => setIsHubOpen(false)} className="absolute top-4 left-4 rtl:right-4 p-1.5 bg-[var(--surface-2)] rounded-full z-10"><X size={20} /></button>
+            <h2 className="text-lg font-bold text-center mb-4 mt-1">🛠️ {t('maintenanceHub') || 'مركز الصيانة التقديري'}</h2>
+            <p className="text-xs text-center text-[var(--text-muted)] mb-4">حدد ما تحتاجه لمعرفة التكلفة التقديرية التقريبية قبل الذهاب للورشة.</p>
+            
+            <div className="space-y-2 overflow-y-auto flex-1 pb-4">
+               {hubItems.map(item => (
+                 <label key={item.id} className="flex items-center justify-between p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--primary)] transition-colors">
+                    <div className="flex items-center gap-3">
+                       <input type="checkbox" checked={selectedHubItems.includes(item.id)} onChange={() => toggleHubItem(item.id)} className="w-4 h-4 accent-[var(--primary)]" />
+                       <span className="text-sm font-bold text-[var(--text)]">{item.name}</span>
+                    </div>
+                    <span className="text-xs font-bold text-[var(--primary)]">{item.price} {currency}</span>
+                 </label>
+               ))}
+            </div>
+
+            <div className="border-t border-[var(--border)] pt-4">
+               <div className="flex justify-between items-center mb-4">
+                 <span className="text-sm font-bold text-[var(--text)]">{t('estimatedTotal') || 'إجمالي التكلفة التقديرية:'}</span>
+                 <span className="text-xl font-extrabold text-green-500">{estimatedTotal.toLocaleString()} {currency}</span>
+               </div>
+               <Link to="/assistance" className="w-full flex items-center justify-center gap-2 bg-[var(--primary)] text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-transform">
+                 <MapPin size={18} /> {t('findRepairShop') || 'البحث عن ورشة قريبة'}
+               </Link>
+            </div>
+          </div>
         </div>
       )}
     </div>
