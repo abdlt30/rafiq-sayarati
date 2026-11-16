@@ -238,7 +238,7 @@ export const en = {
   uploadImage: 'Take a photo or upload',
   technicalInspection: 'Technical Inspection',
   license: 'License',
-  expired: 'Expired',
+  expired: 'Expired!', // ✅ Updated for alerts
   expiringSoon: 'Expiring Soon',
   expiresToday: 'Expires Today',
   expiresTomorrow: 'Expires Tomorrow',
@@ -256,6 +256,10 @@ export const en = {
   invalidDate: 'Invalid date.',
   secureDocuments: 'Your Documents are Safe',
 
+  // ✅ New Alert Keys
+  documentExpiryTitle: 'Document Expiry',
+  expiresIn: 'Expires in',
+
   // ===================== Reminders & Alerts =====================
   reminders: 'Reminders',
   addReminder: 'Add Reminder',
@@ -265,14 +269,15 @@ export const en = {
   completeReminder: 'Complete Reminder',
   oil: 'Oil',
   inspection: 'Inspection',
-  overdue: 'Overdue',
+  overdue: 'Overdue!', // ✅ Updated for alerts
   soon: 'Soon',
   after: 'After',
-  days: 'days',
+  days: 'days', // ✅ Required for alerts
   km: 'km',
   overdueBy: 'Overdue by',
   dueToday: 'Due today',
   dueNow: 'Due now (odometer)',
+  dueIn: 'Due in', // ✅ New Alert Key
   done: 'Done',
   confirmQuickDone: 'Are you sure you want to complete: {title}?\n{target} will be permanently deleted.',
   viewDetails: 'View Details',
@@ -497,10 +502,7 @@ export const en = {
   findSpareParts: 'Find Spare Parts',
   requestTowing: 'Request Towing',
   searchingHelp: 'Searching for nearby help...',
-  
-  // ✅ Updated generic error message
   noHelpFound: 'No results found within 5km. Please use Google Maps to search.',
-  
   call: 'Call',
   navigate: 'Navigate',
   locationRequired: 'Location access is required to find nearby help.',
@@ -516,7 +518,7 @@ export const en = {
   servicePartsNew: 'New Spare Parts',
   servicePartsUsed: 'Used Spare Parts',
   serviceBattery: 'Car Battery',
-  serviceMobileMechanic: 'Mobile Mechanic', // ✅ Added missing key
+  serviceMobileMechanic: 'Mobile Mechanic',
   searchViaGoogle: 'Quick Search via Google',
   nearbyResults: 'Nearby Discovered Services',
   emergencyDesc: 'Choose the type of help you need now',
