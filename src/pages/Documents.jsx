@@ -7,7 +7,8 @@ import OptionPicker from '../shared/components/ui/OptionPicker.jsx';
 import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx';
 import { formatDate } from '../shared/utils/formatters.js';
 
-const EMPTY_FORM = { type: 'insurance', date: '', image: '' };
+// ✅ إصلاح: تغيير date إلى expiryDate ليتوافق مع لوحة البيانات
+const EMPTY_FORM = { type: 'insurance', expiryDate: '', image: '' };
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_DIM = 800;
 
@@ -21,7 +22,6 @@ export default function Documents() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  // ✅ إصلاح: استخدام useRef لمنع تداخل رسائل الـ Toast
   const toastTimeoutRef = useRef(null);
   const todayLocale = lang === 'ar' ? 'ar-MA' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
@@ -49,7 +49,8 @@ export default function Documents() {
       if (!currentCar) return;
       const allDocs = await dbService.getDocuments();
       const carDocs = (allDocs || []).filter(r => String(r.carId) === String(currentCar.id));
-      setRecords([...carDocs].sort((a, b) => (b.date || '').localeCompare(a.date || '')));
+      // ✅ الترتيب بناءً على expiryDate مع دعم date القديم
+      setRecords([...carDocs].sort((a, b) => String(b.expiryDate || b.date || '').localeCompare(String(a.expiryDate || a.date || ''))));
     } catch (e) { console.error(e); setRecords([]); } finally { setIsLoading(false); }
   }, [currentCar]);
 
@@ -94,10 +95,11 @@ export default function Documents() {
     if (!formData.image) return showToast(t('imageRequired') || 'الرجاء رفع صورة الوثيقة', 'error');
     
     try {
+      // ✅ إصلاح: حفظ الحقل باسم expiryDate ليتوافق مع Dashboard
       await dbService.addDocument({ 
         carId: currentCar.id, 
         type: formData.type, 
-        date: formData.date || null, 
+        expiryDate: formData.expiryDate || null, 
         image: formData.image 
       });
       await loadData(); 
@@ -125,7 +127,6 @@ export default function Documents() {
 
   const getTypeLabel = (type) => docTypes.find(d => d.value === type)?.label || type;
 
-  // ✅ شاشة التحميل (Skeleton Loader)
   if (isLoading) {
     return (
       <div className="p-4 space-y-4 animate-pulse">
@@ -155,7 +156,6 @@ export default function Documents() {
       </div>
 
       {records.length === 0 ? (
-        // ✅ حالة الفراغ التفاعلية (متطابقة مع باقي الصفحات)
         <div className="flex flex-col items-center justify-center mt-20 p-6 text-center animate-fade-in">
           <div className="relative w-24 h-24 flex items-center justify-center mb-6">
             <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-50"></div>
@@ -178,7 +178,8 @@ export default function Documents() {
                   <div className="w-8 h-8 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center shrink-0"><FileText size={16} /></div>
                   <div>
                     <p className="font-bold text-[var(--text)] text-sm">{getTypeLabel(record.type)}</p>
-                    {record.date && <p className="text-[10px] text-[var(--text-muted)]">{formatDate(record.date, todayLocale)}</p>}
+                    {/* ✅ دعم البيانات القديمة (date) والجديدة (expiryDate) */}
+                    {(record.expiryDate || record.date) && <p className="text-[10px] text-[var(--text-muted)]">{formatDate(record.expiryDate || record.date, todayLocale)}</p>}
                   </div>
                 </div>
                 <button onClick={() => setDeleteId(record.id)} className="text-red-500 p-1.5 bg-red-500/10 rounded-lg active:scale-90 transition-transform"><Trash2 size={16} /></button>
@@ -194,7 +195,7 @@ export default function Documents() {
         </div>
       )}
 
-      {/* ✅ إصلاح: إخفاء الزر العائم عندما تكون القائمة فارغة لمنع التداخل */}
+      {/* زر عائم للإضافة */}
       {records.length > 0 && (
         <button type="button" onClick={() => { setIsModalOpen(true); setFormData(EMPTY_FORM); }} className="fixed bottom-24 right-6 rtl:left-6 w-14 h-14 bg-green-500 text-white rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center z-40 active:scale-95 transition-transform"><Plus size={28} /></button>
       )}
@@ -219,7 +220,8 @@ export default function Documents() {
               <OptionPicker label={t('documentType') || 'نوع الوثيقة'} options={docTypes} value={formData.type} onChange={(val) => setFormData(prev => ({ ...prev, type: val }))} />
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('expiryDate') || 'تاريخ الانتهاء'}</label>
-                <input type="date" value={formData.date} onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
+                {/* ✅ إصلاح: الربط بـ expiryDate */}
+                <input type="date" value={formData.expiryDate} onChange={e => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))} className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm [color-scheme:dark] outline-none focus:border-[var(--primary)]" />
               </div>
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-muted)] block mb-1">{t('documentImage') || 'صورة الوثيقة'}</label>
