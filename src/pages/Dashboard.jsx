@@ -5,7 +5,8 @@ import {
   Car, Fuel, Wrench, Wallet, FileText, 
   ChevronLeft, X, Bell, Settings,
   TrendingUp, TrendingDown, Activity, Plus, ShieldCheck, ChevronDown, CheckCircle,
-  AlertTriangle, MapPin, Search, Gauge, AlertOctagon, Navigation, Droplets, Lightbulb
+  AlertTriangle, MapPin, Search, Gauge, AlertOctagon, Navigation, Droplets, Lightbulb,
+  Calendar // ✅ تم إضافة أيقونة التقويم
 } from 'lucide-react'; 
 
 import { safeNumber } from '../shared/utils/safeNumber.js';
@@ -126,14 +127,23 @@ export default function Dashboard() {
   const avgValue = safeNumber(totals?.avgConsumption); // قد تكون null
   const distanceToEmpty = totals?.distanceToEmpty; // قد تكون null
   const realCostPerKm = totals?.costPerKm; // قد تكون null
+  const dailyAverage = safeNumber(totals?.dailyAverage);
 
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
-  const nextOilChangeOdo = totals?.nextOilChangeOdo;
   
+  // حسابات الزيت
+  const nextOilChangeOdo = totals?.nextOilChangeOdo;
   const kmToOilChange = (nextOilChangeOdo !== null && odometerValue > 0) 
     ? Math.max(0, nextOilChangeOdo - odometerValue) 
     : null;
   const isOilOverdue = nextOilChangeOdo !== null && odometerValue >= nextOilChangeOdo;
+
+  // ✅ حسابات الإطارات الجديدة
+  const nextTireChangeOdo = totals?.nextTireChangeOdo;
+  const kmToTireChange = (nextTireChangeOdo !== null && odometerValue > 0) 
+    ? Math.max(0, nextTireChangeOdo - odometerValue) 
+    : null;
+  const isTireOverdue = nextTireChangeOdo !== null && odometerValue >= nextTireChangeOdo;
 
   // التنبيهات
   const activeAlert = useMemo(() => {
@@ -150,10 +160,10 @@ export default function Dashboard() {
     healthScore -= (urgentCount * 20) + (normalCount * 5);
   }
   if (isOilOverdue) healthScore -= 30;
+  if (isTireOverdue) healthScore -= 20; // خصم إضافي إذا كانت الإطارات متأخرة
   else if (kmToOilChange !== null && kmToOilChange < 500) healthScore -= 10;
   healthScore = Math.max(0, healthScore);
 
-  // ✅ إصلاح رياضي: التحقق من أن المسافة المتبقية أقل من 50 أو أنها صفر
   const isFuelLow = distanceToEmpty !== null && distanceToEmpty <= 50;
   const findGasStationUrl = `https://www.google.com/maps/search/${encodeURIComponent('gas station محطة وقود')}`;
 
@@ -245,7 +255,7 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* ✅ عداد الصحة + التنبؤ (تم دمج الكود المحدث) */}
+        {/* ✅ عداد الصحة + التنبؤ (الزيت والإطارات) */}
         <div className="p-4 rounded-2xl border bg-[var(--surface)] border-[var(--border)] shadow-sm flex flex-col items-center justify-between relative">
           <div className="flex justify-between items-center w-full mb-2 px-1">
             <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1"><ShieldCheck size={14} className="text-green-500" /> {t('carHealth') || 'الحالة'}</span>
@@ -255,25 +265,43 @@ export default function Dashboard() {
             color={healthScore >= 90 ? "#10b981" : healthScore >= 70 ? "#f59e0b" : "#ef4444"} unit="%" 
           />
           
-          <div className={`mt-3 w-full rounded-lg p-2 text-center border ${isOilOverdue ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface-2)] border-[var(--border)]'}`}>
-             <p className={`text-[10px] font-bold flex items-center justify-center gap-1 ${isOilOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>
-               <Droplets size={12} className={isOilOverdue ? 'text-red-500' : 'text-yellow-500'}/> {t('oilChange') || 'تغيير الزيت'}
-             </p>
-             {kmToOilChange !== null ? (
-               <div className="flex flex-col items-center mt-0.5">
-                 <p className={`text-xs font-extrabold ${isOilOverdue ? 'text-red-500' : 'text-yellow-500'}`}>
-                   {isOilOverdue ? 'متأخر!' : `بعد ${kmToOilChange} كم`}
-                 </p>
-                 {/* ✅ زر البحث عن ورشة عند تأخر الزيت */}
-                 {isOilOverdue && (
-                   <Link to="/assistance" className="mt-1 text-[9px] bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">
-                     أبحث عن ورشة
-                   </Link>
-                 )}
-               </div>
-             ) : (
-               <p className="text-[11px] font-bold text-[var(--text-muted)] mt-0.5">غير مسجل</p>
-             )}
+          <div className="w-full flex flex-col gap-1.5 mt-3">
+             {/* الزيت */}
+             <div className={`w-full rounded-lg p-2 text-center border ${isOilOverdue ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface-2)] border-[var(--border)]'}`}>
+                <p className={`text-[10px] font-bold flex items-center justify-center gap-1 ${isOilOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>
+                  <Droplets size={12} className={isOilOverdue ? 'text-red-500' : 'text-yellow-500'}/> {t('oilChange') || 'تغيير الزيت'}
+                </p>
+                {kmToOilChange !== null ? (
+                  <div className="flex flex-col items-center mt-0.5">
+                    <p className={`text-xs font-extrabold ${isOilOverdue ? 'text-red-500' : 'text-yellow-500'}`}>
+                      {isOilOverdue ? 'متأخر!' : `بعد ${kmToOilChange} كم`}
+                    </p>
+                    {isOilOverdue && (
+                      <Link to="/assistance" className="mt-1 text-[9px] bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">
+                        أبحث عن ورشة
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] font-bold text-[var(--text-muted)] mt-0.5">{t('notRegistered') || 'غير مسجل'}</p>
+                )}
+             </div>
+
+             {/* الإطارات */}
+             <div className={`w-full rounded-lg p-2 text-center border ${isTireOverdue ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--surface-2)] border-[var(--border)]'}`}>
+                <p className={`text-[10px] font-bold flex items-center justify-center gap-1 ${isTireOverdue ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>
+                  <span className="text-[12px]">🛞</span> {t('tires') || 'الإطارات'}
+                </p>
+                {kmToTireChange !== null ? (
+                  <div className="flex flex-col items-center mt-0.5">
+                    <p className={`text-xs font-extrabold ${isTireOverdue ? 'text-red-500' : 'text-blue-500'}`}>
+                      {isTireOverdue ? 'متأخر!' : `بعد ${kmToTireChange} كم`}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] font-bold text-[var(--text-muted)] mt-0.5">{t('notRegistered') || 'غير مسجل'}</p>
+                )}
+             </div>
           </div>
         </div>
       </div>
@@ -309,6 +337,17 @@ export default function Dashboard() {
               <p className="text-sm font-extrabold text-red-500 truncate">{totalValue.toLocaleString()} <span className="text-[10px] font-normal">{currency}</span></p>
             </div>
           </div>
+        </div>
+
+        {/* ✅ إضافة متوسط التكلفة اليومية */}
+        <div className="mt-3 pt-3 border-t border-[var(--border)]/50 flex justify-between items-center">
+          <p className="text-[10px] sm:text-xs text-[var(--text-muted)] flex items-center gap-1.5">
+            <Calendar size={14} className="text-blue-500 shrink-0" />
+            {t('dailyAvgCost') || 'متوسط التكلفة اليومية:'}
+          </p>
+          <span className="text-sm font-extrabold text-blue-500">
+            {dailyAverage > 0 ? `${dailyAverage} ${currency}` : '—'}
+          </span>
         </div>
 
         {/* ✅ إضافة السطر التوضيحي للشفافية المالية */}
