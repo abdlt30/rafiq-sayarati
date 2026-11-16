@@ -1,10 +1,9 @@
 import { useContext, useMemo, useState, useCallback } from 'react';
-import { AppContext } from '../context/AppContext.jsx'; // ✅ إضافة .jsx
-import { notificationService } from '../services/notificationService.js'; // ✅ إضافة .js
-import { AlertTriangle, Info, Trash2, Check, ShieldAlert, Sparkles } from 'lucide-react';
+import { AppContext } from '../context/AppContext.jsx';
+import { AlertTriangle, Info, Trash2, Check, ShieldAlert, Sparkles, FileText, CalendarClock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx'; // ✅ إضافة .jsx
+import ConfirmModal from '../shared/components/ui/ConfirmModal.jsx';
 
 const READ_IDS_KEY = 'read_notifications';
 const DISMISSED_IDS_KEY = 'dismissed_notifications';
@@ -49,7 +48,9 @@ const saveIds = (key, ids) => {
 };
 
 export default function Notifications() {
-  const { currentCar, t, lang, dataVersion } = useContext(AppContext);
+  // ✅ استخدام الإشعارات المركزية من AppContext (المصدر الوحيد للحقيقة)
+  const { currentCar, t, lang, dataVersion, notifications: contextNotifications } = useContext(AppContext);
+  
   const [showClearModal, setShowClearModal] = useState(false);
   const [readIds, setReadIds] = useState(() => safeIdsFromStorage(READ_IDS_KEY));
   const [dismissedIds, setDismissedIds] = useState(() => safeIdsFromStorage(DISMISSED_IDS_KEY));
@@ -58,16 +59,36 @@ export default function Notifications() {
   const readSet = useMemo(() => new Set(readIds), [readIds]);
   const dismissedSet = useMemo(() => new Set(dismissedIds), [dismissedIds]);
 
+  // ✅ تحويل إشعارات AppContext إلى الشكل المطلوب للواجهة
   const notifications = useMemo(() => {
-    if (!currentCar) return [];
-    try {
-      const alerts = notificationService.generateSmartAlerts(currentCar, t, lang);
-      return Array.isArray(alerts) ? alerts : [];
-    } catch (e) {
-      console.error('generateSmartAlerts failed:', e);
-      return [];
-    }
-  }, [currentCar, t, lang, dataVersion]);
+    if (!contextNotifications || contextNotifications.length === 0) return [];
+    
+    return contextNotifications.map(notif => {
+      // تحديد الشكل والأيقونة بناءً على نوع الإشعار
+      let severity = 'warning';
+      let link = '/';
+      let iconType = 'alert';
+
+      if (notif.type === 'document') {
+         severity = notif.isUrgent ? 'critical' : 'warning';
+         link = '/documents';
+         iconType = 'doc';
+      } else if (notif.type === 'reminder') {
+         severity = notif.isUrgent ? 'critical' : 'warning';
+         link = '/reminders';
+         iconType = 'reminder';
+      }
+
+      return {
+        id: notif.id,
+        title: notif.title,
+        desc: notif.message,
+        severity,
+        link,
+        iconType
+      };
+    });
+  }, [contextNotifications]);
 
   const visibleNotifications = useMemo(() => {
     if (dismissedIds.length === 0) return notifications;
@@ -162,7 +183,7 @@ export default function Notifications() {
         <div className="space-y-3">
           {visibleNotifications.map((notif) => {
             const style = getStyle(notif.severity);
-            const Icon = style.icon;
+            const Icon = notif.iconType === 'doc' ? FileText : notif.iconType === 'reminder' ? CalendarClock : style.icon;
             const isRead = readSet.has(notif.id);
 
             return (
