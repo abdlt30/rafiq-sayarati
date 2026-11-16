@@ -11,7 +11,8 @@ import { formatDate } from '../shared/utils/formatters.js';
 const EMPTY_FORM = { date: '', odometer: '', energyType: 'gasoline', amount: '', cost: '', station: '' };
 
 export default function Fuel() {
-  const { currentCar, updateCar, t, currency, lang, dataVersion, bumpDataVersion } = useContext(AppContext); 
+  // ✅ إضافة totals لجلب المتوسط التراكمي الحقيقي
+  const { currentCar, updateCar, t, currency, lang, dataVersion, bumpDataVersion, totals } = useContext(AppContext); 
   
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,6 +156,24 @@ export default function Fuel() {
       <div className="flex justify-between items-center mb-4 sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md pt-4 pb-3 -mx-4 px-4 border-b border-[var(--border)]/50 z-10">
         <h1 className="text-2xl font-bold text-[var(--text)]">{isElectric ? (t('chargingLog') || 'سجل الشحن') : (t('fuel') || 'سجل الوقود')}</h1>
       </div>
+
+      {/* ✅ بطاقة المتوسط التراكمي الحقيقي (تمت الإضافة هنا) */}
+      {records.length > 0 && (
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-2xl shadow-sm mb-3 flex justify-between items-center animate-fade-in">
+          <div>
+            <p className="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
+              <Activity size={16} className="text-blue-500"/> {t('trueCumulativeAvg') || 'المتوسط التراكمي الحقيقي'}
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">محسوب من جميع التعبئات المسجلة</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-extrabold text-blue-500">
+              {safeNumber(totals?.avgConsumption) > 0 ? totals.avgConsumption : '—'} 
+              <span className="text-[10px] font-normal text-[var(--text-muted)] ml-1">{isElectric ? 'kWh/100km' : 'L/100km'}</span>
+            </p>
+          </div>
+        </div>
+      )}
 
       {records.length === 0 ? (
         // ✅ 2. تصميم حالة الفراغ (Empty State) التفاعلي
