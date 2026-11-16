@@ -12,7 +12,7 @@ import { safeNumber } from '../shared/utils/safeNumber.js';
 import { formatDate } from '../shared/utils/formatters.js';
 import { getBrandLogoUrl, findBrandByName } from '../shared/constants/carBrands.js';
 
-// ✅ مكون العداد الدائري (تم تكبير الخطوط لتناسب الجميع)
+// مكون العداد الدائري (بخطوط كبيرة وواضحة)
 const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon }) => {
   const safeMax = max > 0 ? max : 100;
   const displayVal = value !== null && value !== undefined ? value : 0;
@@ -39,14 +39,11 @@ const CircularGauge = ({ value, max, label, color, unit, subLabel, icon: Icon })
         </svg>
         <div className="absolute flex flex-col items-center justify-center text-center">
           {Icon && <Icon size={16} className="mb-1 opacity-80" style={{ color }} />}
-          {/* ✅ تكبير خط الرقم */}
           <span className="text-xl sm:text-2xl font-extrabold text-[var(--text)] leading-tight">{displayVal}</span>
-          {/* ✅ تكبير خط الوحدة */}
           <span className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold">{unit}</span>
         </div>
       </div>
       <div className="text-center mt-2 w-full px-1">
-        {/* ✅ تكبير خط التسمية */}
         <span className="text-xs sm:text-sm font-bold text-[var(--text)] block truncate">{label}</span>
         {subLabel && <span className="text-[10px] text-[var(--text-muted)] block truncate">{subLabel}</span>}
       </div>
@@ -126,26 +123,23 @@ export default function Dashboard() {
   const odometerValue = safeNumber(currentCar?.odometer);
   const avgValue = safeNumber(totals?.avgConsumption);
   const avgUnit = currentCar?.powertrain === 'ev' ? 'kWh/100km' : 'L/100km';
-
   const realCostPerKm = totals?.costPerKm;
-  const nextOilChangeOdo = totals?.nextOilChangeOdo;
   
-  const kmToOilChange = (nextOilChangeOdo !== null && odometerValue > 0) 
-    ? Math.max(0, nextOilChangeOdo - odometerValue) 
-    : null;
+  // ✅ قراءة توقع الوقود الجاهز من الدماغ المركزي
+  const distanceToEmpty = totals?.distanceToEmpty; 
+
+  const nextOilChangeOdo = totals?.nextOilChangeOdo;
+  const kmToOilChange = (nextOilChangeOdo !== null && odometerValue > 0) ? Math.max(0, nextOilChangeOdo - odometerValue) : null;
   const isOilOverdue = nextOilChangeOdo !== null && odometerValue >= nextOilChangeOdo;
 
-  // ✅ التنبيهات الذكية
+  // التنبيهات
   const activeAlert = useMemo(() => {
     if (!notifications || notifications.length === 0) return null;
     const primaryAlert = notifications.find(n => n.isUrgent) || notifications[0];
-    return { 
-      message: `⚠️ ${primaryAlert.title}: ${primaryAlert.message}`, 
-      isUrgent: primaryAlert.isUrgent 
-    };
+    return { message: `⚠️ ${primaryAlert.title}: ${primaryAlert.message}`, isUrgent: primaryAlert.isUrgent };
   }, [notifications]);
 
-  // ✅ حساب صحة السيارة بناءً على الإشعارات
+  // حساب صحة السيارة
   let healthScore = 100;
   if (notifications && notifications.length > 0) {
     const urgentCount = notifications.filter(n => n.isUrgent).length;
@@ -155,29 +149,6 @@ export default function Dashboard() {
   if (isOilOverdue) healthScore -= 30;
   else if (kmToOilChange !== null && kmToOilChange < 500) healthScore -= 10;
   healthScore = Math.max(0, healthScore);
-
-  // ✅ إصلاح رياضي: توقع الوقود الذكي
-  const currentFuelLiters = safeNumber(currentCar?.currentFuel);
-  let distanceToEmpty = null;
-
-  if (avgValue > 0 && currentFuelLiters > 0) {
-    // إذا كان المستخدم قد أدخل كمية الوقود الحالية
-    distanceToEmpty = Math.floor((currentFuelLiters / avgValue) * 100);
-  } else if (avgValue > 0) {
-    // التقدير بناءً على آخر تعبئة
-    const lastFuelRecord = recentActivity?.find(a => a.type === 'fuel');
-    if (lastFuelRecord && lastFuelRecord.liters) {
-       const distanceSinceLastFill = odometerValue - safeNumber(lastFuelRecord.odometer);
-       const litersUsed = (distanceSinceLastFill * avgValue) / 100;
-       const estimatedRemainingLiters = Math.max(0, safeNumber(lastFuelRecord.liters) - litersUsed);
-       
-       if (estimatedRemainingLiters > 0) {
-          distanceToEmpty = Math.floor((estimatedRemainingLiters / avgValue) * 100);
-       } else {
-          distanceToEmpty = 0; 
-       }
-    }
-  }
 
   const isFuelLow = distanceToEmpty !== null && distanceToEmpty > 0 && distanceToEmpty < 50;
   const findGasStationUrl = `https://www.google.com/maps/search/${encodeURIComponent('gas station محطة وقود')}`;
