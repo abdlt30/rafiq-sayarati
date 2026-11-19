@@ -1,9 +1,10 @@
 import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext.jsx';
+ // ✅ الصحيح: استيراد سياق المستخدم الجديد
+import { useUser } from '../../contexts/UserContext';
 
 // ✅ 1. الهيكل الأساسي
-import Layout from '../../shared/components/layout/Layout.jsx';
+import Layout from '../../shared/components/layout/Layout.jsx':
 
 // ✅ 2. صفحات التسويق (متاحة للجميع)
 import Welcome from '../../pages/Welcome.jsx';
